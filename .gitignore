@@ -1,0 +1,76 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*_cifar10
+
+# PyTorch
+libtorch/
+
+# Datasets
+data/fashion/
+
+
+# Model files
+models/
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+build/
+cmake-build-*/
+
+# Other
+.DS_Store
+.idea/
+.clangd/
+.cproject
+.project
+*.iml
+.settings/
+*.pdf
+*.docx
+*.py
+references/
+
+
+# Notebooks
+.ipynb_checkpoints
+
+# extern
+extern/*
+!extern/CMakeLists.txt
+.vscode/
