@@ -34,7 +34,6 @@ libtorch/
 # Datasets
 data/fashion/
 
-
 # Model files
 models/
 
@@ -65,6 +64,8 @@ cmake-build-*/
 *.docx
 *.py
 references/
+x-file
+.pth
 
 
 # Notebooks
