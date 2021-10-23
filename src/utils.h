@@ -144,27 +144,4 @@ torch::Tensor l2_penalty(torch::Tensor x);
 
 std::pair<torch::Tensor, torch::Tensor> init_params(int64_t num_inputs);
 
-template <typename DataLoader>
-DataLoader loadFashionData(std::string data_path, int64_t batch_size, bool is_train) {
-	DataLoader dl;
-
-	if( is_train ) {
-		// fashion custom dataset
-		auto train_dataset = FASHION(data_path, FASHION::Mode::kTrain)
-		    			.map(torch::data::transforms::Stack<>());
-
-		dl = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
-								         std::move(train_dataset), batch_size);
-	} else {
-		auto test_dataset = FASHION(data_path, FASHION::Mode::kTest)
-				                .map(torch::data::transforms::Stack<>());
-
-
-		dl = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
-					         std::move(test_dataset), batch_size);
-	}
-
-	return dl;
-}
-
 #endif /* UTILS_H_ */
