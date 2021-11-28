@@ -8,6 +8,7 @@ set(requiredlibs "python3.6m")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
+list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
 
 # ---------------------------------------------------------
 

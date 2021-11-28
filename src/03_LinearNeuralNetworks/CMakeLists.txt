@@ -8,6 +8,7 @@ set(requiredlibs "python3.6m")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
+list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
 
 #----------------------------------------------------------------------------------
 
@@ -35,7 +36,7 @@ target_sources(03_linear_regression_concise PRIVATE linear_regression_concise.cp
 													../utils.cpp
 													)
 													
-target_link_libraries(03_linear_regression_concise ${TORCH_LIBRARIES})
+target_link_libraries(03_linear_regression_concise ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
 											
 set_target_properties(03_linear_regression_concise PROPERTIES
   CXX_STANDARD 14

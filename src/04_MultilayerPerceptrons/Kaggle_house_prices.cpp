@@ -39,17 +39,17 @@ std::vector<std::vector<float>> get_feature_data(std::ifstream& file, size_t tra
 		t++;
 	}
 	file.close();
-/*
-	torch::Tensor data = torch::zeros({static_cast<int64_t>(features.size()), static_cast<int64_t>(features[0].size())},
-			torch::TensorOptions().dtype(torch::kFloat));
 
-	for( int i = 0; i < features.size(); i++ ) {
-		std::vector<float> tmp = features[i];
-		for( int j = 0; j < tmp.size(); j++ ) {
-			data.index({i,j}) = tmp[j];
-		}
-	}
-*/
+//	torch::Tensor data = torch::zeros({static_cast<int64_t>(features.size()), static_cast<int64_t>(features[0].size())},
+//			torch::TensorOptions().dtype(torch::kFloat));
+
+//	for( int i = 0; i < features.size(); i++ ) {
+//		std::vector<float> tmp = features[i];
+//		for( int j = 0; j < tmp.size(); j++ ) {
+//			data.index({i,j}) = tmp[j];
+//		}
+//	}
+
 	return features;
 }
 
@@ -63,14 +63,14 @@ std::vector<float> get_label_data(std::ifstream& file) {
 		label.push_back(std::stof(row));
 	}
 	file.close();
-/*
-	torch::Tensor tlabels = torch::zeros(static_cast<int64_t>(label.size()),
-			torch::TensorOptions().dtype(torch::kFloat));
 
-	for( int i = 0; i < label.size(); i++ ) {
-		tlabels.index({i}) = label[i];
-	}
-*/
+//	torch::Tensor tlabels = torch::zeros(static_cast<int64_t>(label.size()),
+//			torch::TensorOptions().dtype(torch::kFloat));
+
+//	for( int i = 0; i < label.size(); i++ ) {
+//		tlabels.index({i}) = label[i];
+//	}
+
 	return label;
 }
 
@@ -149,7 +149,8 @@ float log_rmse(torch::nn::Sequential net, torch::nn::MSELoss loss, torch::Tensor
 	return rmse.item<float>();
 }
 
-int main() {
+
+int main( void ) {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
@@ -271,8 +272,5 @@ int main() {
 	std::cout << "Done!\n";
 	return 0;
 }
-
-
-
 
 

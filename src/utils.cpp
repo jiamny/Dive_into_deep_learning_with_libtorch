@@ -118,4 +118,36 @@ std::pair<torch::Tensor, torch::Tensor> init_params(int64_t num_inputs) {
 	return {w, b};
 }
 
+std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFile) {
+	Json::Reader reader;  //for reading the data
+	Json::Value newValue; //for modifying and storing new values
+
+	std::unordered_map<std::string, std::string> labelMap;
+
+	//opening file using fstream
+	std::ifstream file(jsonFile);
+
+	// check if there is any error is getting data from the json file
+	if ( ! reader.parse(file, newValue) ) {
+		     std::cout << reader.getFormattedErrorMessages();
+		     exit(1);
+	} else {
+
+		for( int i = 0; i < newValue.size(); i++ ) {
+			//std::cout << newValue.getMemberNames()[i].c_str() << " " << newValue[newValue.getMemberNames()[i].c_str()].asCString() << std::endl;
+			labelMap.insert({ std::string(newValue.getMemberNames()[i].c_str()),  newValue[newValue.getMemberNames()[i].c_str()].asCString()});
+		}
+//		std::string t = "20";
+//		std::cout << labelMap[t] << std::endl;
+	}
+	return labelMap;
+}
+
+std::vector<unsigned char> tensorToMatrix(torch::Tensor data) {
+	auto mimg = data.permute({1,2,0}).mul(255).to(torch::kByte);
+	std::vector<unsigned char> z(mimg.size(0) * mimg.size(1) * mimg.size(2));
+	std::memcpy(&(z[0]), mimg.data_ptr<unsigned char>(),sizeof(unsigned char)*mimg.numel());
+	return z;
+}
+
 

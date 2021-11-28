@@ -5,9 +5,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <iomanip>
-#include "../utils.h"
 #include <cmath>
 
+#include "../utils.h"
 #include "../matplotlibcpp.h"
 
 namespace plt = matplotlibcpp;

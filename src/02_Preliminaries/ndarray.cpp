@@ -87,8 +87,8 @@ int main() {
 	/*
 	 * The common standard arithmetic operators (+, -, *, /, and ``) have all been lifted to elementwise operations.**
 	 */
-	x = torch::tensor({1.0, 2, 4, 8}, options);
-	auto y = torch::tensor({2, 2, 2, 2}, options);
+	x = torch::tensor({1.0, 2.0, 4.0, 8.0}, options);
+	auto y = torch::tensor({2.0, 2.0, 2.0, 2.0}, options);
 	std::cout << "x + y:\n" << (x + y) << std::endl;
 	std::cout << "x - y:\n" << (x - y) << std::endl;
 	std::cout << "x * y:\n" << (x * y) << std::endl;
@@ -161,6 +161,8 @@ int main() {
 	std::cout << "X = \n" << X << std::endl;
 	std::cout << "X[-1] = \n" << X[-1] << std::endl;
 	std::cout << "X[1:3] = \n" << X.index({Slice(1,3), Slice()}) << std::endl;
+	std::cout << "X[:,2] = \n" << X.index({Slice(), 2}) << std::endl;
+	std::cout << "X[:,2].reshape({-1}) = \n" << X.index({Slice(), 2}).reshape({-1}) << "\n shape:" << X.index({Slice(), 2}).reshape({-1}).sizes() << std::endl;
 
 	/*
 	 * Beyond reading, (we can also write elements of a matrix by specifying indices.)

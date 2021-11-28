@@ -18,6 +18,11 @@
 #include <chrono>
 #include <atomic>
 #include <algorithm>
+#include <iostream>
+
+#include <jsoncpp/json/json.h>
+#include <jsoncpp/json/value.h>
+using namespace Json;
 
 #include "fashion.h"
 
@@ -143,5 +148,10 @@ torch::Tensor d2l_relu(torch::Tensor x);
 torch::Tensor l2_penalty(torch::Tensor x);
 
 std::pair<torch::Tensor, torch::Tensor> init_params(int64_t num_inputs);
+
+std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFile);
+
+std::vector<unsigned char> tensorToMatrix(torch::Tensor data);
+
 
 #endif /* UTILS_H_ */

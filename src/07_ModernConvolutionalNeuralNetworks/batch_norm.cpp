@@ -1,3 +1,4 @@
+
 #include <torch/torch.h>
 #include <torch/script.h>
 #include <torch/autograd.h>
@@ -13,6 +14,7 @@ namespace plt = matplotlibcpp;
 
 using Options = torch::nn::Conv2dOptions;
 
+
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
@@ -22,18 +24,23 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
+	// Concise Implementation
 	auto net = torch::nn::Sequential(torch::nn::Conv2d(Options(1, 6, 5).padding(2)),
-									 torch::nn::Sigmoid(),
-									 torch::nn::AvgPool2d(torch::nn::AvgPool2dOptions(2).stride(2)),
-									 torch::nn::Conv2d(Options(6, 16, 5)),
-									 torch::nn::Sigmoid(),
-									 torch::nn::AvgPool2d(torch::nn::AvgPool2dOptions(2).stride(2)),
-									 torch::nn::Flatten(),
-									 torch::nn::Linear(16 * 5 * 5, 120),
-									 torch::nn::Sigmoid(),
-									 torch::nn::Linear(120, 84),
-									 torch::nn::Sigmoid(),
-									 torch::nn::Linear(84, 10));
+									torch::nn::BatchNorm2d(torch::nn::BatchNorm2dOptions(6)),
+									torch::nn::Sigmoid(),
+									torch::nn::AvgPool2d(torch::nn::AvgPool2dOptions(2).stride(2)),
+									torch::nn::Conv2d(Options(6, 16, 5)),
+									torch::nn::BatchNorm2d(torch::nn::BatchNorm2dOptions(16)),
+									torch::nn::Sigmoid(),
+									torch::nn::AvgPool2d(torch::nn::AvgPool2dOptions(2).stride(2)),
+									torch::nn::Flatten(),
+									torch::nn::Linear(16 * 5 * 5, 120),
+									//torch::nn::BatchNorm2d(torch::nn::BatchNorm2dOptions(120)),
+									torch::nn::Sigmoid(),
+									torch::nn::Linear(120, 84),
+									//torch::nn::BatchNorm2d(torch::nn::BatchNorm2dOptions(84)),
+									torch::nn::Sigmoid(),
+									torch::nn::Linear(84, 10));
 
 	// make sure that its operations line up with what we expect from
 	auto X = torch::randn({256, 1, 28, 28}).to(torch::kFloat32);
@@ -41,11 +48,19 @@ int main() {
 
 	std::cout << net << std::endl;
 
-	for(auto& layer : *net.ptr()) {
-		//auto layer = net.get()->modules().;
-		X = layer.forward(X);
-		std::cout << "name: " << layer.ptr()->name() << "output shape: \t" <<  X.sizes() << std::endl;
+	for (auto& module : net->modules(false) ) { //modules(include_self=false))
+		if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
+			X = M->forward(X);
+			std::cout << "name: " << M->name() << "output shape: \t" <<  X.sizes() << std::endl;
+		}
 	}
+
+
+//	for(auto& layer : *net.ptr()) {
+		//auto layer = net.get()->modules().;
+//		X = layer.forward(X);
+//		std::cout << "name: " << layer.ptr()->name() << "output shape: \t" <<  X.sizes() << std::endl;
+//	}
 
 	/*
 	* Now that we have implemented the model, let us [run an experiment to see how LeNet fares on Fashion-MNIST].
@@ -72,20 +87,10 @@ int main() {
 	for (auto& module : net->modules(false) ) { //modules(include_self=false))
 
 	    if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
-	    	std::cout << module->name() << std::endl;
+	    	//std::cout << module->name() << std::endl;
 	        torch::nn::init::xavier_uniform_( M->weight, 1.0);
 	      //torch::nn::init::constant_(M->bias, 0);
 	    }
-	    /*
-	     else if (
-	        auto M = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
-	      torch::nn::init::constant_(M->weight, 1);
-	      torch::nn::init::constant_(M->bias, 0);
-	    } else if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
-	      torch::nn::init::normal_(M->weight, 0, 0.01);
-	      torch::nn::init::constant_(M->bias, 0);
-	    }
-	    */
 	}
 
 	std::cout << "training on: " <<  device << std::endl;
@@ -97,23 +102,8 @@ int main() {
 	std::vector<float> train_acc;
 	std::vector<float> test_acc;
 	std::vector<float> xx;
-/*
-	auto batch = *train_loader->begin();
-	auto data  = batch.data.to(device);
-	auto y  = batch.target.to(device);
-	std::cout << "y: " << y << std::endl;
 
-	auto y_hat = net->forward(data);
-	std::cout << "y_hat: " << y_hat << std::endl;
-	auto l = loss(y_hat, y);
-	std::cout << l.item<float>() * data.size(0) << std::endl;
-	std::cout << accuracy( y_hat, y) << std::endl;
-	optimizer.zero_grad();
-	l.backward();
-	optimizer.step();
-*/
-
-	//    timer, num_batches = d2l.Timer(), len(train_iter)
+	//timer, num_batches = d2l.Timer(), len(train_iter)
 	for( int64_t epoch = 0; epoch < num_epochs; epoch++ ) {
 
 		double epoch_loss = 0.0;

@@ -8,6 +8,7 @@ set(requiredlibs "python3.6m")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
+list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
 
 #----------------------------------------------------------------------------------
 
@@ -147,14 +148,12 @@ add_executable(04_Kaggle_house_prices)
 target_sources(04_Kaggle_house_prices PRIVATE Kaggle_house_prices.cpp 
 									../utils.h 
 									../utils.cpp
-									../fashion.h
-									../fashion.cpp
 									)
 													
 target_include_directories(04_Kaggle_house_prices PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 target_link_libraries(04_Kaggle_house_prices ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
 
-set_target_properties(04_weight_decay PROPERTIES
+set_target_properties(04_Kaggle_house_prices PROPERTIES
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED YES
 )

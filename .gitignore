@@ -33,6 +33,12 @@ libtorch/
 
 # Datasets
 data/fashion/
+data/fashion_png/
+data/Caltech_101/
+data/hymenoptera_data/
+data/cifar/
+data/CIFAR10/
+data/cat_fish/
 
 # Model files
 models/
