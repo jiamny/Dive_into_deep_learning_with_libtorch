@@ -9,7 +9,15 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
+	//=================================================
+	// Reading the Dataset
+	//=================================================
+
 	std::vector<std::string> lines = read_time_machine("./data/timemachine.txt");
+
+	//=================================================
+	// Tokenization
+	//=================================================
 
 	// split words
 	std::vector<std::string> tokens = tokenize(lines, "char", false);
@@ -19,6 +27,9 @@ int main() {
 	}
 	printf("]\n");
 
+	//=================================================
+	// Vocabulary
+	//=================================================
 
 	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
 	auto it = counter.begin();
@@ -32,7 +43,7 @@ int main() {
 
 	auto vcab = Vocab(counter, 0.0);
 
-	auto token_to_idx = vcab.token_to_idx;
+	auto token_to_idx = vcab.order_token_to_idx;
 	printf("[");
 	for(const auto& it : token_to_idx ) {
 		// .first to access key, .second to access value
@@ -40,12 +51,12 @@ int main() {
 	}
 	printf("]\n");
 
-	std::cout << "vcab[3] = " << vcab[3] << std::endl;
+	std::cout << "vcab['t'] = " << vcab["t"] << std::endl;
 
 
 	printf("[");
 	for(int64_t i = 0; i < vcab.length(); i++ ) {
-		std::cout << i << ":" << vcab[i] << " ";
+		std::cout << i << ":" << vcab.to_tokens({i}) << " ";
 	}
 	printf("]\n");
 

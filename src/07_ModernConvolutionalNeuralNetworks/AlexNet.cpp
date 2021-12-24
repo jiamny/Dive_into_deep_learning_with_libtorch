@@ -85,7 +85,7 @@ class CustomDataset : public torch::data::datasets::Dataset<CustomDataset> {
 
         int label = data[index].second;
 
-        torch::Tensor img_tensor = torch::from_blob(Y.data, {  Y.channels(), Y.rows, Y.cols }, torch::kByte); // Channels x Height x Width
+        torch::Tensor img_tensor = torch::from_blob(Y.data, { Y.channels(), Y.rows, Y.cols }, torch::kByte); // Channels x Height x Width
         torch::Tensor label_tensor = torch::full({1}, label);
 
     	return {img_tensor.clone().to(torch::kFloat32).div_(255.0), label_tensor.clone().to(torch::kInt64)};

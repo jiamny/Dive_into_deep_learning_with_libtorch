@@ -59,7 +59,8 @@ std::vector<std::string> tokenize(const std::vector<std::string> lines, const st
 class Vocab {
 
 public:
-	std::set<std::pair<std::string, int64_t>, comp> token_to_idx;
+	std::map<int64_t, std::string> idx_to_token;
+	std::set<std::pair<std::string, int64_t>, comp> order_token_to_idx;
 
     //Vocabulary for text.
 	Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq);
@@ -75,10 +76,10 @@ public:
     std::vector<std::pair<std::string, int64_t>> token_freqs(void);
 
     // Overload the + operator
-    std::string operator [] (const int64_t idx);
+    int64_t operator [] (const std::string s);
 
 private:
-    std::map<int64_t, std::string> idx_to_token;
+    std::map<std::string, int64_t> token_to_idx;
     std::vector<std::pair<std::string, int64_t>> _token_freqs;
 };
 
@@ -87,7 +88,7 @@ private:
 // Random Sampling
 template<typename T>
 std::vector<std::pair<torch::Tensor, torch::Tensor>>  seq_data_iter_random(std::vector<T> my_seq, int batch_size, int num_steps) {
-    //Generate a minibatch of subsequences using random sampling
+    // Generate a minibatch of subsequences using random sampling
     // Start with a random offset (inclusive of `num_steps - 1`) to partition a sequence
 	std::random_device rd;
 	std::default_random_engine eng(rd());
@@ -95,8 +96,9 @@ std::vector<std::pair<torch::Tensor, torch::Tensor>>  seq_data_iter_random(std::
 	//std::cout << distr(eng) << std::endl;
 
 	std::vector<int> sub_seq;
-	for( int i = distr(eng); i < my_seq.size(); i++ )
+	for( int i = distr(eng); i < my_seq.size(); i++ ) {
 		sub_seq.push_back(my_seq[i]);
+	}
 
 	//Subtract 1 since we need to account for labels
     int num_subseqs = static_cast<int>((my_seq.size() - 1) * 1.0 / num_steps);
@@ -149,7 +151,7 @@ std::vector<std::pair<torch::Tensor, torch::Tensor>>  seq_data_iter_random(std::
     		for(int j = initial_indices[i + r] + 1, c=0; j < (initial_indices[i + r] + 1 + num_steps); j++, c++ )
     			Y.index({r, c}) = my_seq[j];
 
-    	outpairs.push_back({X.clone(), Y.clone()});
+    	outpairs.push_back({X.clone().to(torch::kInt64), Y.clone().to(torch::kInt64)});
     }
 
 	return outpairs;
@@ -190,7 +192,7 @@ std::vector<std::pair<torch::Tensor, torch::Tensor>>  seq_data_iter_sequential(s
     	int idx = i * num_steps;
         auto X = Xs.index({Slice(None),  Slice(i, i + num_steps)});
         auto Y = Ys.index({Slice(None),  Slice(i, i + num_steps)});
-        outpairs.push_back({X.clone(), Y.clone()});
+        outpairs.push_back({X.clone().to(torch::kInt64), Y.clone().to(torch::kInt64)});
     }
 
 	return outpairs;

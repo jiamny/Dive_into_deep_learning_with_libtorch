@@ -6,15 +6,19 @@ Dive into deep learning with LibTorch C++ API
 
 ## Dependency
 
-- cmake 3.14+
+- cmake 3.20+
 
-- PyTorch 1.9+
+- PyTorch 1.10.1
 
 - python3.6
 
-- opencv 4.3.0
+- opencv 4.5.3
 
 - matplotlib-cpp
+
+- jsoncpp
+
+- png++
 
 - ubuntu 18.04
 

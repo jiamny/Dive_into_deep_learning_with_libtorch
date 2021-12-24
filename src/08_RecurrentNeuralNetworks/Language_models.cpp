@@ -12,6 +12,9 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
+	//=============================================
+	// Natural Language Statistics
+	//=============================================
 	std::vector<std::string> lines = read_time_machine("./data/timemachine.txt");
 
 	// split words
@@ -105,6 +108,10 @@ int main() {
 	plt::xlabel("token: x");
 	plt::ylabel("frequency: n(x)");
 	plt::show();
+
+	//=============================================
+	// Reading Long Sequence Data
+	//=============================================
 
 	// manually generate a sequence from 0 to 34
 	// With a minibatch size of 2, we only get 3 minibatches.

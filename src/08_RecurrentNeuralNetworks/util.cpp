@@ -118,23 +118,24 @@ Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq
     token_to_idx.clear();
 
     // create an empty map of pairs
-    std::map<std::string, int64_t> veggy_map;
+    if( ! token_to_idx.empty() ) token_to_idx.clear();
+    if( ! token_to_idx.empty() ) token_to_idx.clear();
 
-    veggy_map.insert(std::make_pair("<unk>", 0));
+    token_to_idx.insert(std::make_pair("<unk>", 0));
     idx_to_token.insert(std::make_pair(0, "<unk>"));
 
     int64_t idx = 1;
     for(const auto it : _token_freqs ) {
     	// not find
-    	if( veggy_map.find(it.first) == veggy_map.end() ) {
-    		veggy_map.insert(std::make_pair(it.first, idx));
+    	if( token_to_idx.find(it.first) == token_to_idx.end() ) {
+    		token_to_idx.insert(std::make_pair(it.first, idx));
     		idx_to_token.insert(std::make_pair(idx, it.first));
     		idx++;
     	}
     }
 
     // sorted by value
-    token_to_idx = std::set<std::pair<std::string, int64_t>, comp>(veggy_map.begin(), veggy_map.end());
+    order_token_to_idx = std::set<std::pair<std::string, int64_t>, comp>(token_to_idx.begin(), token_to_idx.end());
 }
 
 
@@ -163,14 +164,14 @@ std::vector<std::pair<std::string, int64_t>> Vocab::token_freqs(void) {
 }
 
 // Overload the + operator
-std::string Vocab::operator [] (const int64_t idx) {
+int64_t Vocab::operator [] (const std::string s) {
 
-	if( idx < 0 || idx > idx_to_token.size() )
-		return "<unk>";
-
-    auto it = idx_to_token.begin();
-    std::advance(it, idx);
-    return it->second;
+    if( token_to_idx.find(s) == token_to_idx.end() ) {
+    	return 0;
+    } else {
+    	auto it = token_to_idx.find(s);
+    	return it->second;
+    }
 }
 
 

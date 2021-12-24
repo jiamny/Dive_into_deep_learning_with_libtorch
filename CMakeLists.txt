@@ -1,21 +1,22 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 project(D2L_pytorch_cpp VERSION 1.0.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(PYTORCH_VERSION "1.9.1")
+set(PYTORCH_VERSION "1.10.1")
 
 set(CMAKE_CXX_STANDARD 14)
+
 #--------------------------------------------------------------------------------------------
 # following line solve the issue of Can't link a project using cmake with OpenCV and LibTorch
 # -------------------------------------------------------------------------------------------
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake")
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake")               
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake/Torch")
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake/Torch")                  
 
 # add torch package
-find_package(Torch ${PYTORCH_VERSION} EXACT QUIET PATHS "${CMAKE_SOURCE_DIR}/libtorch")
+find_package(Torch ${PYTORCH_VERSION} EXACT QUIET PATHS "${CMAKE_SOURCE_DIR}/libtorch") 
 
 message(STATUS "Torch library status:")
 message(STATUS "    version: ${Torch_VERSION}")
@@ -23,7 +24,7 @@ message(STATUS "    libraries: ${TORCH_LIBRARIES}")
 message(STATUS "    include path: ${TORCH_INCLUDE_DIRS}") 
 
 # add opencv package to the project
-find_package( OpenCV 4.3.0 REQUIRED PATHS "/usr/local/")
+find_package( OpenCV 4.5.3 REQUIRED PATHS "/usr/local/")
 #find_package( OpenCV REQUIRED )
 INCLUDE_DIRECTORIES( ${OpenCV_INCLUDE_DIRS} ) 
 SET(OpenCV_LIBRARIES ${OpenCV_LIBS})

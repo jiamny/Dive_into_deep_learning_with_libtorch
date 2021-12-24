@@ -36,6 +36,10 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
+	//===============================================
+	// Training
+	//===============================================
+
 	/*
 	 * To keep things simple we (generate our sequence data by using a sine function with some additive noise for time steps 1,2,…,1000.)
 	 */
@@ -106,6 +110,10 @@ int main() {
 		}
 		printf("epoch %2i, loss: %.2f\n", (epoch + 1), ls/epochs);
 	}
+
+	//===============================================
+	// Prediction
+	//===============================================
 
 	// predict what happens just in the next time step
 	auto onestep_preds = net->forward(features).reshape(-1);

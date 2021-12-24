@@ -97,6 +97,23 @@ set_target_properties(08_rnn_concise PROPERTIES
 
 #----------------------------------------------------------------------------------
 
+add_executable(08_rnn_scratch)
+
+target_sources(08_rnn_scratch PRIVATE rnn_scratch.cpp 
+									util.h 
+									util.cpp
+									)
+													
+target_include_directories(08_rnn_scratch PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(08_rnn_scratch ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(08_rnn_scratch PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED YES
+)
+
+#----------------------------------------------------------------------------------
+
 add_executable(08_rnn_example)
 
 target_sources(08_rnn_example PRIVATE rnn_example.cpp 
@@ -111,3 +128,18 @@ set_target_properties(08_rnn_example PROPERTIES
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED YES
 )
+
+#----------------------------------------------------------------------------------
+
+add_executable(08_RNN)
+
+target_sources(08_RNN PRIVATE RNN.cpp)
+													
+target_include_directories(08_RNN PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(08_RNN ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(08_RNN PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED YES
+)
+

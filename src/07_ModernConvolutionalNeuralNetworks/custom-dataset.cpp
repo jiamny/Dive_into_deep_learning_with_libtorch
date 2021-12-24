@@ -121,141 +121,137 @@ std::pair<Data, Data> readInfo() {
 }
 
 int main() {
-  torch::manual_seed(1);
+	torch::manual_seed(1);
 
-  if (torch::cuda::is_available())
-	  parameters.device = torch::kCUDA;
-  std::cout << "Running on: "
-            << (parameters.device == torch::kCUDA ? "CUDA" : "CPU") << std::endl;
+	if (torch::cuda::is_available())
+		parameters.device = torch::kCUDA;
+	std::cout << "Running on: " << (parameters.device == torch::kCUDA ? "CUDA" : "CPU") << std::endl;
 
-  auto data = readInfo();
+	auto data = readInfo();
 
-  auto train_set = CustomDataset(data.first).map(torch::data::transforms::Stack<>());
-  auto train_size = train_set.size().value();
+	auto train_set = CustomDataset(data.first).map(torch::data::transforms::Stack<>());
+	auto train_size = train_set.size().value();
 
-  std::cout << "train_size = " << train_size << std::endl;
-  auto train_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
-          	  	  	  	  	  	  	  	  	  	  std::move(train_set),
-												  parameters.train_batch_size);
-  auto test_set =
-      CustomDataset(data.second).map(torch::data::transforms::Stack<>());
-  std::cout << test_set.size().value() << std::endl;
+	std::cout << "train_size = " << train_size << std::endl;
+	auto train_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
+		          	  	  	  	  	  	  	  	  	  	  std::move(train_set),
+														  parameters.train_batch_size);
 
-  auto test_size = test_set.size().value();
-  std::cout << "test_size = " << test_size << std::endl;
+	auto test_set = CustomDataset(data.second).map(torch::data::transforms::Stack<>());
+	std::cout << test_set.size().value() << std::endl;
 
-  auto test_loader =
-      torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
-          std::move(test_set), parameters.test_batch_size);
+	auto test_size = test_set.size().value();
+	std::cout << "test_size = " << test_size << std::endl;
+
+	auto test_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
+	std::move(test_set), parameters.test_batch_size);
 
 
 	// Deep Convolutional Neural Networks (AlexNet)
 	auto network = torch::nn::Sequential(
-		//# Here, we use a larger 11 x 11 window to capture objects. At the same
-  	//# time, we use a stride of 4 to greatly reduce the height and width of the
-  	//# output. Here, the number of output channels is much larger than that in
-  	//# LeNet
-	    torch::nn::Conv2d(Options(3, 96, 11).stride(4).padding(1)), torch::nn::ReLU(),
-	    torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
-		//# Make the convolution window smaller, set padding to 2 for consistent
-  	//# height and width across the input and output, and increase the number of
-  	//# output channels
-		torch::nn::Conv2d(Options(96, 256, 5).padding(2)), torch::nn::ReLU(),
-		torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
-	    //# Use three successive convolutional layers and a smaller convolution
-	    //# window. Except for the final convolutional layer, the number of output
-	    //# channels is further increased. Pooling layers are not used to reduce the
-	    //# height and width of input after the first two convolutional layers
-		torch::nn::Conv2d(Options(256, 384, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::Conv2d(Options(384, 384, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::Conv2d(Options(384, 256, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)), torch::nn::Flatten(),
-	    //# Here, the number of outputs of the fully-connected layer is several
-	    //# times larger than that in LeNet. Use the dropout layer to mitigate
-	    //# overfitting
-	    torch::nn::Linear(6400, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
-	    torch::nn::Linear(4096, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
-	    //# Output layer. Since we are using Fashion-MNIST, the number of classes is
-	    //# 10, instead of 1000 as in the paper
-	    torch::nn::Linear(4096, 102));
+	//# Here, we use a larger 11 x 11 window to capture objects. At the same
+	//# time, we use a stride of 4 to greatly reduce the height and width of the
+	//# output. Here, the number of output channels is much larger than that in
+	//# LeNet
+	torch::nn::Conv2d(Options(3, 96, 11).stride(4).padding(1)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
+	//# Make the convolution window smaller, set padding to 2 for consistent
+	//# height and width across the input and output, and increase the number of
+	//# output channels
+	torch::nn::Conv2d(Options(96, 256, 5).padding(2)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
+	//# Use three successive convolutional layers and a smaller convolution
+	//# window. Except for the final convolutional layer, the number of output
+	//# channels is further increased. Pooling layers are not used to reduce the
+	//# height and width of input after the first two convolutional layers
+	torch::nn::Conv2d(Options(256, 384, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::Conv2d(Options(384, 384, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::Conv2d(Options(384, 256, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)), torch::nn::Flatten(),
+	//# Here, the number of outputs of the fully-connected layer is several
+	//# times larger than that in LeNet. Use the dropout layer to mitigate
+	//# overfitting
+	torch::nn::Linear(6400, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
+	torch::nn::Linear(4096, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
+	//# Output layer. Since we are using Fashion-MNIST, the number of classes is
+	//# 10, instead of 1000 as in the paper
+	torch::nn::Linear(4096, 102));
 
-  network->to(parameters.device);
+	network->to(parameters.device);
 
-  auto optimizer = torch::optim::Adam(network->parameters(), 0.001);
-  //torch::optim::SGD optimizer(
-  //    network->parameters(), torch::optim::SGDOptions(0.001).momentum(0.5));
+	auto optimizer = torch::optim::Adam(network->parameters(), 0.001);
+	//torch::optim::SGD optimizer(
+	//    network->parameters(), torch::optim::SGDOptions(0.001).momentum(0.5));
 
-  auto loss_fn = torch::nn::CrossEntropyLoss();
+	auto loss_fn = torch::nn::CrossEntropyLoss();
 
-  for (size_t i = 0; i < parameters.iterations; ++i) {
-      //train(network, *train_loader, optimizer, loss_fn, i + 1, train_size);
-	    size_t index = 0;
-	    network->train();
-	    float Loss = 0, Acc = 0;
-	    std::cout << "Start train ...\n";
+	for (size_t i = 0; i < parameters.iterations; ++i) {
+		//train(network, *train_loader, optimizer, loss_fn, i + 1, train_size);
+		size_t index = 0;
+		network->train();
+		float Loss = 0, Acc = 0;
+		std::cout << "Start train ...\n";
 
-	    for (auto& batch : *train_loader) {
-	    	auto data = batch.data.to(parameters.device);
-	    	auto targets = batch.target.to(parameters.device).view({-1});
+		for(auto& batch : *train_loader) {
+			auto data = batch.data.to(parameters.device);
+			auto targets = batch.target.to(parameters.device).view({-1});
 
-	    	if( index == 0 ) std::cout << data.sizes() << std::endl;
+			if( index == 0 ) std::cout << data.sizes() << std::endl;
 
-	    	auto output = network->forward(data);
-	    	auto loss = loss_fn(output, targets);
-	    	//assert(!std::isnan(loss.template item<float>()));
-	    	auto acc = output.argmax(1).eq(targets).sum();
+			auto output = network->forward(data);
+			auto loss = loss_fn(output, targets);
+			//assert(!std::isnan(loss.template item<float>()));
+			auto acc = output.argmax(1).eq(targets).sum();
 
-	    	optimizer.zero_grad();
-	    	loss.backward();
-	    	optimizer.step();
+			optimizer.zero_grad();
+			loss.backward();
+			optimizer.step();
 
-	    	Loss += loss.item<float>();
-	    	Acc += acc.template item<float>();
+			Loss += loss.item<float>();
+			Acc += acc.template item<float>();
 
-	    	if(index++ % parameters.log_interval == 0) {
-	    		auto end = std::min(train_size, (index + 1) * parameters.train_batch_size);
+			if(index++ % parameters.log_interval == 0) {
+			    auto end = std::min(train_size, (index + 1) * parameters.train_batch_size);
 
-	    		std::cout << "Train Epoch: " << i << " " << end << "/" << train_size
-	                << "\tLoss: " << Loss / end << "\tAcc: " << Acc / end
-	                << std::endl;
-	    	}
-	///    	std::cout << index << std::endl;
-	  }
+			    std::cout << "Train Epoch: " << i << " " << end << "/" << train_size
+			              << "\tLoss: " << Loss / end << "\tAcc: " << Acc / end
+			              << std::endl;
+			}
+			//    	std::cout << index << std::endl;
+		}
 
-      std::cout << std::endl;
-      //test(network, *test_loader, loss_fn, test_size);
-      index = 0;
-      network->eval();
-      torch::NoGradGuard no_grad;
-      Loss = 0;
-      Acc = 0;
+		std::cout << std::endl;
+		//test(network, *test_loader, loss_fn, test_size);
+		index = 0;
+		network->eval();
+		torch::NoGradGuard no_grad;
+		Loss = 0;
+		Acc = 0;
 
-      for (const auto& batch : *test_loader) {
-        auto data = batch.data.to(parameters.device);
-        auto targets = batch.target.to(parameters.device).view({-1});
+		for(const auto& batch : *test_loader) {
+		    auto data = batch.data.to(parameters.device);
+		    auto targets = batch.target.to(parameters.device).view({-1});
 
-        auto output = network->forward(data);
-        auto loss = loss_fn(output, targets);
-        //assert(!std::isnan(loss.template item<float>()));
-        auto acc = output.argmax(1).eq(targets).sum();
+		    auto output = network->forward(data);
+		    auto loss = loss_fn(output, targets);
+		    //assert(!std::isnan(loss.template item<float>()));
+		    auto acc = output.argmax(1).eq(targets).sum();
 
-        Loss += loss.item<float>();
-        Acc += acc.template item<float>();
-      }
+		    Loss += loss.item<float>();
+		    Acc += acc.template item<float>();
+		}
 
-      if (index++ % parameters.log_interval == 0)
-        std::cout << "Test Loss: " << Loss / test_size
-                  << "\tAcc: " << Acc / test_size << std::endl;
-      std::cout << std::endl;
-  }
-
+		if(index++ % parameters.log_interval == 0)
+		    std::cout << "Test Loss: " << Loss / test_size
+		                  << "\tAcc: " << Acc / test_size << std::endl;
+		std::cout << std::endl;
+	}
 
 //  auto batch = *train_loader->begin();
 //  printf("--------------\n");
 //  std::cout << batch.data << std::endl;
   //std::cout << batch.target << std::endl;
 
-
-  std::cout << "Done!\n";
-  return 0;
+    std::cout << "Done!\n";
+    return 0;
 }

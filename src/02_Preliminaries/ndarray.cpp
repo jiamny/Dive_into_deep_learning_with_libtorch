@@ -99,6 +99,9 @@ int main() {
 	 * Many (more operations can be applied elementwise), including unary operators like exponentiation.
 	 */
 	std::cout << "torch.exp(x):\n" << torch::exp(x) << std::endl;
+	auto h = x.clone();
+	h *= 0.01;
+	std::cout << "---- h:\n" << h.data() << std::endl;
 
 	/*
 	 * We can also [concatenate multiple tensors together,] stacking them end-to-end to form a larger tensor. We just need to provide a list of tensors
@@ -219,6 +222,11 @@ int main() {
 	std::cout << "float(a) = " << a.item<float>() << std::endl;
 	std::cout << "int(a) = "   << a.item<int>() << std::endl;
 
+	// Convert Torch Tensor to flattened C++ array
+	auto tensor = torch::rand({1, 2, 3 ,5});
+	tensor = tensor.view({tensor.size(0), -1}); //Here the shape of the data is batch, num_tensors
+	tensor = tensor.contiguous();
+	std::vector<float> vector(tensor.data_ptr<float>(), tensor.data_ptr<float>()+tensor.numel());
 
 	std::cout << "Done!\n";
 	return 0;
