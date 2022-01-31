@@ -63,6 +63,7 @@ add_subdirectory("src/05_DeepLearningComputation")
 add_subdirectory("src/06_ConvolutionalNeuralNetworks")
 add_subdirectory("src/07_ModernConvolutionalNeuralNetworks")
 add_subdirectory("src/08_RecurrentNeuralNetworks")
+add_subdirectory("src/09_Recurrent_Modern")
 add_subdirectory("src/utils")
 
 if(MSVC)

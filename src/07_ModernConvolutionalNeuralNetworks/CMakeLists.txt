@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 find_package(Python3 COMPONENTS Development NumPy)
 
 add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
 
-set(requiredlibs "python3.6m")
+set(requiredlibs "python3.8")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
@@ -24,6 +24,12 @@ add_executable(07_AlexNet)
 target_sources(07_AlexNet PRIVATE AlexNet.cpp 
 									../utils.h 
 									../utils.cpp
+									../utils/dataloader.hpp
+									../utils/dataloader.cpp
+									../utils/datasets.hpp
+									../utils/datasets.cpp
+									../utils/transforms.hpp
+									../utils/transforms.cpp
 									)
 													
 target_include_directories(07_AlexNet PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})

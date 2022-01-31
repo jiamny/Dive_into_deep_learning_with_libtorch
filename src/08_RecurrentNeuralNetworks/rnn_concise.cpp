@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <iomanip>
 
-#include "util.h"
+#include "../utils/ch_8_9_util.h"
 #include "../utils.h"
 
 #include "../matplotlibcpp.h"
@@ -57,6 +57,8 @@ struct RNNModel : public torch::nn::Module {
 		                                batch_size, num_hiddens}, device);
 	}
 };
+
+
 
 std::string predict_ch8(std::vector<std::string> prefix, int64_t num_preds, RNNModel net, Vocab vocab, torch::Device device) {
     //"""Generate new characters following the `prefix`."""
@@ -204,6 +206,7 @@ std::pair<std::vector<double>, std::vector<double>> train_ch8( RNNModel& net, st
     return {epochs, ppl};
 }
 
+
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
@@ -225,7 +228,9 @@ int main() {
 	std::vector<std::string> tokens(&ttokens[0], &ttokens[max_tokens]); // first 10000 tokens
 
 	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
-	auto vocab = Vocab(counter, 0.0);
+
+	std::vector<std::string> rv(0);
+	auto vocab = Vocab(counter, 0.0, rv);
 
 	std::cout << vocab["t"] << "\n";
 
@@ -276,7 +281,7 @@ int main() {
 	auto net = RNNModel( rnn_layer, vocab.length() );
 	net.to(device);
 
-	int64_t num_epochs = 100;
+	int64_t num_epochs = 300;
 	float lr = 1.0;
 	bool use_random_iter = false;
 

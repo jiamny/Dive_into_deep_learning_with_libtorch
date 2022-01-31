@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <iomanip>
 
-#include "util.h"
+#include "../utils/ch_8_9_util.h"
 #include "../utils.h"
 
 #include "../matplotlibcpp.h"
@@ -142,7 +142,8 @@ std::string predict_ch8(std::vector<std::string> prefix, int64_t num_preds, T ne
     return pred; // ''.join([vocab.idx_to_token[i] for i in outputs]);
 }
 
-std::pair<double, double> train_epoch_ch8(RNNModelScratch& net, std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter,
+template<typename T>
+std::pair<double, double> train_epoch_ch8(T& net, std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter,
 		torch::nn::CrossEntropyLoss loss, torch::optim::Optimizer& updater, torch::Device device, float lr, bool use_random_iter) {
 	//***********************************************
 	//two ways of setting the precision
@@ -195,8 +196,8 @@ std::pair<double, double> train_epoch_ch8(RNNModelScratch& net, std::vector<std:
 	return { std::exp(ppx*1.0 / tot_tk), (tot_tk * 1.0 / t) };
 }
 
-
-std::pair<std::vector<double>, std::vector<double>> train_ch8(RNNModelScratch& net, std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter,
+template<typename T>
+std::pair<std::vector<double>, std::vector<double>> train_ch8(T& net, std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter,
 		Vocab vocab, torch::Device device, float lr, int64_t num_epochs, bool use_random_iter) {
 
 	std::string s = "time traveller", s2 = "traveller";
@@ -265,7 +266,9 @@ int main() {
 	std::vector<std::string> tokens(&ttokens[0], &ttokens[max_tokens]); // first 10000 tokens
 
 	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
-	auto vocab = Vocab(counter, 0.0);
+
+	std::vector<std::string> rv(0);
+	auto vocab = Vocab(counter, 0.0, rv);
 
 	std::cout << vocab["t"] << "\n";
 
@@ -327,7 +330,7 @@ int main() {
 	// Training and Predicting
 	std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter = seq_data_iter_random(tokens_ids, batch_size, num_steps);
 
-	int64_t num_epochs = 100;
+	int64_t num_epochs = 300;
 	float lr = 1.0;
 	bool use_random_iter = false;
 	auto nett = RNNModelScratch(vocab.length(), num_hiddens, device);

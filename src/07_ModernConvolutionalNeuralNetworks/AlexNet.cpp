@@ -11,127 +11,49 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <vector>
 
-#include "../utils.h"
+#include "../utils/transforms.hpp"              // transforms_Compose
+#include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
+#include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
+using torch::indexing::Slice;
+using torch::indexing::None;
+
 using Options = torch::nn::Conv2dOptions;
 
-using Data = std::vector<std::pair<std::string, long>>;
-using Example = torch::data::Example<>;
+std::vector<std::string> Set_Class_Names(const std::string path, const size_t class_num) {
+    // (1) Memory Allocation
+    std::vector<std::string> class_names = std::vector<std::string>(class_num);
 
-class CustomDataset : public torch::data::datasets::Dataset<CustomDataset> {
-
- public:
-  CustomDataset(const Data& dt, std::string fileDir, int imgSize) {
-	  data=dt;
-	  datasetPath=fileDir;
-	  image_size=imgSize;
-  }
-
-  Example get(size_t index) {
-    std::string path = datasetPath + data[index].first;
-//    auto tlabel = torch::from_blob(&data[index].second, {1}, torch::kLong);
-//    std::cout << "path = " << path << " label = " << tlabel << "\n";
-//    auto mat = cv::imread(path.c_str(), 1);
-    cv::Mat mat = cv::imread(path.c_str(), cv::IMREAD_COLOR);
-
-    if(! mat.empty() ) {
-//    	cv::namedWindow("Original Image");
-//    	cv::imshow("Original Image",mat);
-//    	cv::waitKey(0);
-//    	std::cout << "ok!\n";
-
-    	// ----------------------------------------------------------
-    	// opencv BGR format change to RGB
-    	// ----------------------------------------------------------
-    	cv::cvtColor(mat, mat, cv::COLOR_BGR2RGB);
-
-        int h = image_size, w = image_size;
-        int im_h = mat.rows, im_w = mat.cols, chs = mat.channels();
-        float res_aspect_ratio = w*1.0/h;
-        float input_aspect_ratio = im_w*1.0/im_h;
-
-        int dif = im_w;
-        if( im_h > im_w ) int dif = im_h;
-
-        int interpolation = cv::INTER_CUBIC;
-        if( dif > static_cast<int>((h+w)*1.0/2) ) interpolation = cv::INTER_AREA;
-
-        cv::Mat Y;
-        if( input_aspect_ratio != res_aspect_ratio ) {
-            if( input_aspect_ratio > res_aspect_ratio ) {
-                int im_w_r = static_cast<int>(input_aspect_ratio*h);
-                int im_h_r = h;
-                cv::resize(mat, mat, cv::Size(im_w_r, im_h_r), interpolation);
-                int x1 = static_cast<int>((im_w_r - w)/2);
-                int x2 = x1 + w;
-                mat(cv::Rect(x1, 0, w, im_h_r)).copyTo(Y);
-            }
-
-            if( input_aspect_ratio < res_aspect_ratio ) {
-                int im_w_r = w;
-                int im_h_r = static_cast<int>(w/input_aspect_ratio);
-                cv::resize(mat, mat, cv::Size(im_w_r , im_h_r), interpolation);
-                int y1 = static_cast<int>((im_h_r - h)/2);
-                int y2 = y1 + h;
-                mat(cv::Rect(0, y1, im_w_r, h)).copyTo(Y); // startX,startY,cols,rows
-            }
-        } else {
-        	 cv::resize(mat, Y, cv::Size(w, h), interpolation);
-        }
-
-        int label = data[index].second;
-
-        torch::Tensor img_tensor = torch::from_blob(Y.data, { Y.channels(), Y.rows, Y.cols }, torch::kByte); // Channels x Height x Width
-        torch::Tensor label_tensor = torch::full({1}, label);
-
-    	return {img_tensor.clone().to(torch::kFloat32).div_(255.0), label_tensor.clone().to(torch::kInt64)};
+    // (2) Get Class Names
+    std::string class_name;
+    std::ifstream ifs(path, std::ios::in);
+    size_t i = 0;
+    if( ! ifs.fail() ) {
+    	while( getline(ifs, class_name) ) {
+//    		std::cout << class_name.length() << std::endl;
+    		if( class_name.length() > 2 ) {
+    			class_names.at(i) = class_name;
+    			i++;
+    		}
+    	}
     } else {
-
-    	torch::data::Example<> EE;
-    	return(EE);
+    	std::cerr << "Error : can't open the class name file." << std::endl;
+    	std::exit(1);
     }
-  }
 
-  torch::optional<size_t> size() const {
-    return data.size();
-  }
+    ifs.close();
+    if( i != class_num ){
+        std::cerr << "Error : The number of classes does not match the number of lines in the class name file." << std::endl;
+        std::exit(1);
+    }
 
- private:
-  Data data;
-  std::string datasetPath;
-  int image_size;
-};
-
-std::pair<Data, Data> readInfo( std::string infoFilePath ) {
-  Data train, test;
-
-  std::ifstream stream( infoFilePath.c_str());
-  assert(stream.is_open());
-
-  long label;
-  std::string path, type;
-
-  while (true) {
-    stream >> path >> label >> type;
-//    std::cout << path << " " << label << " " << type << std::endl;
-    if (type == "train")
-      train.push_back(std::make_pair(path, label));
-    else if (type == "test")
-      test.push_back(std::make_pair(path, label));
-    else
-      assert(false);
-
-    if (stream.eof())
-      break;
-  }
-
-  std::random_shuffle(train.begin(), train.end());
-  std::random_shuffle(test.begin(), test.end());
-  return std::make_pair(train, test);
+    // End Processing
+    return class_names;
 }
 
 
@@ -144,175 +66,239 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
-	std::string datasetPath = "./data/Caltech_101/";
-	std::string infoFilePath = "./data/Caltech_101_info.txt";
+	size_t img_size = 224;
+	size_t batch_size = 32;
+	const std::string path = "./data/17_flowers_name.txt";
+	const size_t class_num = 17;
+	const size_t valid_batch_size = 1;
+	std::vector<std::string> class_names = Set_Class_Names( path, class_num);
+	constexpr bool train_shuffle = true;    // whether to shuffle the training dataset
+	constexpr size_t train_workers = 2;  	// the number of workers to retrieve data from the training dataset
+    constexpr bool valid_shuffle = true;    // whether to shuffle the validation dataset
+    constexpr size_t valid_workers = 2;     // the number of workers to retrieve data from the validation dataset
 
-	int64_t imgSize = 224;
-	int64_t train_batch_size = 128;
-	int64_t test_batch_size = 200;
-	size_t iterations = 20;
-	size_t log_interval = 20;
 
-	auto data = readInfo( infoFilePath );
+    // (4) Set Transforms
+    std::vector<transforms_Compose> transform {
+        transforms_Resize(cv::Size(img_size, img_size), cv::INTER_LINEAR),        // {IH,IW,C} ===method{OW,OH}===> {OH,OW,C}
+        transforms_ToTensor(),                                                     // Mat Image [0,255] or [0,65535] ===> Tensor Image [0,1]
+		transforms_Normalize(std::vector<float>{0.485, 0.456, 0.406}, std::vector<float>{0.229, 0.224, 0.225})  // Pixel Value Normalization for ImageNet
+    };
 
-	auto train_set = CustomDataset(data.first, datasetPath, imgSize).map(torch::data::transforms::Stack<>());
-	auto train_size = train_set.size().value();
+	std::string dataroot = "./data/17_flowers/train";
+    std::tuple<torch::Tensor, torch::Tensor, std::vector<std::string>> mini_batch;
+    torch::Tensor loss, image, label, output;
+    datasets::ImageFolderClassesWithPaths dataset, valid_dataset, test_dataset;      		// dataset;
+    DataLoader::ImageFolderClassesWithPaths dataloader, valid_dataloader, test_dataloader; 	// dataloader;
 
-	std::cout << "train_size = " << train_size << std::endl;
-	auto train_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
-	          	  	  	  	  	  	  	  	  	  	  std::move(train_set),
-													  torch::data::DataLoaderOptions()
-													  .batch_size(train_batch_size)
-													  .workers(2)
-													  .enforce_ordering(false));
-	auto test_set =
-	      CustomDataset(data.second, datasetPath, imgSize).map(torch::data::transforms::Stack<>());
-	std::cout << test_set.size().value() << std::endl;
+    // -----------------------------------
+    // a1. Preparation
+    // -----------------------------------
 
-	auto test_size = test_set.size().value();
-	std::cout << "test_size = " << test_size << std::endl;
+    // (1) Get Dataset
 
-	auto test_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
-	                                                 std::move(test_set),
-													 torch::data::DataLoaderOptions()
-													 .batch_size(test_batch_size)
-													 .workers(2)
-													 .enforce_ordering(false));
+    dataset = datasets::ImageFolderClassesWithPaths(dataroot, transform, class_names);
+    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, /*shuffle_=*/train_shuffle, /*num_workers_=*/train_workers);
+
+	std::cout << "total training images : " << dataset.size() << std::endl;
+
+    std::string valid_dataroot = "./data/17_flowers/valid";
+    valid_dataset = datasets::ImageFolderClassesWithPaths(valid_dataroot, transform, class_names);
+    valid_dataloader = DataLoader::ImageFolderClassesWithPaths(valid_dataset, valid_batch_size, /*shuffle_=*/valid_shuffle, /*num_workers_=*/valid_workers);
+
+    std::cout << "total validation images : " << valid_dataset.size() << std::endl;
+
+    bool valid = true;
+    bool test  = true;
+    bool vobose = false;
 
 	// Deep Convolutional Neural Networks (AlexNet)
 	auto net = torch::nn::Sequential(
-		//# Here, we use a larger 11 x 11 window to capture objects. At the same
-    	//# time, we use a stride of 4 to greatly reduce the height and width of the
-    	//# output. Here, the number of output channels is much larger than that in
-    	//# LeNet
-	    torch::nn::Conv2d(Options(3, 96, 11).stride(4).padding(1)), torch::nn::ReLU(),
-	    torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
-		//# Make the convolution window smaller, set padding to 2 for consistent
-    	//# height and width across the input and output, and increase the number of
-    	//# output channels
-		torch::nn::Conv2d(Options(96, 256, 5).padding(2)), torch::nn::ReLU(),
-		torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
-	    //# Use three successive convolutional layers and a smaller convolution
-	    //# window. Except for the final convolutional layer, the number of output
-	    //# channels is further increased. Pooling layers are not used to reduce the
-	    //# height and width of input after the first two convolutional layers
-		torch::nn::Conv2d(Options(256, 384, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::Conv2d(Options(384, 384, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::Conv2d(Options(384, 256, 3).padding(1)), torch::nn::ReLU(),
-		torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)), torch::nn::Flatten(),
-	    //# Here, the number of outputs of the fully-connected layer is several
-	    //# times larger than that in LeNet. Use the dropout layer to mitigate
-	    //# overfitting
-	    torch::nn::Linear(6400, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
-	    torch::nn::Linear(4096, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
-	    //# Output layer. Since we are using Fashion-MNIST, the number of classes is
-	    //# 10, instead of 1000 as in the paper
-	    torch::nn::Linear(4096, 102));
+	//# Here, we use a larger 11 x 11 window to capture objects. At the same
+    //# time, we use a stride of 4 to greatly reduce the height and width of the
+    //# output. Here, the number of output channels is much larger than that in
+    //# LeNet
+	torch::nn::Conv2d(Options(3, 96, 11).stride(4).padding(1)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
+	//# Make the convolution window smaller, set padding to 2 for consistent
+    //# height and width across the input and output, and increase the number of
+    //# output channels
+	torch::nn::Conv2d(Options(96, 256, 5).padding(2)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)),
+	//# Use three successive convolutional layers and a smaller convolution
+	//# window. Except for the final convolutional layer, the number of output
+	//# channels is further increased. Pooling layers are not used to reduce the
+	//# height and width of input after the first two convolutional layers
+	torch::nn::Conv2d(Options(256, 384, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::Conv2d(Options(384, 384, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::Conv2d(Options(384, 256, 3).padding(1)), torch::nn::ReLU(),
+	torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2)), torch::nn::Flatten(),
+	//# Here, the number of outputs of the fully-connected layer is several
+	//# times larger than that in LeNet. Use the dropout layer to mitigate
+	//# overfitting
+	torch::nn::Linear(6400, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
+	torch::nn::Linear(4096, 4096), torch::nn::ReLU(), torch::nn::Dropout(0.5),
+	//# Output layer. Since we are using Fashion-MNIST, the number of classes is
+	//# 10, instead of 1000 as in the paper
+	torch::nn::Linear(4096, class_num));
 
 	// make sure that its operations line up with what we expect from
 	//auto X = torch::randn({1, 3, imgSize, imgSize}).to(torch::kFloat32);
 	//std::cout << net->forward(X) << std::endl;
 
+	torch::optim::Adam optimizer(net->parameters(), torch::optim::AdamOptions(1e-4).betas({0.5, 0.999}));
 
-	std::vector<float> train_loss;
-	std::vector<float> train_acc;
-	std::vector<float> test_acc;
-	std::vector<float> xx;
-/*
-	auto batch = *train_loader->begin();
-	auto data  = batch.data.to(device);
-	auto y  = batch.target.to(device).flatten(0, -1);
-	std::cout << "y: " << y << std::endl;
+	auto criterion = torch::nn::NLLLoss(torch::nn::NLLLossOptions().ignore_index(-100).reduction(torch::kMean));
 
-	auto y_hat = net->forward(data);
-	std::cout << "y_hat: " << y_hat << std::endl;
-	auto l = loss(y_hat, y);
-	std::cout << l.item<float>() * data.size(0) << std::endl;
-	std::cout << accuracy( y_hat, y) << std::endl;
-	optimizer.zero_grad();
-	l.backward();
-	optimizer.step();
-*/
 	net->to(device);
 
-	auto optimizer = torch::optim::Adam(net->parameters(), 0.001);
+	size_t epoch;
+	size_t total_iter = dataloader.get_count_max();
+	size_t start_epoch, total_epoch;
+	start_epoch = 1;
+	total_iter = dataloader.get_count_max();
+	total_epoch = 35;
+	bool first = true;
+	std::vector<float> train_loss_ave;
+	std::vector<float> train_epochs;
 
-	auto loss_fn = torch::nn::CrossEntropyLoss();
-
-	for (size_t i = 0; i < iterations; ++i) {
-	    //train(network, *train_loader, optimizer, loss_fn, i + 1, train_size);
-		size_t index = 0;
+	for (epoch = start_epoch; epoch <= total_epoch; epoch++) {
 		net->train();
-		float Loss = 0, Acc = 0;
-		std::cout << "Start train ...\n";
+		std::cout << "--------------- Training --------------------\n";
+		first = true;
+		float loss_sum = 0.0;
+		while (dataloader(mini_batch)) {
+			image = std::get<0>(mini_batch).to(device);
+			label = std::get<1>(mini_batch).to(device);
 
-		for (auto& batch : *train_loader) {
-		    auto data = batch.data.to(device);
-		    auto targets = batch.target.to(device).view({-1});
+			if( first && vobose ) {
+				for(size_t i = 0; i < label.size(0); i++)
+					std::cout << label[i].item<int64_t>() << " ";
+				std::cout << "\n";
+				first = false;
+			}
 
-		    if( index == 0 ) std::cout << data.sizes() << std::endl;
+			image = std::get<0>(mini_batch).to(device);
+			label = std::get<1>(mini_batch).to(device);
+			output = net->forward(image);
+			auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+			//std::cout << output.sizes() << "\n" << out.sizes() << std::endl;
+			loss = criterion(out, label); //torch::mse_loss(out, label);
 
-		    auto output = net->forward(data);
-		    auto loss = loss_fn(output, targets);
-		    //assert(!std::isnan(loss.template item<float>()));
-		    auto acc = output.argmax(1).eq(targets).sum();
+			optimizer.zero_grad();
+			loss.backward();
+			optimizer.step();
 
-		    optimizer.zero_grad();
-		    loss.backward();
-		    optimizer.step();
+			loss_sum += loss.item<float>();
+		}
 
-		    Loss += loss.item<float>() * data.size(0);
-		    Acc += acc.template item<float>();
+		train_loss_ave.push_back(loss_sum/total_iter);
+		train_epochs.push_back(epoch*1.0);
+		std::cout << "epoch: " << epoch << "/"  << total_epoch << ", avg_loss: " << (loss_sum/total_iter) << std::endl;
 
-		    if(index++ % log_interval == 0) {
-		    	auto end = std::min(train_size, (index + 1) * train_batch_size);
+		// ---------------------------------
+		// validation
+		// ---------------------------------
+		if( valid && (epoch % 5 == 0) ) {
+			std::cout << "--------------- validation --------------------\n";
+			net->eval();
+			size_t iteration = 0;
+			float total_loss = 0.0;
+			size_t total_match = 0, total_counter = 0;
+			torch::Tensor responses;
+			first = true;
+			while (valid_dataloader(mini_batch)){
 
-		    	std::cout << "Train Epoch: " << i << " " << end << "/" << train_size
-		                << "\tLoss: " << Loss / end << "\tAcc: " << Acc / end
-		                << std::endl;
-		    }
-	    }
+				image = std::get<0>(mini_batch).to(device);
+				label = std::get<1>(mini_batch).to(device);
+				size_t mini_batch_size = image.size(0);
 
-		train_loss.push_back(Loss / train_size);
-		train_acc.push_back(Acc / train_size );
+				if( first && vobose ) {
+				    for(size_t i = 0; i < label.size(0); i++)
+				    	std::cout << label[i].item<int64_t>() << " ";
+				    std::cout << "\n";
+				    first = false;
+				}
 
-	    std::cout << std::endl;
-	    //test(network, *test_loader, loss_fn, test_size);
-	    index = 0;
-	    net->eval();
-	    torch::NoGradGuard no_grad;
-	    Loss = 0;
-	    Acc = 0;
+				output = net->forward(image);
+				auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+				loss = criterion(out, label);
 
-	    for (const auto& batch : *test_loader) {
-	    	auto data = batch.data.to(device);
-	        auto targets = batch.target.to(device).view({-1});
+				responses = output.exp().argmax(/*dim=*/1);
+				for (size_t i = 0; i < mini_batch_size; i++){
+				    int64_t response = responses[i].item<int64_t>();
+				    int64_t answer = label[i].item<int64_t>();
 
-	        auto output = net->forward(data);
-	        auto loss = loss_fn(output, targets);
-	        //assert(!std::isnan(loss.template item<float>()));
-	        auto acc = output.argmax(1).eq(targets).sum();
+				    total_counter++;
+				    if (response == answer) total_match++;
+				}
+				total_loss += loss.item<float>();
+				iteration++;
+			}
+			// (3) Calculate Average Loss
+			float ave_loss = total_loss / (float)iteration;
 
-	        Loss += loss.item<float>() * data.size(0);
-	        Acc += acc.template item<float>();
-	    }
-
-	    if (index++ % log_interval == 0) {
-	        std::cout << "Test Loss: " << Loss / test_size
-	                  << "\tAcc: " << Acc / test_size << std::endl;
-	    }
-	    test_acc.push_back(Acc / test_size);
-	    xx.push_back(i*1.0);
-
-	    std::cout << std::endl;
+			// (4) Calculate Accuracy
+			float total_accuracy = (float)total_match / (float)total_counter;
+			std::cout << "\nValidation accuracy: " << total_accuracy << std::endl;
+		}
 	}
-	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
-	plt::ylim(0.0, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Valid acc", xx, test_acc, "r-.");
-	plt::ylabel("loss; acc");
+
+
+	if( test ) {
+		std::string test_dataroot = "./data/17_flowers/test";
+		test_dataset = datasets::ImageFolderClassesWithPaths(test_dataroot, transform, class_names);
+		test_dataloader = DataLoader::ImageFolderClassesWithPaths(test_dataset, /*batch_size_=*/1, /*shuffle_=*/false, /*num_workers_=*/0);
+		std::cout << "total test images : " << test_dataset.size() << std::endl << std::endl;
+
+		float  ave_loss = 0.0;
+		size_t match = 0;
+		size_t counter = 0;
+		std::tuple<torch::Tensor, torch::Tensor, std::vector<std::string>> data;
+		std::vector<size_t> class_match = std::vector<size_t>(class_num, 0);
+		std::vector<size_t> class_counter = std::vector<size_t>(class_num, 0);
+		std::vector<float> class_accuracy = std::vector<float>(class_num, 0.0);
+
+		net->eval();
+		while (test_dataloader(data)){
+		    image = std::get<0>(data).to(device);
+		    label = std::get<1>(data).to(device);
+		    output = net->forward(image);
+
+		    auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+
+		    loss = criterion(out, label);
+
+		    ave_loss += loss.item<float>();
+
+		    output = output.exp();
+		    int64_t response = output.argmax(/*dim=*/1).item<int64_t>();
+		    int64_t answer = label[0].item<int64_t>();
+		    counter += 1;
+		    class_counter[answer]++;
+
+		    if (response == answer){
+		        class_match[answer]++;
+		        match += 1;
+		    }
+		}
+
+		// (7.1) Calculate Average
+		ave_loss = ave_loss / (float)dataset.size();
+
+		// (7.2) Calculate Accuracy
+		std::cout << "Test accuracy ==========\n";
+		for (size_t i = 0; i < class_num; i++){
+			class_accuracy[i] = (float)class_match[i] / (float)class_counter[i];
+		    std::cout << class_names[i] << ": " << class_accuracy[i] << "\n";
+		}
+		float accuracy = (float)match / float(counter);
+		std::cout << "\nTest accuracy: " << accuracy << std::endl;
+	}
+
+	plt::figure_size(600, 500);
+	plt::named_plot("Train loss", train_epochs, train_loss_ave, "b");
+	plt::ylabel("loss");
 	plt::xlabel("epoch");
 	plt::legend();
 	plt::show();

@@ -3,7 +3,7 @@
 #include <torch/autograd.h>
 #include <torch/utils.h>
 
-#include "util.h"
+#include "../utils/ch_8_9_util.h"
 
 int main() {
 
@@ -41,7 +41,8 @@ int main() {
 	}
 	printf("]\n");
 
-	auto vcab = Vocab(counter, 0.0);
+	std::vector<std::string> rv(0);
+	auto vcab = Vocab(counter, 0.0, rv);
 
 	auto token_to_idx = vcab.order_token_to_idx;
 	printf("[");

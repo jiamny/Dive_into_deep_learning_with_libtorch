@@ -3,7 +3,7 @@
 #include <torch/autograd.h>
 #include <torch/utils.h>
 
-#include "util.h"
+#include "../utils/ch_8_9_util.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
@@ -29,7 +29,8 @@ int main() {
 	// concatenate all text lines
 	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
 
-	auto vocab = Vocab(counter, 0.0);;
+	std::vector<std::string> rv(0);
+	auto vocab = Vocab(counter, 0.0, rv);;
 	auto tk_frq = vocab.token_freqs();
 	auto it = tk_frq.begin();
 	for(int i =0; i < 10; i++ ) {
@@ -61,7 +62,7 @@ int main() {
 
 	std::vector<std::pair<std::string, int64_t>> bigram_counter = count_corpus( bigram_tokens );
 
-	auto bigram_token_freqs = Vocab(bigram_counter, 0.0).token_freqs();
+	auto bigram_token_freqs = Vocab(bigram_counter, 0.0, rv).token_freqs();
 	it = bigram_token_freqs.begin();
 	for(int i =0; i < 10; i++ ) {
 		std::cout << "(" << it->first << "):" << it->second << "\n";
@@ -85,7 +86,7 @@ int main() {
 
 	std::vector<std::pair<std::string, int64_t>> trigram_counter = count_corpus( trigram_tokens );
 
-	auto trigram_token_freqs = Vocab(trigram_counter, 0.0).token_freqs();
+	auto trigram_token_freqs = Vocab(trigram_counter, 0.0, rv).token_freqs();
 	it = trigram_token_freqs.begin();
 	for(int i =0; i < 10; i++ ) {
 		std::cout << "(" << it->first << "):" << it->second << "\n";
