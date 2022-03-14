@@ -64,6 +64,8 @@ public:
 	std::map<int64_t, std::string> idx_to_token;
 	std::set<std::pair<std::string, int64_t>, comp> order_token_to_idx;
 
+	Vocab() {}	// default constructor
+
     //Vocabulary for text.
 	Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq,
 			std::vector<std::string> reserved_tokens);
@@ -351,5 +353,56 @@ std::pair<std::vector<double>, std::vector<double>> train_ch9(T& net, std::vecto
 
     return {epochs, ppl};
 }
+
+std::string read_data_nmt(const std::string filename);
+
+bool no_space(char c, char pc);
+
+std::string preprocess_nmt( std::string raw_test);
+
+std::tuple<std::vector<std::vector<std::string>>, std::vector<std::vector<std::string>>> tokenize_nmt(std::string processed,
+																										size_t num_examples);
+template<typename T>
+std::vector<T> truncate_pad(std::vector<T> line, size_t num_steps, T padding_token) {
+    //Truncate or pad sequences."""
+    if( line.size() > num_steps ) {
+    	std::vector<T> tokens(&line[0], &line[num_steps]);
+        return tokens;  // Truncate
+    } else {
+    	int num_pad = num_steps - line.size();
+    	for( int i = 0; i < num_pad; i++ )
+    		line.push_back(padding_token);
+    	return line;
+    }
+}
+
+std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector<std::string>> lines,
+														 Vocab vocab, int num_steps);
+
+std::tuple<std::pair<torch::Tensor, torch::Tensor>, Vocab, Vocab> load_data_nmt( std::string filename,
+														 int num_steps, int num_examples);
+
+class Nmtdataset : public torch::data::datasets::Dataset<Nmtdataset> {
+ public:
+
+    explicit Nmtdataset(std::pair<torch::Tensor, torch::Tensor> data_arrays);
+
+    // Returns the `Example` at the given `index`.
+    torch::data::Example<> get(size_t index) override;
+
+    // Returns the size of the dataset.
+    torch::optional<size_t> size() const override;
+
+    // Returns all features.
+    const torch::Tensor& features() const;
+
+    // Returns all targets
+    const torch::Tensor& labels() const;
+
+
+ private:
+    torch::Tensor features_;
+    torch::Tensor labels_;
+};
 
 #endif /* SRC_08_RECURRENTNEURALNETWORKS_UTIL_H_ */

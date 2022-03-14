@@ -205,5 +205,187 @@ std::vector<int64_t> Vocab::operator [] (const std::vector<std::string> ss ) {
 	return idx;
 }
 
+// ----------------------------------------------------------
+std::string read_data_nmt(const std::string filename) {
+
+	std::string raw_test = "";
+	std::string line;
+	std::ifstream fs;
+
+	fs.open(filename.c_str()); 		// OPen the file
+	if( fs.is_open() ) {      		// Fail bit will be set if file does not exist
+		while( ! fs.eof() ) {
+			getline(fs, line);
+			raw_test += (line + "\n");
+		}
+		//fs.open(filename, std::ios_base::in | std::ios_base::out);
+	} else {
+		fs.close();
+		std::cout << "Error opening file\n";
+		return "";
+	}
+
+	fs.close();
+	return raw_test;
+}
+
+bool no_space(char c, char pc) {
+	std::set<char> s = {',', '.', '!', '?'};
+
+	return ((s.find(c) != s.end()) && pc != ' ');
+}
+
+std::string preprocess_nmt( std::string raw_test) {
+    // Preprocess the English-French dataset."""
+	std::string processed = "";
+	for( std::string::size_type i = 0; i < raw_test.size(); ++i ) {
+
+		if( i > 0 && no_space(raw_test[i], raw_test[i-1]) ) {
+			std::string tt1 = " ";
+			tt1 += raw_test[i];
+			processed += tt1;
+		} else {
+			std::string tt2 = "";
+			tt2 += raw_test[i];
+			processed += tt2;
+		}
+	}
+
+	// convert lowercase
+	for(auto& c : processed) {
+	   c = std::tolower(c);
+	}
+
+    return processed;
+}
+
+std::tuple<std::vector<std::vector<std::string>>, std::vector<std::vector<std::string>>> tokenize_nmt(std::string processed,
+																										size_t num_examples) {
+    // Tokenize the English-French dataset.
+    std::vector<std::vector<std::string>> source, target;
+    std::stringstream st(processed);
+	std::string line;
+	size_t i = 0;
+	while(std::getline(st, line, '\n')) {
+
+	     size_t pos = line.find("\t");
+	     std::string part1 = line.substr(0, pos);
+	     std::string part2 = line.substr(pos+1, line.size());
+
+	     std::stringstream ss(part1);
+	     std::string token;
+	     std::vector<std::string> stk;
+	     while(ss >> token) {
+	    	 // strip space
+	    	 token = std::regex_replace(token, std::regex("^\\s+"), std::string(""));
+	    	 token = std::regex_replace(token, std::regex("\\s+$"), std::string(""));
+	    	 stk.push_back(token);
+	     }
+	     source.push_back(stk);
+
+	     std::stringstream ss2(part2);
+	     std::vector<std::string> stk2;
+	     while(ss2 >> token) {
+	    	 // strip space
+	    	 token = std::regex_replace(token, std::regex("^\\s+"), std::string(""));
+	    	 token = std::regex_replace(token, std::regex("\\s+$"), std::string(""));
+	    	 stk2.push_back(token);
+	     }
+	     target.push_back(stk2);
+	     i++;
+	     if( i % 10000 == 0 ) std::cout << "complete: " << i << std::endl;
+	     if( num_examples > 0 && i > num_examples ) break;
+	}
+    return {source, target};
+}
+
+std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector<std::string>> lines,
+														 Vocab vocab, int num_steps) {
+    //将机器翻译的文本序列转换成小批量
+	std::vector<int64_t> vec;
+	int row = 0;
+	for(auto& l : lines) {
+		std::vector<int64_t> a = vocab[l];
+		a.push_back(vocab["<eos>"]);
+		auto c = truncate_pad( a, num_steps, vocab["<pad>"]);
+		for(auto i : c)
+			vec.push_back(i);
+		row++;
+	}
+	auto options = torch::TensorOptions().dtype(torch::kLong);
+	torch::Tensor array = torch::from_blob(vec.data(), {row, num_steps}, options);
+	array = array.clone().to(torch::kLong);
+	torch::Tensor valid_len = (array != vocab["<pad>"]).to(torch::kLong).sum(1);
+    return {array, valid_len};
+}
+
+Nmtdataset::Nmtdataset(std::pair<torch::Tensor, torch::Tensor> data_arrays) {
+    features_ = std::move(data_arrays.first);
+    labels_   = std::move(data_arrays.second);
+}
+
+torch::data::Example<> Nmtdataset::get(size_t index) {
+    return {features_[index], labels_[index]};
+}
+
+torch::optional<size_t> Nmtdataset::size() const {
+    return features_.size(0);
+}
+
+const torch::Tensor& Nmtdataset::features() const {
+    return features_;
+}
+
+const torch::Tensor& Nmtdataset::labels() const {
+    return labels_;
+}
+
+
+std::tuple<std::pair<torch::Tensor, torch::Tensor>, Vocab, Vocab> load_data_nmt( std::string filename,
+		int num_steps, int num_examples=600) {
+    //返回翻译数据集的迭代器和词表
+	std::string raw_test = read_data_nmt(filename);
+	std::string processed = preprocess_nmt( raw_test );
+
+	std::vector<std::vector<std::string>> source, target;
+	std::tie(source, target) = tokenize_nmt(processed, num_examples); // set 0 to use all samples
+
+	std::vector<std::string> tokens;
+	for(std::vector<std::string>& tk : source ) {
+		for(std::string& t : tk) {
+			tokens.push_back(t);
+		}
+	}
+
+	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
+	std::vector<std::string> rv({"<pad>", "<bos>", "<eos>"});
+	auto src_vocab = Vocab(counter, 2.0, rv);
+
+	// transform text sequences into minibatches for training.
+	torch::Tensor src_array, src_valid_len;
+	std::tie(src_array, src_valid_len) = build_array_nmt(source, src_vocab, num_steps);
+
+	std::vector<std::string> tgt_tokens;
+	for(std::vector<std::string>& tk : target ) {
+		for(std::string& t : tk) {
+			tgt_tokens.push_back(t);
+		}
+	}
+	std::vector<std::pair<std::string, int64_t>> tgt_counter = count_corpus( tgt_tokens );
+	auto tgt_vocab = Vocab(tgt_counter, 2.0, rv);
+
+	torch::Tensor tgt_array, tgt_valid_len;
+	std::tie(tgt_array, tgt_valid_len) = build_array_nmt(target, tgt_vocab, num_steps);
+
+	// merge tensors
+	torch::Tensor features = torch::cat({src_array, tgt_array}, -1);
+
+	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
+
+	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};
+
+    return {data_arrays, src_vocab, tgt_vocab};
+}
+
 
 

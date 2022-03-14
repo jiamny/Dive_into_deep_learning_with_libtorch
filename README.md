@@ -6,9 +6,9 @@ Dive into deep learning with LibTorch C++ API
 
 ## Dependency
 
-- cmake 3.16+
+- cmake 3.20+
 
-- PyTorch 1.10.1
+- PyTorch 1.11.0
 
 - python3.8
 

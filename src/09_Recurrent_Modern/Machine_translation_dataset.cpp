@@ -21,101 +21,9 @@
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-
-std::string read_data_nmt(const std::string filename) {
-
-	std::string raw_test = "";
-	std::string line;
-	std::ifstream fs;
-
-	fs.open(filename.c_str()); 		// OPen the file
-	if( fs.is_open() ) {      		// Fail bit will be set if file does not exist
-		while( ! fs.eof() ) {
-			getline(fs, line);
-			raw_test += (line + "\n");
-		}
-		//fs.open(filename, std::ios_base::in | std::ios_base::out);
-	} else {
-		fs.close();
-		std::cout << "Error opening file\n";
-		return "";
-	}
-
-	fs.close();
-	return raw_test;
-}
-
-bool no_space(char c, char pc) {
-	std::set<char> s = {',', '.', '!', '?'};
-
-	return ((s.find(c) != s.end()) && pc != ' ');
-}
-
-
-std::string preprocess_nmt( std::string raw_test) {
-    // Preprocess the English-French dataset."""
-	std::string processed = "";
-	for( std::string::size_type i = 0; i < raw_test.size(); ++i ) {
-
-		if( i > 0 && no_space(raw_test[i], raw_test[i-1]) ) {
-			std::string tt1 = " ";
-			tt1 += raw_test[i];
-			processed += tt1;
-		} else {
-			std::string tt2 = "";
-			tt2 += raw_test[i];
-			processed += tt2;
-		}
-	}
-
-	// convert lowercase
-	for(auto& c : processed) {
-	   c = std::tolower(c);
-	}
-
-    return processed;
-}
-
-
-std::tuple<std::vector<std::vector<std::string>>, std::vector<std::vector<std::string>>> tokenize_nmt(std::string processed,
-																										size_t num_examples) {
-    // Tokenize the English-French dataset.
-    std::vector<std::vector<std::string>> source, target;
-    std::stringstream st(processed);
-	std::string line;
-	size_t i = 0;
-	while(std::getline(st, line, '\n')) {
-
-	     size_t pos = line.find("\t");
-	     std::string part1 = line.substr(0, pos);
-	     std::string part2 = line.substr(pos+1, line.size());
-
-	     std::stringstream ss(part1);
-	     std::string token;
-	     std::vector<std::string> stk;
-	     while(ss >> token) {
-	    	 // strip space
-	    	 token = std::regex_replace(token, std::regex("^\\s+"), std::string(""));
-	    	 token = std::regex_replace(token, std::regex("\\s+$"), std::string(""));
-	    	 stk.push_back(token);
-	     }
-	     source.push_back(stk);
-
-	     std::stringstream ss2(part2);
-	     std::vector<std::string> stk2;
-	     while(ss2 >> token) {
-	    	 // strip space
-	    	 token = std::regex_replace(token, std::regex("^\\s+"), std::string(""));
-	    	 token = std::regex_replace(token, std::regex("\\s+$"), std::string(""));
-	    	 stk2.push_back(token);
-	     }
-	     target.push_back(stk2);
-	     i++;
-	     if( i % 10000 == 0 ) std::cout << "complete: " << i << std::endl;
-	     if( num_examples > 0 && i > num_examples ) break;
-	}
-    return {source, target};
-}
+using torch::indexing::Slice;
+using torch::indexing::None;
+using torch::indexing::Ellipsis;
 
 void show_list_len_pair_hist(std::vector<std::vector<std::string>> source,
 							 std::vector<std::vector<std::string>> target) {
@@ -175,18 +83,37 @@ std::vector<std::pair<std::string, int64_t>> count_corpus2( std::vector<std::str
     return _token_freqs;
 }
 
-template<typename T>
-std::vector<T> truncate_pad(std::vector<T> line, size_t num_steps, T padding_token) {
-    //Truncate or pad sequences."""
-    if( line.size() > num_steps ) {
-    	std::vector<T> tokens(&line[0], &line[num_steps]);
-        return tokens;  // Truncate
-    } else {
-    	int num_pad = num_steps - line.size();
-    	for( int i = 0; i < num_pad; i++ )
-    		line.push_back(padding_token);
-    	return line;
-    }
+void torch_cat_test() {
+	torch::Tensor src_array = torch::tensor({{1,  1,  1,  0,  0,  0,  0,  0},
+		{1,  1,  1,  1,  1,  0,  0,  0}, {1,  1,  1,  0,  0,  0,  0 , 0}}).to(torch::kLong);
+
+	torch::Tensor tgt_array = torch::tensor({{0,  0, 1,  1,  1,  1,  0,  0},
+				{0,  0,  0,  0,  3,  1,  1,  1}, {1,  1,  1,  1,  1,  1,  0,  0}}).to(torch::kLong);
+
+	torch::Tensor src_valid_len = torch::tensor({3, 3, 3, 3, 3, 3, 3, 3, 3, 3}).to(torch::kLong);
+	torch::Tensor tgt_valid_len = torch::tensor({3, 3, 3, 3, 3, 4, 4, 4, 3, 4}).to(torch::kLong);
+
+	torch::NoGradGuard no_grad;
+	torch::Tensor features = torch::cat({src_array, tgt_array}, -1).to(torch::kLong);
+	std::cout << "----------------------------\n";
+	std::cout << src_array << std::endl;
+	std::cout << tgt_array << std::endl;
+	std::cout << "============================\n";
+	std::cout << features << std::endl;
+	std::cout << src_valid_len << std::endl;
+	std::cout << tgt_valid_len << std::endl;
+	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
+	std::cout << labels << std::endl;
+
+	std::string filename = "./data/fra-eng/fra.txt";
+	std::pair<torch::Tensor, torch::Tensor> datas;
+	Vocab s_vocab, t_vocab;
+	std::tie(datas, s_vocab, t_vocab) = load_data_nmt(filename, 8, 600);
+
+	torch::Tensor f = datas.first;
+	torch::Tensor l = datas.second;
+	std::cout << f << std::endl;
+	std::cout << l << std::endl;
 }
 
 int main() {
@@ -199,6 +126,8 @@ int main() {
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(7);
+	int num_examples = 600;
+
 	std::string filename = "./data/fra-eng/fra.txt";
 
 	std::string raw_test = read_data_nmt(filename);
@@ -212,13 +141,12 @@ int main() {
 	std::cout << processed.substr(0, 75) << std::endl;
 
 	std::vector<std::vector<std::string>> source, target;
-	std::tie(source, target) = tokenize_nmt(processed, 10000); // set 0 to use all samples
+	std::tie(source, target) = tokenize_nmt(processed, num_examples); // set 0 to use all samples
 
 	std::cout << source.size() << std::endl;
 	std::cout << target.size() << std::endl;
 
 //	show_list_len_pair_hist(source, target);
-
 	std::vector<std::string> tokens;
 	for(std::vector<std::string>& tk : source ) {
 		for(std::string& t : tk) {
@@ -229,26 +157,92 @@ int main() {
 	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
 
 	std::vector<std::string> rv({"<pad>", "<bos>", "<eos>"});
-	auto vocab = Vocab(counter, 2.0, rv);
-	std::cout << vocab.length() << "\n";
-	std::cout << vocab.to_tokens({47}) << "\n";
+	auto src_vocab = Vocab(counter, 2.0, rv);
+	std::cout << src_vocab.length() << "\n";
+	std::cout << src_vocab.to_tokens({47}) << "\n";
 
 	for(std::string& t : source[0])
-		std::cout << t << " " << vocab[t] << " ";
+		std::cout << t << " " << src_vocab[t] << " ";
 	std::cout << "\n";
 
-	auto idx = vocab[source[0]];
+	auto idx = src_vocab[source[0]];
 	std::cout << idx.size() << "\n";
 	for(auto& t : idx)
 		std::cout << t << " ";
 	std::cout << "\n";
 
-	auto rlt = truncate_pad(vocab[source[0]], 10, vocab["<pad>"]);
+	auto rlt = truncate_pad(src_vocab[source[0]], 10, src_vocab["<pad>"]);
 	for(auto& t : rlt)
 		std::cout << t << " ";
 	std::cout << "\n";
 
+	// transform text sequences into minibatches for training.
+	int num_steps = 8;
 
+	torch::Tensor src_array, src_valid_len;
+	std::tie(src_array, src_valid_len) = build_array_nmt(source, src_vocab, num_steps);
+	std::cout << src_valid_len.sizes() << "\n";
+	std::cout << src_array[0] << std::endl; // index({Slice(None, 3), Slice()})
+
+	std::vector<std::string> tgt_tokens;
+	for(std::vector<std::string>& tk : target ) {
+		for(std::string& t : tk) {
+			tgt_tokens.push_back(t);
+		}
+	}
+	std::vector<std::pair<std::string, int64_t>> tgt_counter = count_corpus( tgt_tokens );
+	auto tgt_vocab = Vocab(tgt_counter, 2.0, rv);
+
+	torch::Tensor tgt_array, tgt_valid_len;
+	std::tie(tgt_array, tgt_valid_len) = build_array_nmt(target, tgt_vocab, num_steps);
+	std::cout << tgt_valid_len.sizes() << "\n";
+	std::cout << tgt_array[0] << std::endl;
+
+	// merge tensors
+	torch::Tensor features = torch::cat({src_array, tgt_array}, -1);
+//	std::cout << features << std::endl;
+
+	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
+//	std::cout << labels << "\n";
+
+	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};
+
+	int batch_size = 2;
+	auto dataset = Nmtdataset(data_arrays)
+	    				.map(torch::data::transforms::Stack<>());
+	auto data_iter = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
+	    	        std::move(dataset), batch_size);
+
+	// read the first minibatch from the English-French dataset
+	for(auto& batch : *data_iter){
+		auto features = batch.data;
+		auto labels = batch.target;
+		auto X = features.index({Slice(), Slice(None, num_steps)});
+		auto X_valid_len = labels.index({Slice(), 0});
+		auto Y = features.index({Slice(), Slice(num_steps, None)});
+		auto Y_valid_len = labels.index({Slice(), 1});
+
+		std::cout << "X:\n" << X << std::endl;
+		std::cout << "valid lengths for X:\n" << X_valid_len << std::endl;
+		std::cout << "Y:\n" << Y << std::endl;
+		std::cout << "valid lengths for Y:\n" << Y_valid_len << std::endl;
+
+        X.to(device);
+        X_valid_len.to(device);
+        Y.to(device);
+        Y_valid_len.to(device);
+        std::vector<int64_t> tmp;
+        for(int i = 0; i < Y.size(0); i++)
+        	tmp.push_back(tgt_vocab["<bos>"]);
+        auto options = torch::TensorOptions().dtype(torch::kLong);
+        torch::Tensor bos = torch::from_blob(tmp.data(), {1, Y.size(0)}, options);
+        bos = bos.clone().to(device).reshape({-1, 1});
+//        auto bos = torch::tensor({tgt_vocab["<bos>"]} * Y.size(0)).to(device).reshape(-1, 1);
+        std::cout << bos << std::endl;
+        torch::Tensor dec_input = torch::cat({bos, Y.index({Slice(), Slice(None, -1)})}, 1); // Y[:, :-1]
+        std::cout << dec_input << std::endl;
+	    break;
+	}
 
 	std::cout << "Done!\n";
 	return 0;

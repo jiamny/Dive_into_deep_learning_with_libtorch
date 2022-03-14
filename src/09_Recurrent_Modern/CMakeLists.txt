@@ -84,3 +84,20 @@ set_target_properties(09_Machine_translation_dataset PROPERTIES
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED YES
 )
+
+#----------------------------------------------------------------------------------
+add_executable(09_SequenceToSequence)
+target_sources(09_SequenceToSequence PRIVATE SequenceToSequence.cpp 
+					../utils/ch_8_9_util.h
+					../utils/ch_8_9_util.cpp
+					)
+													
+target_include_directories(09_SequenceToSequence PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(09_SequenceToSequence ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(09_SequenceToSequence PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED YES
+)
+
+

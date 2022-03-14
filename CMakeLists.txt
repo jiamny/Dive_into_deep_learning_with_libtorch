@@ -4,7 +4,7 @@ project(D2L_pytorch_cpp VERSION 1.0.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(PYTORCH_VERSION "1.10.1")
+set(PYTORCH_VERSION "1.11.0")
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -64,6 +64,7 @@ add_subdirectory("src/06_ConvolutionalNeuralNetworks")
 add_subdirectory("src/07_ModernConvolutionalNeuralNetworks")
 add_subdirectory("src/08_RecurrentNeuralNetworks")
 add_subdirectory("src/09_Recurrent_Modern")
+add_subdirectory("src/10_Attention_mechanisms")
 add_subdirectory("src/utils")
 
 if(MSVC)
