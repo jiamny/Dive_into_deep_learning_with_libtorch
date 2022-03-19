@@ -75,6 +75,8 @@ add_executable(09_Machine_translation_dataset)
 target_sources(09_Machine_translation_dataset PRIVATE Machine_translation_dataset.cpp 
 					../utils/ch_8_9_util.h
 					../utils/ch_8_9_util.cpp
+					../utils.h
+					../utils.cpp
 					)
 													
 target_include_directories(09_Machine_translation_dataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -90,6 +92,10 @@ add_executable(09_SequenceToSequence)
 target_sources(09_SequenceToSequence PRIVATE SequenceToSequence.cpp 
 					../utils/ch_8_9_util.h
 					../utils/ch_8_9_util.cpp
+					../utils.h
+					../utils.cpp
+					../utils/ch_10_util.h
+					../utils/ch_10_util.cpp		
 					)
 													
 target_include_directories(09_SequenceToSequence PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})

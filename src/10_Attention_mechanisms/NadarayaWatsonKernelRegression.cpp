@@ -35,6 +35,7 @@ void plot_kernel_reg(torch::Tensor y_hat, torch::Tensor y_train,
 	plt::title(tlt.c_str());
 	plt::legend();
 	plt::show();
+	plt::close();
 }
 
 // ------------------------------------------------
@@ -92,7 +93,6 @@ int main() {
 	auto y_hat = torch::repeat_interleave(y_train.mean(), n_test);
 
 	plot_kernel_reg( y_hat, y_train, y_truth, x_test, "Average Pooling");
-	plt::close();
 
 	/* Nonparametric Attention Pooling
 	 * Notably, Nadaraya-Watson kernel regression is a nonparametric model;
@@ -114,7 +114,7 @@ int main() {
 	y_hat = torch::matmul(attention_weights, y_train);
 
 	plot_kernel_reg( y_hat, y_train, y_truth, x_test, "Nonparametric Attention Pooling");
-	plt::close();
+
 
 	// Now let us take a look at the [attention weights]
 	float maxV = attention_weights.max().item<float>();
@@ -133,12 +133,16 @@ int main() {
 
     const float* zptr = &(z[0]);
     const int colors = 1;
+    PyObject* mat;
 
     plt::title("heatmap");
-    plt::imshow(zptr, nrows, ncols, colors);
+    plt::imshow(zptr, nrows, ncols, colors, {}, &mat);
     plt::xlabel("Sorted training inputs");
     plt::ylabel("Sorted testing inputs");
+    plt::colorbar(mat);
     plt::show();
+    plt::close();
+    Py_DECREF(mat);
 
     //plot_heatmap(attention_weights, "Sorted training inputs", "Sorted testing inputs");
 
@@ -192,6 +196,7 @@ int main() {
     plt::title("Train the parametric attention model");
     plt::legend();
     plt::show();
+    plt::close();
 
     // Shape of `keys`: (`n_test`, `n_train`), where each column contains the same training inputs (i.e., same keys)
     keys = x_train.repeat({n_test, 1});

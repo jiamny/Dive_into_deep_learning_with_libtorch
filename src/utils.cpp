@@ -150,4 +150,30 @@ std::vector<unsigned char> tensorToMatrix(torch::Tensor data) {
 	return z;
 }
 
+// data batch indices
+std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle) {
 
+	std::list<torch::Tensor> batch_indices;
+	// data index
+	std::vector<int64_t> index;
+	for (int64_t i = 0; i < num_examples; ++i) {
+		index.push_back(i);
+	}
+	// shuffle index
+	if( shuffle ) std::random_shuffle(index.begin(), index.end());
+
+	for (int64_t i = 0; i < index.size(); i +=batch_size) {
+		std::vector<int64_t>::const_iterator first = index.begin() + i;
+		std::vector<int64_t>::const_iterator last = index.begin() + std::min(i + batch_size, num_examples);
+		std::vector<int64_t> indices(first, last);
+
+		int64_t idx_size = indices.size();
+		torch::Tensor idx = (torch::from_blob(indices.data(), {idx_size}, torch::kInt64)).clone();
+
+		//auto batch_x = X.index_select(0, idx);
+		//auto batch_y = Y.index_select(0, idx);
+
+		batch_indices.push_back(idx);
+	}
+	return( batch_indices );
+}

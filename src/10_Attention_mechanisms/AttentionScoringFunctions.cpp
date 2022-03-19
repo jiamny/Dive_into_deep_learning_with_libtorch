@@ -5,57 +5,12 @@
 #include <iostream>
 #include <unistd.h>
 #include <iomanip>
-//#include <math>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include "../utils/ch_10_util.h"
-
-// ---------------------------------------------
-// Additive Attention]
-// ---------------------------------------------
-struct AdditiveAttention : public torch::nn::Module {
-    //Additive attention
-    AdditiveAttention(int64_t key_size, int64_t query_size, int64_t num_hiddens, float dropout) {
-        W_k = torch::nn::Linear(torch::nn::LinearOptions(key_size, num_hiddens).bias(false));
-        W_q = torch::nn::Linear(torch::nn::LinearOptions(query_size, num_hiddens).bias(false));
-        W_v = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, 1).bias(false));
-        dpout = torch::nn::Dropout(dropout);
-    }
-
-    torch::Tensor forward(torch::Tensor queries, torch::Tensor keys, torch::Tensor values, torch::Tensor valid_lens) {
-        queries = W_q->forward(queries);
-		keys = W_k->forward(keys);
-        // After dimension expansion, shape of `queries`: (`batch_size`, no. of
-        // queries, 1, `num_hiddens`) and shape of `keys`: (`batch_size`, 1,
-        // no. of key-value pairs, `num_hiddens`). Sum them up with broadcasting
-
-		std::cout << "queries: " << queries.sizes() << "\n";
-		std::cout << "keys: " << keys.sizes() << "\n";
-        auto features = queries.unsqueeze(2) + keys.unsqueeze(1);
-        features = torch::tanh(features);
-
-        std::cout << "features: " << features.sizes() << "\n";
-		// There is only one output of `self.w_v`, so we remove the last
-        // one-dimensional entry from the shape. Shape of `scores`:
-        // (`batch_size`, no. of queries, no. of key-value pairs)
-        auto scores = W_v->forward(features).squeeze(-1); //squeeze() 不加参数的，把所有为1的维度都压缩
-        std::cout << "scores: " << scores << "\n";
-        std::cout << "valid_lens: " << valid_lens << "\n";
-
-        attention_weights = masked_softmax(scores, valid_lens);
-        std::cout << "attention_weights: " << attention_weights.sizes() << "\n";
-
-        // Shape of `values`: (`batch_size`, no. of key-value pairs, value dimension)
-        return torch::bmm(dpout->forward(attention_weights), values);
-    }
-    torch::nn::Linear W_k{nullptr}, W_q{nullptr}, W_v{nullptr};
-    torch::nn::Dropout dpout{nullptr};
-    torch::Tensor attention_weights;
-};
-
 
 int main() {
 

@@ -105,15 +105,19 @@ void torch_cat_test() {
 	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
 	std::cout << labels << std::endl;
 
-	std::string filename = "./data/fra-eng/fra.txt";
-	std::pair<torch::Tensor, torch::Tensor> datas;
-	Vocab s_vocab, t_vocab;
-	std::tie(datas, s_vocab, t_vocab) = load_data_nmt(filename, 8, 600);
+	/*
+	// merge tensors
+	torch::Tensor features = torch::cat({src_array, tgt_array}, -1);
 
-	torch::Tensor f = datas.first;
-	torch::Tensor l = datas.second;
-	std::cout << f << std::endl;
-	std::cout << l << std::endl;
+	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
+
+	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};
+
+	auto X = features.index({Slice(), Slice(None, num_steps)});
+	auto X_valid_len = labels.index({Slice(), 0});
+	auto Y = features.index({Slice(), Slice(num_steps, None)});
+	auto Y_valid_len = labels.index({Slice(), 1});
+	*/
 }
 
 int main() {
@@ -208,7 +212,7 @@ int main() {
 	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};
 
 	int batch_size = 2;
-	auto dataset = Nmtdataset(data_arrays)
+	auto dataset = LRdataset(data_arrays)
 	    				.map(torch::data::transforms::Stack<>());
 	auto data_iter = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
 	    	        std::move(dataset), batch_size);

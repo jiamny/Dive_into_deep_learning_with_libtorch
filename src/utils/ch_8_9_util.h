@@ -379,30 +379,6 @@ std::vector<T> truncate_pad(std::vector<T> line, size_t num_steps, T padding_tok
 std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector<std::string>> lines,
 														 Vocab vocab, int num_steps);
 
-std::tuple<std::pair<torch::Tensor, torch::Tensor>, Vocab, Vocab> load_data_nmt( std::string filename,
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab, Vocab> load_data_nmt(std::string filename,
 														 int num_steps, int num_examples);
-
-class Nmtdataset : public torch::data::datasets::Dataset<Nmtdataset> {
- public:
-
-    explicit Nmtdataset(std::pair<torch::Tensor, torch::Tensor> data_arrays);
-
-    // Returns the `Example` at the given `index`.
-    torch::data::Example<> get(size_t index) override;
-
-    // Returns the size of the dataset.
-    torch::optional<size_t> size() const override;
-
-    // Returns all features.
-    const torch::Tensor& features() const;
-
-    // Returns all targets
-    const torch::Tensor& labels() const;
-
-
- private:
-    torch::Tensor features_;
-    torch::Tensor labels_;
-};
-
 #endif /* SRC_08_RECURRENTNEURALNETWORKS_UTIL_H_ */

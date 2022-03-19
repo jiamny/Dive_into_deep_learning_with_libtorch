@@ -312,6 +312,7 @@ std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector
 			vec.push_back(i);
 		row++;
 	}
+
 	auto options = torch::TensorOptions().dtype(torch::kLong);
 	torch::Tensor array = torch::from_blob(vec.data(), {row, num_steps}, options);
 	array = array.clone().to(torch::kLong);
@@ -319,29 +320,8 @@ std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector
     return {array, valid_len};
 }
 
-Nmtdataset::Nmtdataset(std::pair<torch::Tensor, torch::Tensor> data_arrays) {
-    features_ = std::move(data_arrays.first);
-    labels_   = std::move(data_arrays.second);
-}
 
-torch::data::Example<> Nmtdataset::get(size_t index) {
-    return {features_[index], labels_[index]};
-}
-
-torch::optional<size_t> Nmtdataset::size() const {
-    return features_.size(0);
-}
-
-const torch::Tensor& Nmtdataset::features() const {
-    return features_;
-}
-
-const torch::Tensor& Nmtdataset::labels() const {
-    return labels_;
-}
-
-
-std::tuple<std::pair<torch::Tensor, torch::Tensor>, Vocab, Vocab> load_data_nmt( std::string filename,
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab, Vocab> load_data_nmt( std::string filename,
 		int num_steps, int num_examples=600) {
     //返回翻译数据集的迭代器和词表
 	std::string raw_test = read_data_nmt(filename);
@@ -377,14 +357,7 @@ std::tuple<std::pair<torch::Tensor, torch::Tensor>, Vocab, Vocab> load_data_nmt(
 	torch::Tensor tgt_array, tgt_valid_len;
 	std::tie(tgt_array, tgt_valid_len) = build_array_nmt(target, tgt_vocab, num_steps);
 
-	// merge tensors
-	torch::Tensor features = torch::cat({src_array, tgt_array}, -1);
-
-	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
-
-	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};
-
-    return {data_arrays, src_vocab, tgt_vocab};
+    return {src_array, src_valid_len, tgt_array, tgt_valid_len, src_vocab, tgt_vocab};
 }
 
 

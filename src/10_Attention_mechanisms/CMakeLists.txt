@@ -44,7 +44,7 @@ target_sources(10_AttentionScoringFunctions PRIVATE
 AttentionScoringFunctions.cpp 
 ../matplotlibcpp.h
 ../utils/ch_10_util.h
-../utils/ch_10_util.cpp						
+../utils/ch_10_util.cpp					
 )
 													
 target_include_directories(10_AttentionScoringFunctions PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -66,5 +66,45 @@ target_link_libraries(10_MultiHeadAttention ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${
 
 set_target_properties(10_MultiHeadAttention PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
+#----------------------------------------------------------------------------------
+add_executable(10_BahdanauAttention)
+target_sources(10_BahdanauAttention PRIVATE 
+BahdanauAttention.cpp 
+../matplotlibcpp.h
+../utils/ch_10_util.h
+../utils/ch_10_util.cpp						
+)
+													
+target_include_directories(10_BahdanauAttention PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(10_BahdanauAttention ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
 
+set_target_properties(10_BahdanauAttention PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(10_SelfAttentionAndPositionalEncoding)
+target_sources(10_SelfAttentionAndPositionalEncoding PRIVATE 
+SelfAttentionAndPositionalEncoding.cpp 
+../matplotlibcpp.h
+../utils/ch_10_util.h
+../utils/ch_10_util.cpp						
+)
+													
+target_include_directories(10_SelfAttentionAndPositionalEncoding PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(10_SelfAttentionAndPositionalEncoding ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(10_SelfAttentionAndPositionalEncoding PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(10_Transformer)
+target_sources(10_Transformer PRIVATE 
+Transformer.cpp 
+../matplotlibcpp.h
+../utils/ch_10_util.h
+../utils/ch_10_util.cpp						
+)
+													
+target_include_directories(10_Transformer PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(10_Transformer ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(10_Transformer PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
