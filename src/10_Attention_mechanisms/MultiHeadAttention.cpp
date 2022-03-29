@@ -51,7 +51,7 @@ int main() {
 
 	auto attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
 	                               num_hiddens, num_heads, 0.5);
-	attention.eval();
+	attention->eval();
 
 	std::cout << attention << std::endl;
 
@@ -60,7 +60,7 @@ int main() {
 
 	auto X = torch::ones({batch_size, num_queries, num_hiddens});
 	auto Y = torch::ones({batch_size, num_kvpairs, num_hiddens});
-	std::cout << attention.forward(X, Y, Y, valid_lens).sizes() << std::endl;
+	std::cout << attention->forward(X, Y, Y, valid_lens).sizes() << std::endl;
 
 	std::cout << "Done!\n";
 	return 0;

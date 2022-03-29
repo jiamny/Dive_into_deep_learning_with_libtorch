@@ -124,6 +124,7 @@ int main() {
 	plt::ylabel("p(x)");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -67,24 +67,24 @@ int main() {
 
 	auto attention = AdditiveAttention(2, 20, 8, 0.1);
 
-	attention.eval();
-	auto AA = attention.forward(queries, keys, values, valid_lens);
+	attention->eval();
+	auto AA = attention->forward(queries, keys, values, valid_lens);
 	std::cout << "demonstrate AdditiveAttention class:\n" << AA << std::endl;
 
 	// demonstrate the above DotProductAttention class
 	queries = torch::normal(0, 1, {2, 1, 2});
 	auto dattention = DotProductAttention(0.5);
-	dattention.eval();
+	dattention->eval();
 
     std::cout << "queries:\n" << queries.sizes() << std::endl;
     std::cout << "keys:\n" << keys.sizes() << std::endl;
     std::cout << "values:\n" << values.sizes() << std::endl;
     std::cout << "valid_lens:\n" << valid_lens.sizes() << std::endl;
 
-	auto DA = dattention.forward(queries, keys, values, valid_lens);
+	auto DA = dattention->forward(queries, keys, values, valid_lens);
 	std::cout << "demonstrate DotProductAttention class:\n" << DA << std::endl;
 
-	auto tsr = dattention.attention_weights.reshape({1, 1, 2, 10});
+	auto tsr = dattention->attention_weights.reshape({1, 1, 2, 10});
 	std::cout << tsr.squeeze() << "\n";
 
 	plot_heatmap(tsr.squeeze(), "keys", "Queries");

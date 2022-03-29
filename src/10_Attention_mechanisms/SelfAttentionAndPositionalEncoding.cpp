@@ -12,51 +12,6 @@ using torch::indexing::Slice;
 using torch::indexing::None;
 using torch::indexing::Ellipsis;
 
-// ------------------------------------------------------------------
-// Positional Encoding
-// In the positional embedding matrix 𝐏, [rows correspond to positions within
-// a sequence and columns represent different positional encoding dimensions].
-// ------------------------------------------------------------------
-struct PositionalEncoding : public torch::nn::Module {
-	torch::nn::Dropout drpout;
-	torch::Tensor P;
-
-    //Positional encoding
-	PositionalEncoding(int64_t num_hiddens, float dropout, int64_t max_len=1000) {
-
-        drpout = torch::nn::Dropout(dropout);
-        // Create a long enough `P`
-        P = torch::zeros({1, max_len, num_hiddens});
-        auto X = torch::arange(max_len, torch::kFloat).reshape({-1, 1}) / torch::pow(10000, torch::arange(
-            0, num_hiddens, 2, torch::kFloat) / num_hiddens);
-
-    	std::vector<int64_t> oddidx, evenidx;
-    	for(int64_t i = 0; i < num_hiddens; i++) {
-    		if( i % 2 == 0 )
-    			evenidx.push_back(i);
-    		else
-    			oddidx.push_back(i);
-    	}
-
-    	auto st = torch::sin(X);
-    	int c = 0;
-    	for( int64_t n = 0; n < evenidx.size(); n++, c++)
-    		P.index_put_({Slice(), Slice(), evenidx[n]}, st.index({Slice(), c}));
-
-    	st = torch::cos(X);
-    	c = 0;
-    	for( int64_t n = 0; n < oddidx.size(); n++, c++)
-    		P.index_put_({Slice(), Slice(), oddidx[n]}, st.index({Slice(), c}));
-//        P[:, :, 0::2] = torch::sin(X);
-//        P[:, :, 1::2] = torch::cos(X);
-	}
-
-    torch::Tensor forward(torch::Tensor X) {
-        X = X + P.index({Slice(), Slice(0, X.size(1)), Slice()}).to(X.device());
-        return drpout->forward(X);
-    }
-};
-
 void binary(int64_t n) {
     /* step 1 */
     if (n > 1)
@@ -79,22 +34,22 @@ int main() {
 	int64_t num_hiddens = 100, num_heads = 5;
 	auto attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
 	                                   num_hiddens, num_heads, 0.5);
-	attention.eval();
+	attention->eval();
 	std::cout << attention << "\n";
 
 	int64_t batch_size = 2, num_queries = 4;
 	auto valid_lens =  torch::tensor({3, 2});
 
 	auto X = torch::ones({batch_size, num_queries, num_hiddens});
-	std::cout << attention.forward(X, X, X, valid_lens).sizes() << std::endl;
+	std::cout << attention->forward(X, X, X, valid_lens).sizes() << std::endl;
 
 	int64_t encoding_dim = 32, num_steps = 60;
 
 	auto pos_encoding = PositionalEncoding(encoding_dim, 0);
-	pos_encoding.eval();
-	X = pos_encoding.forward(torch::zeros({1, num_steps, encoding_dim}).to(device));
+	pos_encoding->eval();
+	X = pos_encoding->forward(torch::zeros({1, num_steps, encoding_dim}).to(device));
 
-	auto P = pos_encoding.P.index({Slice(), Slice(0, X.size(1)), Slice()});
+	auto P = pos_encoding->P.index({Slice(), Slice(0, X.size(1)), Slice()});
 	std::cout << "P: " << P.sizes() << "\n";
 
 	auto xL = torch::arange(num_steps).to(torch::kFloat); //torch::arange(num_steps).to(torch::kFloat);

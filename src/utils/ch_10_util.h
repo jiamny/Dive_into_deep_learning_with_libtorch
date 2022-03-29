@@ -14,6 +14,7 @@
 #include <iostream>
 #include <iomanip>
 
+#include "ch_8_9_util.h"
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
@@ -23,21 +24,14 @@ using torch::indexing::Ellipsis;
 
 void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab);
 
-torch::Tensor sequence_mask(torch::Tensor X, torch::Tensor  valid_len, float value=0);
-
-// --------------------------------------------
-// Masked Softmax Operation
-// --------------------------------------------
-torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens);
-
 // -----------------------------------------------
 // Scaled Dot-Product Attention
 // -----------------------------------------------
-struct DotProductAttention : public torch::nn::Module {
+struct DotProductAttentionImpl : public torch::nn::Module {
     // Scaled dot product attention.
-	DotProductAttention() {}
-	DotProductAttention(float dropout) {
+	DotProductAttentionImpl(float dropout) {
         dpout = torch::nn::Dropout(dropout);
+        register_module("dpout", dpout);
 	}
 
     // Shape of `queries`: (`batch_size`, no. of queries, `d`)
@@ -55,20 +49,23 @@ struct DotProductAttention : public torch::nn::Module {
     torch::nn::Dropout dpout{nullptr};
     torch::Tensor attention_weights;
 };
+TORCH_MODULE(DotProductAttention);
 
 // ---------------------------------------------
 // Additive Attention]
 // ---------------------------------------------
-struct AdditiveAttention : public torch::nn::Module {
+struct AdditiveAttentionImpl : public torch::nn::Module {
     //Additive attention
-	AdditiveAttention() {}
-    AdditiveAttention(int64_t key_size, int64_t query_size, int64_t num_hiddens, float dropout) {
+	AdditiveAttentionImpl(int64_t key_size, int64_t query_size, int64_t num_hiddens, float dropout) {
         W_k = torch::nn::Linear(torch::nn::LinearOptions(key_size, num_hiddens).bias(false));
         W_q = torch::nn::Linear(torch::nn::LinearOptions(query_size, num_hiddens).bias(false));
         W_v = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, 1).bias(false));
         dpout = torch::nn::Dropout(dropout);
+        register_module("W_k", W_k);
+        register_module("W_q", W_q);
+        register_module("W_v", W_v);
+        register_module("dpout", dpout);
     }
-    ~AdditiveAttention() {}
 
     torch::Tensor forward(torch::Tensor queries, torch::Tensor keys, torch::Tensor values, torch::Tensor valid_lens) {
         queries = W_q->forward(queries);
@@ -101,36 +98,7 @@ struct AdditiveAttention : public torch::nn::Module {
     torch::Tensor attention_weights;
 };
 
-// ---------------------------
-// Seq2Seq Encoder
-// ---------------------------
-struct Seq2SeqEncoderImpl : public torch::nn::Module {
-	torch::nn::Embedding embedding{nullptr};
-	torch::nn::GRU rnn{nullptr};
-    //The RNN encoder for sequence to sequence learning.
-	Seq2SeqEncoderImpl(int64_t vocab_size, int64_t embed_size, int64_t num_hiddens, int64_t num_layers, float dropout=0){
-        // Embedding layer
-        embedding = torch::nn::Embedding(vocab_size, embed_size);
-        rnn = torch::nn::GRU(torch::nn::GRUOptions(embed_size, num_hiddens).num_layers(num_layers).dropout(dropout)); //embed_size, num_hiddens, num_layers, dropout
-        register_module("Eembedding", embedding);
-        register_module("Ernn", rnn);
-	}
-
-	std::tuple<torch::Tensor, torch::Tensor>  forward(torch::Tensor X) {
-        // The output `X` shape: (`batch_size`, `num_steps`, `embed_size`)
-        X = embedding->forward(X);
-        // In RNN models, the first axis corresponds to time steps
-        X = X.permute({1, 0, 2});
-        // When state is not mentioned, it defaults to zeros
-        torch::Tensor output, state;
-        std::tie(output, state) = rnn->forward(X);
-        // `output` shape: (`num_steps`, `batch_size`, `num_hiddens`)
-        // `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
-        return std::make_tuple(output, state);
-    }
-};
-
-TORCH_MODULE(Seq2SeqEncoder);
+TORCH_MODULE(AdditiveAttention);
 
 // -------------------------------------
 torch::Tensor transpose_qkv(torch::Tensor X, int64_t num_heads);
@@ -139,13 +107,13 @@ torch::Tensor transpose_output(torch::Tensor X, int64_t num_heads);
 // -------------------------------------
 // Model Implementation
 // -------------------------------------
-struct MultiHeadAttention : public torch::nn::Module {
+struct MultiHeadAttentionImpl : public torch::nn::Module {
 	int64_t num_heads;
-	DotProductAttention attention;
+	DotProductAttention attention{nullptr};
 	torch::nn::Linear W_k{nullptr}, W_q{nullptr}, W_v{nullptr}, W_o{nullptr};
 
-    //Multi-head attention.
-	MultiHeadAttention(int64_t key_size, int64_t query_size, int64_t value_size, int64_t num_hiddens,
+    //Multi-head attention
+	MultiHeadAttentionImpl(int64_t key_size, int64_t query_size, int64_t value_size, int64_t num_hiddens,
                  int64_t n_heads, float dropout, bool bias=false) {
 
         num_heads = n_heads;
@@ -154,6 +122,7 @@ struct MultiHeadAttention : public torch::nn::Module {
         W_k = torch::nn::Linear(torch::nn::LinearOptions(key_size, num_hiddens).bias(bias));
         W_v = torch::nn::Linear(torch::nn::LinearOptions(value_size, num_hiddens).bias(bias));
         W_o = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, num_hiddens).bias(bias));
+        register_module("attention", attention);
         register_module("W_q",W_q);
         register_module("W_k",W_k);
         register_module("W_v",W_v);
@@ -180,7 +149,7 @@ struct MultiHeadAttention : public torch::nn::Module {
 
         // Shape of `output`: (`batch_size` * `num_heads`, no. of queries,
         // `num_hiddens` / `num_heads`)
-        auto output = attention.forward(queries, keys, values, valid_lens);
+        auto output = attention->forward(queries, keys, values, valid_lens);
 
         // Shape of `output_concat`:
         // (`batch_size`, no. of queries, `num_hiddens`)
@@ -188,6 +157,53 @@ struct MultiHeadAttention : public torch::nn::Module {
         return W_o->forward(output_concat);
     }
 };
+TORCH_MODULE(MultiHeadAttention);
 
+// ------------------------------------------------------------------
+// Positional Encoding
+// In the positional embedding matrix 𝐏, [rows correspond to positions within
+// a sequence and columns represent different positional encoding dimensions].
+// ------------------------------------------------------------------
+struct PositionalEncodingImpl : public torch::nn::Module {
+	torch::nn::Dropout drpout{nullptr};
+	torch::Tensor P;
+
+    //Positional encoding
+	PositionalEncodingImpl(int64_t num_hiddens, float dropout, int64_t max_len=1000) {
+
+        drpout = torch::nn::Dropout(dropout);
+        register_module("drpout", drpout);
+        // Create a long enough `P`
+        P = torch::zeros({1, max_len, num_hiddens});
+        auto X = torch::arange(max_len, torch::kFloat).reshape({-1, 1}) / torch::pow(10000, torch::arange(
+            0, num_hiddens, 2, torch::kFloat) / num_hiddens);
+
+    	std::vector<int64_t> oddidx, evenidx;
+    	for(int64_t i = 0; i < num_hiddens; i++) {
+    		if( i % 2 == 0 )
+    			evenidx.push_back(i);
+    		else
+    			oddidx.push_back(i);
+    	}
+
+    	auto st = torch::sin(X);
+    	int c = 0;
+    	for( int64_t n = 0; n < evenidx.size(); n++, c++)
+    		P.index_put_({Slice(), Slice(), evenidx[n]}, st.index({Slice(), c}));
+
+    	st = torch::cos(X);
+    	c = 0;
+    	for( int64_t n = 0; n < oddidx.size(); n++, c++)
+    		P.index_put_({Slice(), Slice(), oddidx[n]}, st.index({Slice(), c}));
+//        P[:, :, 0::2] = torch::sin(X);
+//        P[:, :, 1::2] = torch::cos(X);
+	}
+
+    torch::Tensor forward(torch::Tensor X) {
+        X = X + P.index({Slice(), Slice(0, X.size(1)), Slice()}).to(X.device());
+        return drpout->forward(X);
+    }
+};
+TORCH_MODULE(PositionalEncoding);
 
 #endif /* SRC_UTILS_CH_10_UTIL_H_ */

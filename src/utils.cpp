@@ -58,10 +58,10 @@ void sgd(torch::Tensor& w, torch::Tensor& b, float lr, int64_t batch_size) {
 	//Minibatch stochastic gradient descent.
 	torch::NoGradGuard no_grad_guard;
 	// SGD
-	w -= lr * w.grad() / batch_size;
+	w -= (lr * w.grad() / batch_size);
 	w.grad().zero_();
 
-	b -= lr * b.grad() / batch_size;
+	b -= (lr * b.grad() / batch_size);
 	b.grad().zero_();
 }
 

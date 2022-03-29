@@ -15,6 +15,8 @@ add_executable(10_Attention_cues)
 target_sources(10_Attention_cues PRIVATE 
 Attention_cues.cpp 
 ../matplotlibcpp.h
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp						
 )
@@ -29,6 +31,8 @@ add_executable(10_NadarayaWatsonKernelRegression)
 target_sources(10_NadarayaWatsonKernelRegression PRIVATE 
 NadarayaWatsonKernelRegression.cpp 
 ../matplotlibcpp.h
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp						
 )
@@ -43,6 +47,8 @@ add_executable(10_AttentionScoringFunctions)
 target_sources(10_AttentionScoringFunctions PRIVATE 
 AttentionScoringFunctions.cpp 
 ../matplotlibcpp.h
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp					
 )
@@ -57,6 +63,8 @@ add_executable(10_MultiHeadAttention)
 target_sources(10_MultiHeadAttention PRIVATE 
 MultiHeadAttention.cpp 
 ../matplotlibcpp.h
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp						
 )
@@ -71,8 +79,12 @@ add_executable(10_BahdanauAttention)
 target_sources(10_BahdanauAttention PRIVATE 
 BahdanauAttention.cpp 
 ../matplotlibcpp.h
+../utils.h
+../utils.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
-../utils/ch_10_util.cpp						
+../utils/ch_10_util.cpp								
 )
 													
 target_include_directories(10_BahdanauAttention PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -85,6 +97,8 @@ add_executable(10_SelfAttentionAndPositionalEncoding)
 target_sources(10_SelfAttentionAndPositionalEncoding PRIVATE 
 SelfAttentionAndPositionalEncoding.cpp 
 ../matplotlibcpp.h
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp						
 )
@@ -99,6 +113,10 @@ add_executable(10_Transformer)
 target_sources(10_Transformer PRIVATE 
 Transformer.cpp 
 ../matplotlibcpp.h
+../utils.h
+../utils.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
 ../utils/ch_10_util.cpp						
 )

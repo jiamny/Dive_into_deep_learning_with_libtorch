@@ -381,4 +381,79 @@ std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab, Vocab> load_data_nmt(std::string filename,
 														 int num_steps, int num_examples);
+
+torch::Tensor sequence_mask(torch::Tensor X, torch::Tensor  valid_len, float value=0);
+
+// --------------------------------------------
+// Masked Softmax Operation
+// --------------------------------------------
+torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens);
+
+void xavier_init_weights(torch::nn::Module &m);
+
+// ---------------------------------
+// Loss Function
+// ---------------------------------
+class MaskedSoftmaxCELoss : public torch::nn::CrossEntropyLoss {
+public:
+	MaskedSoftmaxCELoss() {
+		loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
+	}
+    /*The softmax cross-entropy loss with masks.
+    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
+    # `label` shape: (`batch_size`, `num_steps`)
+    # `valid_len` shape: (`batch_size`,)
+    */
+    torch::Tensor forward(torch::Tensor pred, torch::Tensor label, torch::Tensor valid_len){
+    	weights = torch::ones_like(label);
+        weights = sequence_mask(weights, valid_len);
+        //reduction ='none'
+        // auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
+        unweighted_loss = loss->forward(pred.permute({0, 2, 1}), label);
+        weighted_loss = (unweighted_loss * weights).mean(1);
+        //std::cout << "unweighted_loss:\n" << unweighted_loss << "\n";
+        //std::cout << "weighted_loss:\n" << weighted_loss << "\n";
+        return weighted_loss;
+   }
+private:
+   torch::nn::CrossEntropyLoss loss{nullptr};
+   torch::Tensor weights, unweighted_loss, weighted_loss; //mast???!!!
+};
+
+
+// ---------------------------
+// Seq2Seq Encoder
+// ---------------------------
+struct Seq2SeqEncoderImpl : public torch::nn::Module {
+	torch::nn::Embedding embedding{nullptr};
+	torch::nn::GRU rnn{nullptr};
+    //The RNN encoder for sequence to sequence learning.
+	Seq2SeqEncoderImpl(int64_t vocab_size, int64_t embed_size, int64_t num_hiddens, int64_t num_layers, float dropout=0){
+        // Embedding layer
+        embedding = torch::nn::Embedding(vocab_size, embed_size);
+        rnn = torch::nn::GRU(torch::nn::GRUOptions(embed_size, num_hiddens).num_layers(num_layers).dropout(dropout)); //embed_size, num_hiddens, num_layers, dropout
+        register_module("Eembedding", embedding);
+        register_module("Ernn", rnn);
+	}
+
+	std::tuple<torch::Tensor, torch::Tensor>  forward(torch::Tensor X) {
+        // The output `X` shape: (`batch_size`, `num_steps`, `embed_size`)
+        X = embedding->forward(X);
+        // In RNN models, the first axis corresponds to time steps
+        X = X.permute({1, 0, 2});
+        // When state is not mentioned, it defaults to zeros
+        torch::Tensor output, state;
+        std::tie(output, state) = rnn->forward(X);
+        // `output` shape: (`num_steps`, `batch_size`, `num_hiddens`)
+        // `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
+        return std::make_tuple(output, state);
+    }
+};
+
+TORCH_MODULE(Seq2SeqEncoder);
+
+std::string join(int i, int j, std::vector<std::string> label_tokens);
+
+double bleu(std::string pred_seq, std::string label_seq, int64_t k);
+
 #endif /* SRC_08_RECURRENTNEURALNETWORKS_UTIL_H_ */

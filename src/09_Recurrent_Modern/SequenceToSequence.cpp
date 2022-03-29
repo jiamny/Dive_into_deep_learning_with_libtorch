@@ -10,7 +10,6 @@
 
 #include "../utils/ch_8_9_util.h"
 #include "../utils.h"
-#include "../utils/ch_10_util.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
@@ -19,7 +18,7 @@ using torch::indexing::Slice;
 using torch::indexing::None;
 using torch::indexing::Ellipsis;
 
-// Seq2SeqEncoder and sequence_mask() defined in ch_10_util.h
+// Seq2SeqEncoder and sequence_mask() defined in ch_8_9_util.h
 
 // ---------------------------
 // Decoder
@@ -85,59 +84,11 @@ struct EncoderDecoderImpl : public torch::nn::Module {
 };
 TORCH_MODULE(EncoderDecoder);
 
-void xavier_init_weights(torch::nn::Module &m) {
-
-	torch::NoGradGuard no_grad;
-
-    if(typeid(m) == typeid(torch::nn::Linear) ) {
-    	auto p = m.named_parameters(false);
-    	auto w = p.find("weight");
-        torch::nn::init::xavier_uniform_(*w);
-    }
-    if(typeid(m) == typeid(torch::nn::GRU) ) {
-        for( auto& param : m.named_parameters(true)) { 					// _flat_weights_names() ) {
-            if( param.pair().first.find("weight") ) {
-                torch::nn::init::xavier_uniform_(param.pair().second);	// m.parameters[param]
-            }
-        }
-    }
-}
-
-// ---------------------------------
-// Loss Function
-// ---------------------------------
-
-class MaskedSoftmaxCELoss : public torch::nn::CrossEntropyLoss {
-public:
-	MaskedSoftmaxCELoss() {
-		loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
-	}
-    /*The softmax cross-entropy loss with masks.
-    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
-    # `label` shape: (`batch_size`, `num_steps`)
-    # `valid_len` shape: (`batch_size`,)
-    */
-    torch::Tensor forward(torch::Tensor pred, torch::Tensor label, torch::Tensor valid_len){
-    	weights = torch::ones_like(label);
-        weights = sequence_mask(weights, valid_len);
-        //reduction ='none'
-        // auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
-        unweighted_loss = loss->forward(pred.permute({0, 2, 1}), label);
-        weighted_loss = (unweighted_loss * weights).mean(1);
-        //std::cout << "unweighted_loss:\n" << unweighted_loss << "\n";
-        //std::cout << "weighted_loss:\n" << weighted_loss << "\n";
-        return weighted_loss;
-   }
-private:
-   torch::nn::CrossEntropyLoss loss{nullptr};
-   torch::Tensor weights, unweighted_loss, weighted_loss; //mast???!!!
-};
-
 // ----------------------------------------------------------
 // Prediction
 // To predict the output sequence token by token,
 // at each decoder time step the predicted token from
-//the previous time step is fed into the decoder as an input.
+// the previous time step is fed into the decoder as an input.
 // -----------------------------------------------------------
 
 template<typename T>
@@ -156,17 +107,16 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 	for(auto i : c)
 		vec.push_back(i);
 
-	torch::Tensor src_ar = torch::from_blob(vec.data(), {1, num_steps}, options);
-	src_ar = src_ar.clone().to(torch::kLong);
+	torch::Tensor src_ar = (torch::from_blob(vec.data(), {1, num_steps}, options)).clone();
+	src_ar = src_ar.to(torch::kLong);
 	torch::Tensor src_val_len = (src_ar != src_vocab["<pad>"]).to(torch::kLong).sum(1);
 
 	std::tuple<torch::Tensor, torch::Tensor> enc_outputs = net->encoder->forward(src_ar);
-	torch::Tensor dec_state = net->decoder->init_state(enc_outputs);
 
-    torch::Tensor prd;
+	torch::Tensor prd;
+	torch::Tensor dec_state = net->decoder->init_state(enc_outputs);
 	std::tie(prd, dec_state) = net->decoder->forward(src_ar, dec_state );
 	prd = prd.argmax(2);
-//	std::cout << "pred: " << prd << "\n";
 
 	auto r_ptr = prd.data_ptr<int64_t>();
 	std::vector<int64_t> idx{r_ptr, r_ptr + prd.numel()};
@@ -183,54 +133,6 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 			if( tk != "<eos>" ) out += (" " + tk);
 	}
     return out;
-}
-
-// join list of strings
-std::string join(int i, int n, std::vector<std::string> label_tokens) {
-	std::string ret;
-	for(int c = i; c < (i + n); c++) {
-		if(! ret.empty())
-			ret += " ";
-		ret += label_tokens[c];
-	}
-	return(ret);
-}
-
-// ----------------------------------------------------------------------------
-// Evaluation of Predicted Sequences
-// We can evaluate a predicted sequence by comparing it with the label sequence
-// (the ground-truth). BLEU (Bilingual Evaluation Understudy)
-// ------------------------------------------------------------------------------
-double bleu(std::string pred_seq, std::string label_seq, int64_t k) {
-    //Compute the BLEU.
-	std::vector<std::string> pred_tokens = tokenize({pred_seq}, "word", false);
-	std::vector<std::string> label_tokens = tokenize({label_seq}, "word", false);
-
-	int64_t len_pred = pred_tokens.size();
-	int64_t len_label = label_tokens.size();
-	double score = std::exp(std::min(0.0, 1.0 - (len_label*1.0 / len_pred)));
-
-	for( int n = 1; n < (k + 1); n++ ) {
-		int num_matches = 0;
-		std::map<std::string, int> label_subs;
-		for( int i = 0; i < (len_label - n + 1); i++ ) {
-			std::string s = join(i, n, label_tokens);
-			label_subs[s] += 1;
-		}
-		//std::cout << "-------------------------------------------\n";
-		//std::for_each(std::begin(label_subs), std::end(label_subs), [](const auto & element) { std::cout << element << " "; });
-		//std::cout << std::endl;
-
-		for( int i = 0; i < (len_pred - n + 1); i++ ) {
-			std::string s = join(i, n, label_tokens);
-			if(label_subs[s] > 0 ){
-				num_matches += 1;
-				label_subs[s] -= 1;
-			}
-		}
-		score *= std::pow(num_matches / (len_pred - n + 1), std::pow(0.5, n));
-	}
-	return score;
 }
 
 
@@ -289,10 +191,10 @@ int main() {
 	int embed_size = 32, num_hiddens = 32, num_layers = 2;
 	float dropout = 0.1, lr = 0.005;
 	int batch_size = 64, num_steps = 10;
-	int64_t num_epochs = 400;
+	int64_t num_epochs = 500;
 
 	std::string filename = "./data/fra-eng/fra.txt";
-	//std::pair<torch::Tensor, torch::Tensor> data_arrays;
+
 	Vocab src_vocab, tgt_vocab;
 	torch::Tensor src_array, src_valid_len, tgt_array, tgt_valid_len;
 
@@ -300,10 +202,11 @@ int main() {
 	encoder = Seq2SeqEncoder(src_vocab.length(), embed_size, num_hiddens, num_layers, dropout);
 	decoder = Seq2SeqDecoder(tgt_vocab.length(), embed_size, num_hiddens, num_layers, dropout);
 	auto net = EncoderDecoder(encoder, decoder);
+	net->to(device);
 
 	//Train a model for sequence to sequence.
 	net->apply(xavier_init_weights);
-	net->to(device);
+
 	//auto optimizer = torch::optim::Adam(net->parameters(), lr);
 	torch::optim::Adam optimizer(net->parameters(), torch::optim::AdamOptions(lr).betas({0.5, 0.999}));
 
@@ -317,6 +220,10 @@ int main() {
 	for( int64_t epoch = 0;  epoch < num_epochs; epoch++ ) {
 		// get shuffled batch data indices
 		std::list<torch::Tensor> idx_iter = data_index_iter(src_array.size(0), batch_size, true);
+
+		float t_loss = 0.0;
+		int64_t cnt = 0;
+		int64_t n_wtks = 0;
 
 		for(auto& batch_idx : idx_iter) {
 
@@ -353,13 +260,17 @@ int main() {
 	        optimizer.step();
 	        torch::NoGradGuard no_grad;
 	        //torch::no_grad();
-	        plsum.push_back((l.sum()).item<float>());
-	        wtks.push_back(num_tokens.item<long>());
-	        epochs.push_back(1.0*epoch);
+	        t_loss += ((l.sum()).item<float>()/Y.size(0));
+	        n_wtks += num_tokens.item<long>();
+	        cnt++;
 	    }
 
-	    if((epoch + 1) % 10 == 0)
-	    	std::cout << "loss: " << plsum[epoch]/wtks[epoch] << std::endl;
+	    if( epoch % 210 == 0) {
+	    	std::cout << "loss: " << (t_loss/cnt) << std::endl;
+	    	plsum.push_back((t_loss/cnt));
+	    	wtks.push_back(static_cast<int64_t>(n_wtks/cnt));
+	    	epochs.push_back(1.0*epoch);
+	    }
 	}
 
 	plt::figure_size(800, 600);
@@ -374,8 +285,8 @@ int main() {
 	// Prediction
 	std::vector<std::string> engs = {"go .", "i lost .", "he\'s calm .", "i\'m home ."};
 	std::vector<std::string> fras = {"va !", "j\'ai perdu .", "il est calme .", "je suis chez moi ."};
-	int t = 0;
-	for(  ; t < engs.size(); t++ ) {
+
+	for( int t = 0; t < engs.size(); t++ ) {
 		std::string translation = predict_seq2seq(net, engs[t], src_vocab, tgt_vocab, num_steps, device);
 		std::cout << "translation: " << translation << "\n";
 		std::cout << "target: " << fras[t] << "\n";
@@ -383,6 +294,7 @@ int main() {
 		auto score = bleu(translation, fras[t],  2);
 		std::cout << "Bleu score: " << score << "\n";
 	}
+
 	std::cout << "Done!\n";
 	return 0;
 }

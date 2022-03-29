@@ -100,12 +100,12 @@ std::vector<std::pair<std::string, int64_t>> count_corpus( std::vector<std::stri
     // sort the vector by increasing the order of its pair's second value
     // if the second value is equal, order by the pair's first value
     std::sort(_token_freqs.begin(), _token_freqs.end(),
-                      [](const std::pair<std::string, int64_t> &l, const std::pair<std::string, int64_t> &r) {
-                          if (l.second != r.second) {
-                              return l.second > r.second;
-                          }
-                          return l.first > r.first;
-                      });
+             [](const std::pair<std::string, int64_t> &l, const std::pair<std::string, int64_t> &r) {
+             if(l.second != r.second) {
+            	 return l.second > r.second;
+             }
+             return l.first > r.first;
+    });
 
     return _token_freqs;
 }
@@ -359,6 +359,111 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab, Vo
 
     return {src_array, src_valid_len, tgt_array, tgt_valid_len, src_vocab, tgt_vocab};
 }
+
+
+torch::Tensor sequence_mask(torch::Tensor X, torch::Tensor  valid_len, float value) {
+    //Mask irrelevant entries in sequences.
+    int64_t maxlen = X.size(1);
+    auto mask = torch::arange((maxlen),
+    		torch::TensorOptions().dtype(torch::kFloat32).device(X.device())).index({None, Slice()}) < valid_len.index({Slice(), None});
+
+    // (if B - boolean tensor) at::Tensor not_B = torch::ones_like(B) ^ B;
+    // std::cout << (torch::ones_like(mask) ^ mask).sizes() <<std::endl;
+    X.index_put_({torch::ones_like(mask) ^ mask}, value);
+
+    return X;
+}
+
+// --------------------------------------------
+// Masked Softmax Operation
+// --------------------------------------------
+torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens) {
+    // Perform softmax operation by masking elements on the last axis.
+    // `X`: 3D tensor, `valid_lens`: 1D or 2D tensor
+    if( ! valid_lens.defined() || (valid_lens.numel() == 0) ) { 								// None
+        return torch::nn::functional::softmax(X, /*dim=*/-1);
+    } else {
+        auto shape = X.sizes();
+
+        if( valid_lens.dim() == 1) {
+            valid_lens = torch::repeat_interleave(valid_lens, shape[shape.size() - 2]);
+        } else {
+            valid_lens = valid_lens.reshape(-1);
+        }
+
+        // On the last axis, replace masked elements with a very large negative value, whose exponentiation outputs 0
+        //std::cout << X.reshape({-1, shape[shape.size() - 1]}).sizes()  << "\n";
+        X = sequence_mask(X.reshape({-1, shape[shape.size() - 1]}), valid_lens, /*value=*/ -1e6);
+
+        return torch::nn::functional::softmax(X.reshape(shape), /*dim=*/-1);
+
+    }
+}
+
+void xavier_init_weights(torch::nn::Module &m) {
+	torch::NoGradGuard no_grad;
+
+	for(auto& module : m.modules(false)) { // include_self= false
+		if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+			torch::nn::init::xavier_uniform_(M->weight);
+		} else if (auto M = dynamic_cast<torch::nn::GRUImpl*>(module.get())) {
+			for(auto& p : M->named_parameters(false) ) {
+				if( p.pair().first.find("weight") != std::string::npos )
+					torch::nn::init::xavier_uniform_(p.pair().second);
+			}
+		}
+	}
+}
+
+// join list of strings
+std::string join(int i, int j, std::vector<std::string> label_tokens) {
+	std::string ret;
+	for(int c = i; c < j; c++) {
+		if(! ret.empty())
+			ret += " ";
+		ret += label_tokens[c];
+	}
+	return(ret);
+}
+
+// ----------------------------------------------------------------------------
+// Evaluation of Predicted Sequences
+// We can evaluate a predicted sequence by comparing it with the label sequence
+// (the ground-truth). BLEU (Bilingual Evaluation Understudy)
+// ------------------------------------------------------------------------------
+double bleu(std::string pred_seq, std::string label_seq, int64_t k) {
+    //Compute the BLEU.
+	std::vector<std::string> pred_tokens = tokenize({pred_seq}, "word", false);
+	std::vector<std::string> label_tokens = tokenize({label_seq}, "word", false);
+
+	int64_t len_pred = pred_tokens.size();
+	int64_t len_label = label_tokens.size();
+	double score = std::exp(std::min(0.0, 1.0 - (len_label*1.0 / len_pred)));
+
+	for( int n = 1; n < (k + 1); n++ ) {
+		int num_matches = 0;
+		std::map<std::string, int> label_subs;
+		for( int i = 0; i < (len_label - n + 1); i++ ) {
+			std::string s = join(i, (i+n), label_tokens);
+			label_subs[s] += 1;
+		}
+		//std::cout << "-------------------------------------------\n";
+		//std::for_each(std::begin(label_subs), std::end(label_subs), [](const auto & element) { std::cout << element << " "; });
+		//std::cout << std::endl;
+
+		for( int i = 0; i < (len_pred - n + 1); i++ ) {
+			std::string s = join(i, (i+n), pred_tokens);
+			if(label_subs[s] > 0 ){
+				num_matches += 1;
+				label_subs[s] -= 1;
+			}
+		}
+		if( num_matches != 0 )
+			score *= std::pow(num_matches*1.0 / (len_pred - n + 1), std::pow(0.5, n));
+	}
+	return score;
+}
+
 
 
 
