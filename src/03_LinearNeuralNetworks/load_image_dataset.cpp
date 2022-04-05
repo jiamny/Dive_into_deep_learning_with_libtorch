@@ -20,9 +20,14 @@ void show_images(torch::Tensor batch_data, torch::Tensor target,
 
 	plt::figure_size( static_cast<size_t>(num_cols * scale * img_size), static_cast<size_t>(num_rows * scale * img_size));
 
+	int rid = 0, cid=0;
 	for( int i = 0; i < batch_size; i++ ) {
 
-		plt::subplot(num_rows, num_cols, (i+1));
+//		plt::subplot(num_rows, num_cols, (i+1)); // cause runtime error point
+		cid = i % num_cols;
+		rid = static_cast<int>(std::ceil(i / num_cols));
+
+		plt::subplot2grid(num_rows, num_cols, rid, cid, 1, 1);
 
 		auto image = batch_data.data()[i].view({-1,1}).to(dtype_option);
 		//std::cout << image.data().sizes() << "\n";
@@ -39,6 +44,7 @@ void show_images(torch::Tensor batch_data, torch::Tensor target,
 	}
 
 	plt::show();
+	plt::close();
 }
 
 

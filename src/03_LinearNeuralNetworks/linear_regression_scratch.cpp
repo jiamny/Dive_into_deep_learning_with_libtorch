@@ -41,8 +41,6 @@ int main() {
 	 */
 
 	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
-
 	auto x = features.data().index({Slice(), 1});
 
 	std::vector<float> xx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());

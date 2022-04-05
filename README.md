@@ -6,13 +6,13 @@ Dive into deep learning with LibTorch C++ API
 
 ## Dependency
 
-- cmake 3.20+
+- cmake 3.18+
 
 - PyTorch 1.11.0
 
-- python3.8
+- python3.9
 
-- opencv 4.5.3
+- opencv 4.5.3/4.5.5
 
 - matplotlib-cpp
 
@@ -20,9 +20,9 @@ Dive into deep learning with LibTorch C++ API
 
 - png++
 
-- ubuntu 20.04
+- ubuntu 21.10
 
-- gcc-9/g++-9 for C++ 17
+- gcc-11/g++-11 for C++ 17
 
 ## Data file
 - [H. G. Wells' The Time Machine (Plain Text UTF-8)](https://www.gutenberg.org/files/35/35-0.txt)

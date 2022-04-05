@@ -4,7 +4,7 @@ find_package(Python3 COMPONENTS Development NumPy)
 
 add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
 
-set(requiredlibs "python3.8")
+set(requiredlibs "python3.9")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
@@ -35,4 +35,61 @@ target_include_directories(11_MinibatchStochasticGradientDescent PRIVATE ${Pytho
 target_link_libraries(11_MinibatchStochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
 
 set_target_properties(11_MinibatchStochasticGradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_Adagrad)
+target_sources(11_Adagrad PRIVATE  Adagrad.cpp
+../csvloader.h
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+../utils.h
+../utils.cpp
+)
+
+target_include_directories(11_Adagrad PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_Adagrad ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_Adagrad PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_Adadelta)
+target_sources(11_Adadelta PRIVATE  Adadelta.cpp
+../csvloader.h
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+../utils.h
+../utils.cpp
+)
+
+target_include_directories(11_Adadelta PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_Adadelta ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_Adadelta PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_Adam)
+target_sources(11_Adam PRIVATE  Adam.cpp
+../csvloader.h
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+../utils.h
+../utils.cpp
+)
+
+target_include_directories(11_Adam PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_Adam ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_Adam PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_Convexity)
+target_sources(11_Convexity PRIVATE  Convexity.cpp
+)
+
+target_include_directories(11_Convexity PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_Convexity ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_Convexity PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+
 

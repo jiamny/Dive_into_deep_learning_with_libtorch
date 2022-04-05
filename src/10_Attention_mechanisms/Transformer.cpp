@@ -589,6 +589,8 @@ int main() {
 	std::cout << "enc_attention_weights.sizes(): " << enc_attention_weights.sizes() << "\n";
 
 	plt::figure_size(1200, 750);
+	int rid = 0, cid = 0;
+
 	PyObject* mat;
 	for(int i = 0; i < enc_attention_weights.size(0); i++) {
 		torch::Tensor layerH = enc_attention_weights.index({i, Slice(), Slice(), Slice()});
@@ -602,8 +604,14 @@ int main() {
 			const float* zptr = &(z[0]);
 			const int colors = 1;
 			int cnt = (i*layerH.size(0) + c) + 1;
-			std::cout << "cnt: " << cnt << "\n";
-			plt::subplot(enc_attention_weights.size(0), layerH.size(0), cnt);
+//			plt::subplot(enc_attention_weights.size(0), layerH.size(0), cnt);
+
+			cid = ((cnt - 1) % layerH.size(0));
+			rid = static_cast<int>((cnt - 1) / layerH.size(0));
+			std::cout << "cnt: " << cnt << " " << enc_attention_weights.size(0) << " " << layerH.size(0)
+					  << " " << rid << " " << cid << "\n";
+			plt::subplot2grid(enc_attention_weights.size(0), layerH.size(0), rid, cid, 1, 1);
+
 			plt::title(("Head " + std::to_string(c)).c_str());
 			plt::imshow(zptr, tsr.size(0), tsr.size(1), colors, {}, &mat);
 			if( c == 0 )

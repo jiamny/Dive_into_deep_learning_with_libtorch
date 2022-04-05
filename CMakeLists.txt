@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(D2L_pytorch_cpp VERSION 1.0.0 LANGUAGES CXX)
 
@@ -33,6 +33,7 @@ message(STATUS "OpenCV library status:")
 message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+message("OpenCV_FOUND:${OpenCV_FOUND}")
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lm -ldl")
 
@@ -72,3 +73,5 @@ if(MSVC)
     include(copy_torch_dlls)
     copy_torch_dlls(${EXECUTABLE_NAME})
 endif()
+
+

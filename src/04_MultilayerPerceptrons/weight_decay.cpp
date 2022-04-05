@@ -244,7 +244,8 @@ int main() {
 				lambd, train_loss4, test_loss4, xx4, false);
 
 	plt::figure_size(1200, 1000);
-	plt::subplot(2, 2, 1);
+//	plt::subplot(2, 2, 1);
+	plt::subplot2grid(2, 2, 0, 0, 1, 1);
 	plt::named_plot("Train loss", xx, train_loss, "b");
 	plt::named_plot("Test loss", xx, test_loss, "c:");
 	plt::ylabel("loss");
@@ -252,7 +253,8 @@ int main() {
 	plt::legend();
 	plt::title("Scratch implementation: lambd = 0");
 
-	plt::subplot(2, 2, 2);
+//	plt::subplot(2, 2, 2);
+	plt::subplot2grid(2, 2, 0, 1, 1, 1);
 	plt::named_plot("Train loss", xx2, train_loss2, "b");
 	plt::named_plot("Test loss", xx2, test_loss2, "c:");
 	plt::ylabel("loss");
@@ -260,7 +262,8 @@ int main() {
 	plt::legend();
 	plt::title("Scratch implementation: lambd = 3");
 
-	plt::subplot(2, 2, 3);
+//	plt::subplot(2, 2, 3);
+	plt::subplot2grid(2, 2, 1, 0, 1, 1);
 	plt::named_plot("Train loss", xx3, train_loss3, "b");
 	plt::named_plot("Test loss", xx3, test_loss3, "c:");
 	plt::ylabel("loss");
@@ -268,7 +271,8 @@ int main() {
 	plt::legend();
 	plt::title("Concise implementation: lambd = 0");
 
-	plt::subplot(2, 2, 4);
+//	plt::subplot(2, 2, 4);
+	plt::subplot2grid(2, 2, 1, 1, 1, 1);
 	plt::named_plot("Train loss", xx4, train_loss4, "b");
 	plt::named_plot("Test loss", xx4, test_loss4, "c:");
 	plt::ylabel("loss");

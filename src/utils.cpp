@@ -119,27 +119,35 @@ std::pair<torch::Tensor, torch::Tensor> init_params(int64_t num_inputs) {
 }
 
 std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFile) {
-	Json::Reader reader;  //for reading the data
-	Json::Value newValue; //for modifying and storing new values
 
 	std::unordered_map<std::string, std::string> labelMap;
+	//Json::Reader reader;  	  //for reading the data
+	Json::Value newValue; 	  //for modifying and storing new values
 
 	//opening file using fstream
-	std::ifstream file(jsonFile);
+	//std::ifstream file(jsonFile);
+	std::ifstream ifs;
+	ifs.open(jsonFile);
+	Json::CharReaderBuilder builder;
+	builder["collectComments"] = true;
+	std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>> errs;
 
 	// check if there is any error is getting data from the json file
-	if ( ! reader.parse(file, newValue) ) {
-		     std::cout << reader.getFormattedErrorMessages();
-		     exit(1);
+	//if ( ! reader.parse(file, newValue) ) {
+	if (! parseFromStream(builder, ifs, &newValue, &errs)) {
+		//std::cout << reader.getFormattedErrorMessages();
+		std::cout << errs << std::endl;
+		exit(1);
 	} else {
 
 		for( int i = 0; i < newValue.size(); i++ ) {
 			//std::cout << newValue.getMemberNames()[i].c_str() << " " << newValue[newValue.getMemberNames()[i].c_str()].asCString() << std::endl;
 			labelMap.insert({ std::string(newValue.getMemberNames()[i].c_str()),  newValue[newValue.getMemberNames()[i].c_str()].asCString()});
 		}
-//		std::string t = "20";
-//		std::cout << labelMap[t] << std::endl;
+	//		std::string t = "20";
+	//		std::cout << labelMap[t] << std::endl;
 	}
+
 	return labelMap;
 }
 

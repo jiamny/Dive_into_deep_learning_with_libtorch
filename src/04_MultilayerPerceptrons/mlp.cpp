@@ -45,7 +45,8 @@ int main() {
             0.35);  // hspace=
 */
 	plt::tight_layout();
-	plt::subplot(3, 2, 1);
+//	plt::subplot(3, 2, 1);
+	plt::subplot2grid(3, 2, 0, 0, 1, 1);
 
 	std::vector<float> xx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
 	std::vector<float> yy(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
@@ -64,7 +65,8 @@ int main() {
 
 	std::vector<float> gyy(relu_grad.data().data_ptr<float>(), relu_grad.data().data_ptr<float>() + relu_grad.data().numel());
 
-	plt::subplot(3, 2, 2);
+//	plt::subplot(3, 2, 2);
+	plt::subplot2grid(3, 2, 0, 1, 1, 1);
 	plt::plot(xx, gyy, "g--");
 //	plt::xlabel("x");
 	plt::ylabel("grad of relu");
@@ -77,7 +79,8 @@ int main() {
 	y = torch::sigmoid(x);
 	std::vector<float> sx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
 	std::vector<float> sy(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
-	plt::subplot(3, 2, 3);
+//	plt::subplot(3, 2, 3);
+	plt::subplot2grid(3, 2, 1, 0, 1, 1);
 	plt::plot(sx, sy, "b");
 //	plt::xlabel("x");
 	plt::ylabel("sigmoid(x)");
@@ -87,7 +90,8 @@ int main() {
 	x.grad().data().zero_();
 	y.backward(torch::ones_like(x), true);
 	std::vector<float> gy(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());
-	plt::subplot(3, 2, 4);
+//	plt::subplot(3, 2, 4);
+	plt::subplot2grid(3, 2, 1, 1, 1, 1);
 	plt::plot(sx, gy, "g--");
 //	plt::xlabel("x");
 	plt::ylabel("grad of sigmoid");
@@ -101,7 +105,8 @@ int main() {
 	y = torch::tanh(x);
 	std::vector<float> tx(x.detach().data_ptr<float>(), x.detach().data_ptr<float>() + x.detach().numel());
 	std::vector<float> ty(y.detach().data_ptr<float>(), y.detach().data_ptr<float>() + y.detach().numel());
-	plt::subplot(3, 2, 5);
+//	plt::subplot(3, 2, 5);
+	plt::subplot2grid(3, 2, 2, 0, 1, 1);
 	plt::plot(tx, ty, "b");
 	plt::xlabel("x");
 	plt::ylabel("tanh(x)");
@@ -111,7 +116,8 @@ int main() {
 	x.grad().data().zero_();
 	y.backward(torch::ones_like(x), true);
 	std::vector<float> tgy(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());
-	plt::subplot(3, 2, 6);
+//	plt::subplot(3, 2, 6);
+	plt::subplot2grid(3, 2, 2, 1, 1, 1);
 	plt::plot(tx, tgy, "g--");
 	plt::xlabel("x");
 	plt::ylabel("grad of tanh");

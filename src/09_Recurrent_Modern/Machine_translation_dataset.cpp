@@ -51,6 +51,7 @@ void show_list_len_pair_hist(std::vector<std::vector<std::string>> source,
 	plt::ylabel("Count");
 	plt::legend();
 	plt::show();
+	plt::close();
 }
 
 std::vector<std::pair<std::string, int64_t>> count_corpus2( std::vector<std::string> tokens ) {

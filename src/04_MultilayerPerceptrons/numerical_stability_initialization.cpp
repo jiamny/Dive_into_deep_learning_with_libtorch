@@ -25,7 +25,6 @@ int main() {
 	std::cout << "x.grad: " << x.grad().sizes() << std::endl;
 	plt::figure_size(800, 600);
 	plt::tight_layout();
-	plt::subplot(1, 1, 1);
 	std::vector<float> xx(x.detach().data_ptr<float>(), x.detach().data_ptr<float>() + x.detach().numel());
 	std::vector<float> yy(y.detach().data_ptr<float>(), y.detach().data_ptr<float>() + y.detach().numel());
 	std::vector<float> yy2(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());

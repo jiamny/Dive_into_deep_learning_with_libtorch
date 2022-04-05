@@ -20,8 +20,15 @@
 #include <algorithm>
 #include <iostream>
 
-#include <jsoncpp/json/json.h>
+
+#include <jsoncpp/json/allocator.h>
 #include <jsoncpp/json/value.h>
+#include <jsoncpp/json/config.h>
+#include <jsoncpp/json/json_features.h>
+#include <jsoncpp/json/reader.h>
+#include <jsoncpp/json/writer.h>
+
+
 using namespace Json;
 
 #include "fashion.h"

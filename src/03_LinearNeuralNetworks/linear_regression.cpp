@@ -95,7 +95,7 @@ int main() {
 	double params[3][2] = {{0, 1}, {0, 2}, {3, 1}};
 
 	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
+
 	//std:: cout << params[0][0] << " " << params[0][1] << std::endl;
 	//normal(xx, params[0][0], params[0][1]);
 

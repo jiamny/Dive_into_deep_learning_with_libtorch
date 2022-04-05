@@ -427,20 +427,23 @@ int main() {
 			num_epochs, use_random_iter);
 
 	plt::figure_size(1400, 500);
-	plt::subplot(int(1),int(2),int(1));
+//	plt::subplot(int(1),int(2),int(1));
+	plt::subplot2grid(1, 2, 0, 0, 1, 1);
 	plt::named_plot("train", trlt.first, trlt.second, "b");
 	plt::xlabel("epoch");
 	plt::ylabel("perplexity");
 	plt::title("RNNModelScratch GRU");
 	plt::legend();
 
-	plt::subplot(int(1),int(2),int(2));
+//	plt::subplot(int(1),int(2),int(2));
+	plt::subplot2grid(1, 2, 0, 1, 1, 1);
 	plt::named_plot("train", ctrlt.first, ctrlt.second, "b");
 	plt::xlabel("epoch");
 	plt::ylabel("perplexity");
 	plt::title("RNNModel concise GRU");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

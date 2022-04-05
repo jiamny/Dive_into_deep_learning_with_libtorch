@@ -134,6 +134,7 @@ int main() {
 	plt::ylabel("data");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 
 	// Let us [take a closer look at the difficulties in 𝑘-step-ahead predictions] by computing predictions on
@@ -196,6 +197,7 @@ int main() {
 	plt::ylabel("data");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

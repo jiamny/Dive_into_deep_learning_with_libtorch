@@ -152,13 +152,13 @@ int main() {
 			num_epochs, use_random_iter);
 
 	plt::figure_size(700, 500);
-	plt::subplot(1, 1, 1);
 	plt::named_plot("train", ctrlt.first, ctrlt.second, "b");
 	plt::xlabel("epoch");
 	plt::ylabel("perplexity");
 	plt::title("RNNModeldeeprnn");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

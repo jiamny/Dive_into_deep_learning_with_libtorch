@@ -303,7 +303,6 @@ int main() {
 	}
 
 	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
 	plt::ylim(0.2, 0.9);
 	plt::named_plot("Train loss", xx, train_loss, "b");
 	plt::named_plot("Test loss", xx, test_loss, "c:");
@@ -421,7 +420,6 @@ int main() {
 	}
 
 	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
 	plt::ylim(0.2, 0.9);
 	plt::named_plot("Train loss", xx, train_loss, "b");
 	plt::named_plot("Test loss", xx, test_loss, "c:");

@@ -259,7 +259,6 @@ int main( void ) {
     valid_l_sum /= num_epochs;
 
 	plt::figure_size(800, 600);
-	plt::subplot(1, 1, 1);
 	plt::semilogy(xx, train_ls_epoch);
 	plt::named_plot("Train loss", xx, train_ls_epoch, "b");
 	plt::named_plot("Test loss", xx, test_ls_epoch, "c:");

@@ -197,7 +197,8 @@ int main() {
 	train_ana_test(train_features, train_labels, test_features, test_labels, train_loss3, test_loss3, xx3);
 
 	plt::figure_size(1500, 500);
-	plt::subplot(1, 3, 1);
+//	plt::subplot(1, 3, 1);
+	plt::subplot2grid(1, 3, 0, 0, 1, 1);
 	plt::named_plot("Train loss", xx1, train_loss1, "b");
 	plt::named_plot("Test loss", xx1, test_loss1, "c:");
 	plt::ylabel("loss");
@@ -205,7 +206,8 @@ int main() {
 	plt::title("Third-Order Polynomial Fitting");
 	plt::legend();
 
-	plt::subplot(1, 3, 2);
+//	plt::subplot(1, 3, 2);
+	plt::subplot2grid(1, 3, 0, 1, 1, 1);
 	plt::named_plot("Train loss", xx2, train_loss2, "b");
 	plt::named_plot("Test loss", xx2, test_loss2, "c:");
 	plt::ylabel("loss");
@@ -213,7 +215,8 @@ int main() {
 	plt::title("Linear Function Fitting (Underfitting)");
 	plt::legend();
 
-	plt::subplot(1, 3, 3);
+//	plt::subplot(1, 3, 3);
+	plt::subplot2grid(1, 3, 0, 2, 1, 1);
 	plt::named_plot("Train loss", xx3, train_loss3, "b");
 	plt::named_plot("Test loss", xx3, test_loss3, "c:");
 	plt::ylabel("loss");
@@ -221,6 +224,7 @@ int main() {
 	plt::title("Higher-Order Fitting (Overfitting)");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -83,8 +83,6 @@ int main() {
 
 	plt::figure_size(800, 600);
 
-	plt::subplot(1, 1, 1);
-
 	std::vector<float> xx(x_sample.data_ptr<float>(), x_sample.data_ptr<float>() + x_sample.numel());
 	std::vector<float> w(rep, 0.167);
 
