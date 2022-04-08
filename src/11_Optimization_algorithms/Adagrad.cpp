@@ -6,14 +6,16 @@
 #include <iostream>
 #include <unistd.h>
 #include <iomanip>
+#include <atomic>
+#include <algorithm>
+#include <iostream>
 #include <cmath>
 #include <tuple>
 #include <map>
-#include <string>
 #include <vector>
-#include <chrono>
 #include <functional>
 #include <utility> 		// make_pair etc.
+#include <chrono>
 
 #include "../csvloader.h"
 #include "../utils.h"
@@ -23,7 +25,6 @@
 namespace plt = matplotlibcpp;
 
 using namespace std::chrono;
-
 
 std::tuple<double, double, double, double> adagrad_2d(double x1, double x2, double s1, double s2, const double eta) {
 	double eps = 1e-6;
@@ -66,7 +67,10 @@ std::pair<std::vector<double>, std::vector<double>> train_2d(std::function<std::
 
 void show_trace_2d(std::function<double(double, double)> func, std::pair<std::vector<double>, std::vector<double>> rlt) {
 
-	plt::figure_size(800, 600);
+//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
+//	printf("\n");
+
+	plt::figure_size(700, 500);
 	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
 
 	std::vector<std::vector<double>> x, y, z;
@@ -124,7 +128,8 @@ int main() {
 
 	torch::manual_seed(1000);
 
-	auto rlt = train_2d( &adagrad_2d, 20 );
+	std::pair<std::vector<double>, std::vector<double>> rlt = train_2d( &adagrad_2d, 20 );
+
 	show_trace_2d( &f_2d, rlt );
 
 	// As we increase the learning rate to 2 we see much better behavior.

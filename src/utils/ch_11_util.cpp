@@ -30,4 +30,3 @@ std::list<std::pair<torch::Tensor, torch::Tensor>> get_data_ch11(torch::Tensor X
 }
 
 
-

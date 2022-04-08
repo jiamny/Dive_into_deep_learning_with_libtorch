@@ -91,5 +91,23 @@ target_link_libraries(11_Convexity ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredl
 
 set_target_properties(11_Convexity PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
+#----------------------------------------------------------------------------------
+add_executable(11_GradientDescent)
+target_sources(11_GradientDescent PRIVATE  GradientDescent.cpp
+)
 
+target_include_directories(11_GradientDescent PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_GradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_GradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_Momentum)
+target_sources(11_Momentum PRIVATE  Momentum.cpp
+)
+
+target_include_directories(11_Momentum PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_Momentum ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_Momentum PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
