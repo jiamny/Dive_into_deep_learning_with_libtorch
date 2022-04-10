@@ -104,6 +104,11 @@ set_target_properties(11_GradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 #----------------------------------------------------------------------------------
 add_executable(11_Momentum)
 target_sources(11_Momentum PRIVATE  Momentum.cpp
+../csvloader.h
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+../utils.h
+../utils.cpp
 )
 
 target_include_directories(11_Momentum PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <iomanip>
 #include <atomic>
+#include <string>
 #include <algorithm>
 #include <iostream>
 #include <cmath>

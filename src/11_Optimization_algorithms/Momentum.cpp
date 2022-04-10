@@ -5,6 +5,7 @@
 #include <torch/utils.h>
 #include <unistd.h>
 #include <iomanip>
+#include <atomic>
 #include <string>
 #include <algorithm>
 #include <iostream>
@@ -14,9 +15,16 @@
 #include <vector>
 #include <functional>
 #include <utility> 		// make_pair etc.
+#include <chrono>
+
+#include "../csvloader.h"
+#include "../utils.h"
+#include "../utils/ch_11_util.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
+
+using namespace std::chrono;
 
 double f_2d(double x1, double x2) {
     return 0.1 * x1 * x1 + 2 * x2 * x2;
@@ -93,6 +101,83 @@ std::pair<std::vector<double>, std::vector<double>> m_train_2d(int steps, double
     return std::make_pair(x, xx);
 }
 
+// Implementation from Scratch
+std::vector<torch::Tensor> init_momentum_states(int64_t feature_dim) {
+    auto v_w = torch::zeros({feature_dim, 1});
+    auto v_b = torch::zeros(1);
+    return {v_w, v_b};
+}
+
+void sgd_momentum(std::vector<torch::Tensor>& params, std::vector<torch::Tensor>& states,
+													 std::map<std::string, float> hyperparams) {
+
+	for( int i = 0; i < states.size(); i++ ) {
+        auto p = params[i];
+        auto v = states[i];
+		torch::NoGradGuard no_grad;
+            v = hyperparams["momentum"] * v + p.grad();
+            p -= hyperparams["lr"] * v;
+        p.grad().data().zero_();
+	}
+}
+
+void train_momentum_sgd(float lr, float momentum, int64_t num_epochs,
+									torch::Tensor t_data, torch::Tensor t_label, int64_t batch_size ) {
+
+	std::map<std::string, float> hyperparams = {{"momentum", momentum},{"lr", lr}};
+
+	std::vector<torch::Tensor> states = init_momentum_states(t_data.size(1));
+
+	// Initialization
+	torch::Tensor w = torch::normal(0.0, 0.01, {t_data.size(1), 1}).requires_grad_(true);
+	torch::Tensor b = torch::zeros({1}, torch::requires_grad(true));
+	std::vector<torch::Tensor> params = {w, b};
+
+	torch::Tensor loss, t;
+
+	auto start = high_resolution_clock::now();
+	std::vector<float> epochs, losses;
+
+	for( int64_t  epoch = 0; epoch < num_epochs; epoch++ ) {
+		std::list<std::pair<torch::Tensor, torch::Tensor>> data_iter = get_data_ch11(t_data, t_label, batch_size);
+
+		float t_loss = 0.0;
+		int64_t b_cnt = 0;
+		for (auto &batch : data_iter) {
+
+			auto X = batch.first;
+			auto y = batch.second;
+
+	    	t = linreg(X, params[0], params[1]); // X, w, b
+	        loss = squared_loss(t, y).mean();
+
+	        // Compute gradient on `l` with respect to [`w`, `b`]
+	        loss.backward();
+
+	        // Update parameters using their gradient
+	        sgd_momentum(params, states, hyperparams);
+
+	        t_loss += loss.item<float>();
+	        b_cnt++;
+	    }
+
+		auto stop = high_resolution_clock::now();
+		auto duration = duration_cast<microseconds>(stop - start);
+		std::cout << "Epoch: " << (epoch + 1) << ", loss: " << (t_loss/b_cnt)  << ", duration: " << (duration.count() / 1e6) << " sec.\n";
+		epochs.push_back(epoch*1.0);
+		losses.push_back((t_loss/b_cnt));
+	}
+
+	plt::figure_size(800, 600);
+	plt::named_plot("train", epochs, losses, "b");
+	plt::title("Momentum scratch");
+	plt::xlabel("epoch");
+	plt::ylabel("loss");
+	plt::legend();
+	plt::show();
+	plt::close();
+
+}
 
 int main() {
 
@@ -137,14 +222,141 @@ int main() {
 	int i = 0;
 	for( auto& b : betas ) {
 		std::vector<double> x, y;
-		for( double i = 0.0; i < 40.0; i += 1.0) {
-			x.push_back(i);
-			y.push_back(std::pow(b, i));
+		for( double t = 0.0; t < 40.0; t += 1.0) {
+			x.push_back(t);
+			y.push_back(std::pow(b, t));
 		}
 		plt::named_plot(("beta = " + std::to_string(b)).c_str(), x, y, strs[i].c_str() );
 		i++;
 	}
 	plt::xlabel("time(x)");
+	plt::legend();
+	plt::show();
+	plt::close();
+
+	// --------------------------------------------------
+	// Practical Experiments
+	// Implementation from Scratch
+	// --------------------------------------------------
+	// Load train CSV data
+	std::ifstream file;
+	std::string path = "./data/airfoil_self_noise.csv";
+	file.open(path, std::ios_base::in);
+
+	// Exit if file not opened successfully
+	if (!file.is_open()) {
+		std::cout << "File not read successfully" << std::endl;
+		std::cout << "Path given: " << path << std::endl;
+		file.close();
+		return -1;
+	}
+
+	int num_records = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
+	std::cout << "records in file = " << num_records << '\n';
+
+	// set file read from begining
+	file.clear();
+	file.seekg(0, std::ios::beg);
+
+	std::pair<std::vector<float>, std::vector<float>> data_label = process_data(file, true, true);
+
+	int64_t batch_size = 10;
+
+	std::vector<float> datas;
+	std::vector<float> labels;
+
+	datas  = data_label.first;
+	labels = data_label.second;
+	std::cout << datas.size() << std::endl;
+
+	// Convert vectors to a tensor
+	auto t_label = torch::from_blob(labels.data(), {int(labels.size()), 1}).clone();
+	auto t_data = torch::from_blob(datas.data(), {int(labels.size()), int(datas.size()/labels.size())}).clone();
+
+	int64_t num_epochs = 10;
+	float lr = 0.02, momentum = 0.5;
+	train_momentum_sgd(lr, momentum, num_epochs, t_data, t_label, batch_size);
+
+	lr = 0.01;
+	momentum = 0.9;
+	train_momentum_sgd(lr, momentum, num_epochs, t_data, t_label, batch_size);
+
+	lr = 0.005;
+	momentum = 0.9;
+	train_momentum_sgd(lr, momentum, num_epochs, t_data, t_label, batch_size);
+
+	// ------------------------------------------------
+	// Concise Implementation
+	// ------------------------------------------------
+	auto net = torch::nn::Sequential( torch::nn::Linear(5, 1) );
+
+	// init weight
+	for(auto& module : net->modules(false)) { 			// include_self= false
+		if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+			torch::nn::init::normal_(M->weight, 0.01);  // torch.nn.init.normal_(m.weight, std=0.01)
+		}
+	}
+
+	auto optimizer = torch::optim::SGD(net->parameters(), torch::optim::SGDOptions(lr).momentum(momentum));
+	auto loss = torch::nn::MSELoss(torch::nn::MSELossOptions(torch::kNone));
+
+	auto start = high_resolution_clock::now();
+	std::vector<float> epochs, losses;
+
+	for( int64_t  epoch = 0; epoch < num_epochs; epoch++ ) {
+		std::list<std::pair<torch::Tensor, torch::Tensor>> data_iter = get_data_ch11(t_data, t_label, batch_size);
+
+		float t_loss = 0.0;
+		int64_t b_cnt = 0;
+		for (auto &batch : data_iter) {
+			auto X = batch.first;
+			auto y = batch.second;
+
+			optimizer.zero_grad();
+
+			auto out = net->forward(X);
+
+			y = y.reshape(out.sizes());
+			auto l = loss(out, y).mean();
+			l.backward();
+
+			optimizer.step();
+
+		    t_loss += l.item<float>();
+		    b_cnt++;
+		}
+
+		auto stop = high_resolution_clock::now();
+		auto duration = duration_cast<microseconds>(stop - start);
+		std::cout << "Epoch: " << (epoch + 1) << ", loss: " << (t_loss/b_cnt)  << ", duration: " << (duration.count() / 1e6) << " sec.\n";
+		epochs.push_back(epoch*1.0);
+		losses.push_back((t_loss/b_cnt));
+	}
+
+	plt::figure_size(800, 600);
+	plt::plot(epochs, losses, "b");
+	plt::xlabel("epoch");
+	plt::ylabel("loss");
+	plt::show();
+	plt::close();
+
+	// Theoretical Analysis
+	std::vector<double> lambdas = {0.1, 1.0, 10.0, 19.0};
+	double leta = 0.1;
+	std::vector<std::string> lstrs = {"b-", "y-", "g-", "r-"};
+
+	plt::figure_size(700, 500);
+	i = 0;
+	for( auto& l : lambdas ) {
+		std::vector<double> x, y;
+		for( double t = 0.0; t < 20.0; t += 1.0) {
+			x.push_back(t);
+			y.push_back(std::pow(1 - leta * l, t));
+		}
+		plt::named_plot(("lambda = " + std::to_string(l)).c_str(), x, y, lstrs[i].c_str() );
+		i++;
+	}
+	plt::xlabel("time");
 	plt::legend();
 	plt::show();
 	plt::close();
