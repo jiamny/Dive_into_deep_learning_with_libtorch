@@ -9,26 +9,13 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
-#include <cmath>
-#include <tuple>
-#include <map>
-#include <vector>
-#include <functional>
-#include <utility> 		// make_pair etc.
 #include <chrono>
 
 #include "../csvloader.h"
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
 using namespace std::chrono;
-
-double f_2d(double x1, double x2) {
-    return 0.1 * x1 * x1 + 2 * x2 * x2;
-}
 
 std::tuple<double, double> gd_2d(double x1, double x2, double eta) {
     return std::make_tuple(x1 - eta * 0.2 * x1, x2 - eta * 4 * x2);
@@ -51,33 +38,6 @@ std::pair<std::vector<double>, std::vector<double>> train_2d( std::function<std:
     return std::make_pair(x, xx);
 }
 
-void show_trace_2d(std::function<double(double, double)> func, std::pair<std::vector<double>, std::vector<double>> rlt) {
-
-//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
-//	printf("\n");
-
-	plt::figure_size(700, 500);
-	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
-
-	std::vector<std::vector<double>> x, y, z;
-	for (double i = -5.5; i <= 1.0;  i += 0.1) {
-	    std::vector<double> x_row, y_row, z_row;
-	    for (double j = -3.0; j <= 1.0; j += 0.1) {
-	            x_row.push_back(i);
-	            y_row.push_back(j);
-	            z_row.push_back(func(i, j));
-	    }
-	    x.push_back(x_row);
-	    y.push_back(y_row);
-	    z.push_back(z_row);
-	}
-
-	plt::contour(x, y, z);
-	plt::xlabel("x1");
-	plt::ylabel("x2");
-	plt::show();
-	plt::close();
-}
 
 std::tuple<double, double, double, double> momentum_2d(double x1, double x2, double v1, double v2, double eta, double beta) {
     v1 = beta * v1 + 0.2 * x1;
@@ -179,6 +139,35 @@ void train_momentum_sgd(float lr, float momentum, int64_t num_epochs,
 
 }
 
+
+void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
+
+//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
+//	printf("\n");
+	plt::figure_size(700, 500);
+	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
+
+	std::vector<std::vector<double>> x, y, z;
+	for (double i = -5.5; i <= 1.0;  i += 0.1) {
+	    std::vector<double> x_row, y_row, z_row;
+	    for (double j = -3.0; j <= 1.0; j += 0.1) {
+	            x_row.push_back(i);
+	            y_row.push_back(j);
+	            z_row.push_back(f_2d(i, j));
+	    }
+	    x.push_back(x_row);
+	    y.push_back(y_row);
+	    z.push_back(z_row);
+	}
+
+	plt::contour(x, y, z);
+	plt::xlabel("x1");
+	plt::ylabel("x2");
+	plt::show();
+	plt::close();
+}
+
+
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
@@ -195,12 +184,12 @@ int main() {
 	// Leaky Averages
 	// An Ill-conditioned Problem
 	// -----------------------------------------------------
-	show_trace_2d(&f_2d, train_2d(&gd_2d, 20, eta));
+	show_trace_2d( train_2d(&gd_2d, 20, eta) );
 
 	// increase in learning rate from 0.4 to 0.6. Convergence in the x1 direction improves
 	// but the overall solution quality is much worse.
 	eta = 0.6;
-	show_trace_2d(&f_2d, train_2d(&gd_2d, 20, eta));
+	show_trace_2d( train_2d(&gd_2d, 20, eta) );
 
 	// ------------------------------------------------------
 	// The Momentum Method
@@ -208,11 +197,11 @@ int main() {
 	// ------------------------------------------------------
 	eta = 0.6;
 	double beta = 0.5;
-	show_trace_2d(&f_2d, m_train_2d(20, eta, beta));
+	show_trace_2d( m_train_2d(20, eta, beta) );
 
 	// Halving it to β=0.25 leads to a trajectory that barely converges at all.
 	beta = 0.25;
-	show_trace_2d(&f_2d, m_train_2d(20, eta, beta));
+	show_trace_2d( m_train_2d(20, eta, beta) );
 
 	// Effective Sample Weight
 	std::vector<double> betas = {0.95, 0.9, 0.6, 0};
@@ -229,7 +218,7 @@ int main() {
 		plt::named_plot(("beta = " + std::to_string(b)).c_str(), x, y, strs[i].c_str() );
 		i++;
 	}
-	plt::xlabel("time(x)");
+	plt::xlabel("time");
 	plt::legend();
 	plt::show();
 	plt::close();

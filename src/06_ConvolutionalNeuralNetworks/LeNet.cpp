@@ -66,7 +66,7 @@ int main() {
 	auto test_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
 						         std::move(test_dataset), batch_size);
 	float lr = 0.9;
-	int64_t num_epochs = 20;
+	int64_t num_epochs = 50;
 
 	// initialize_weights
 	for (auto& module : net->modules(false) ) { //modules(include_self=false))
@@ -119,10 +119,11 @@ int main() {
 		double epoch_loss = 0.0;
 		int64_t epoch_correct = 0;
 		int64_t num_train_samples = 0;
+		int64_t num_batch = 0;
 
-		torch::AutoGradMode enable_grad(true);
+		//torch::AutoGradMode enable_grad(true);
 		// Sum of training loss, sum of training accuracy, no. of examples
-	    //net->train();
+	    net->train(true);
 	    for( auto& batch : *train_loader ) {
 	    	auto X = batch.data.to(device);
 	    	auto y = batch.target.to(device);
@@ -130,7 +131,7 @@ int main() {
 	    	auto y_hat = net->forward(X);
 	    	auto l = loss(y_hat, y);
 
-	    	epoch_loss += l.item<float>() * X.size(0);
+	    	epoch_loss += l.item<float>();
 	    	epoch_correct += accuracy( y_hat, y);
 
 	    	optimizer.zero_grad();
@@ -138,9 +139,10 @@ int main() {
 	    	optimizer.step();
 
 	    	num_train_samples += X.size(0);
+	    	num_batch++;
 	    }
 
-	    auto sample_mean_loss = epoch_loss / num_train_samples;
+	    auto sample_mean_loss = epoch_loss / num_batch;
 	    auto tr_acc = static_cast<double>(epoch_correct) / num_train_samples;
 
 	    std::cout << "Epoch [" << (epoch + 1) << "/" << num_epochs << "], Trainset - Loss: "
@@ -152,6 +154,7 @@ int main() {
 		std::cout << "Training finished!\n\n";
 		std::cout << "Testing...\n";
 
+		net->eval();
 		torch::NoGradGuard no_grad;
 
 		epoch_correct = 0;
@@ -178,7 +181,7 @@ int main() {
 	}
 
 	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
+	plt::ylim(0.0, 1.0);
 	plt::named_plot("Train loss", xx, train_loss, "b");
 	plt::named_plot("Train acc", xx, train_acc, "g--");
 	plt::named_plot("Test acc", xx, test_acc, "r-.");
@@ -186,6 +189,7 @@ int main() {
 	plt::xlabel("epoch");
 	plt::legend();
 	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

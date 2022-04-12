@@ -18,31 +18,23 @@
 
 using namespace std::chrono;
 
-std::tuple<double, double, double, double> adagrad_2d(double x1, double x2, double s1, double s2, const double eta) {
-	double eps = 1e-6;
-    double g1 = 0.2 * x1;
-    double g2 = 4 * x2;
-    s1 += std::pow(g1, 2);
-    s2 += std::pow(g2, 2);
+std::tuple<double, double, double, double> rmsprop_2d(double x1, double x2,
+											double s1, double s2, double eta, double gamma) {
+    double g1 = 0.2 * x1,  g2 = 4 * x2, eps = 1e-6;
+    s1 = gamma * s1 + (1 - gamma) * g1 * g1;
+    s2 = gamma * s2 + (1 - gamma) * g2 * g2;
     x1 -= eta / std::sqrt(s1 + eps) * g1;
     x2 -= eta / std::sqrt(s2 + eps) * g2;
     return std::make_tuple(x1, x2, s1, s2);
 }
 
-std::pair<std::vector<double>, std::vector<double>> train_2d(std::function<std::tuple<double, double, double, double>(double, double, double, double, const double)> func,
-																			int steps, const double eta = 0.4) {
-    //Optimize a 2D objective function with a customized trainer.
-	//Defined in :numref:`subsec_gd-learningrate`"""
-    //`s1` and `s2` are internal state variables that will be used later
+std::pair<std::vector<double>, std::vector<double>> train_2d(int steps, double eta, double gamma) {
 	double x1 = -5, x2 = -2, s1 = 0, s2 = 0;
     std::vector<double> x, xx; // = [(x1, x2)]
     x.push_back(x1);
     xx.push_back(x2);
     for(int  i = 0; i < steps; i++ ) {
-        //if f_grad:
-        //    x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
-        //else:
-        std::tie(x1, x2, s1, s2) = func(x1, x2, s1, s2, eta);
+    	std::tie(x1, x2, s1, s2) = rmsprop_2d(x1, x2, s1, s2, eta, gamma);
         x.push_back(x1);
         xx.push_back(x2);
     }
@@ -51,30 +43,6 @@ std::pair<std::vector<double>, std::vector<double>> train_2d(std::function<std::
 
     return std::make_pair(x, xx);
 }
-
-// ---------------------------------------------------------
-// Implementation from Scratch
-// ---------------------------------------------------------
-
-std::vector<torch::Tensor> init_adagrad_states(int64_t feature_dim) {
-    auto s_w = torch::zeros({feature_dim, 1});
-    auto s_b = torch::zeros(1);
-    return {s_w, s_b};
-}
-
-void adagrad(std::vector<torch::Tensor>& params, std::vector<torch::Tensor>& states,
-												 std::map<std::string, float> hyperparams) {
-    float eps = 1e-6;
-    for( int i = 0; i < states.size(); i++ ) {
-    	auto s = states[i];
-    	auto p = params[i];
-    	torch::NoGradGuard no_grad;
-        s += torch::square(p.grad());
-        p -= hyperparams["lr"] * p.grad() / torch::sqrt(s + eps);
-        p.grad().data().zero_();
-    }
-}
-
 
 void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
 
@@ -103,6 +71,24 @@ void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
 	plt::close();
 }
 
+// Implementation from Scratch
+std::vector<torch::Tensor> init_rmsprop_states(int64_t feature_dim) {
+	auto s_w = torch::zeros({feature_dim, 1});
+    auto s_b = torch::zeros(1);
+    return {s_w, s_b};
+}
+
+void rmsprop(std::vector<torch::Tensor>& params, std::vector<torch::Tensor>& states,
+													 std::map<std::string, float> hyperparams) {
+	double gamma = hyperparams["gamma"], eps = 1e-6;
+
+	for( int i = 0; i < states.size(); i++ ) {
+		torch::NoGradGuard no_grad;
+		states[i] = gamma * states[i] + (1 - gamma) * torch::square(params[i].grad());
+        params[i] -= hyperparams["lr"] * params[i].grad() / torch::sqrt(states[i] + eps);
+        params[i].grad().data().zero_();
+	}
+}
 
 int main() {
 
@@ -115,18 +101,33 @@ int main() {
 
 	torch::manual_seed(1000);
 
-	std::pair<std::vector<double>, std::vector<double>> rlt = train_2d( &adagrad_2d, 20 );
+	std::vector<double> gmmas = {0.95, 0.9, 0.8, 0.7};
+	std::vector<std::string> strs = {"b-", "y-", "g-", "r-"};
 
-	show_trace_2d( rlt );
+	// RMSProp
+	plt::figure_size(700, 500);
+	int i = 0;
+	for( auto& b : gmmas ) {
+		std::vector<double> x, y;
+		for( double t = 0.0; t < 40.0; t += 1.0) {
+			x.push_back(t);
+			y.push_back((1-b) * std::pow(b, t));
+		}
+		plt::named_plot(("gamma = " + std::to_string(b)).c_str(), x, y, strs[i].c_str() );
+		i++;
+	}
+	plt::xlabel("time");
+	plt::ylim(0.0, 0.3);
+	plt::legend();
+	plt::show();
+	plt::close();
 
-	// As we increase the learning rate to 2 we see much better behavior.
-	rlt = train_2d( &adagrad_2d, 20, 2.0 );
-	show_trace_2d( rlt );
-
-
-	// ---------------------------------------------------------
+	// ----------------------------------------------------
 	// Implementation from Scratch
-	// ---------------------------------------------------------
+	// ----------------------------------------------------
+	double eta = 0.4, gamma = 0.9;
+
+	show_trace_2d( train_2d(20, eta, gamma) );
 
 	// Load train CSV data
 	std::ifstream file;
@@ -163,11 +164,10 @@ int main() {
 	auto t_label = torch::from_blob(labels.data(), {int(labels.size()), 1}).clone();
 	auto t_data = torch::from_blob(datas.data(), {int(labels.size()), int(datas.size()/labels.size())}).clone();
 
-
 	int64_t num_epochs = 5;
-	std::map<std::string, float> hyperparams = {{"lr", 0.1}};
+	std::map<std::string, float> hyperparams = {{"lr", 0.01}, {"gamma", 0.9}};
 
-	std::vector<torch::Tensor> states = init_adagrad_states(t_data.size(1));
+	std::vector<torch::Tensor> states = init_rmsprop_states(t_data.size(1));
 
 	// Initialization
 	torch::Tensor w = torch::normal(0.0, 0.01, {t_data.size(1), 1}).requires_grad_(true);
@@ -196,7 +196,7 @@ int main() {
 	        loss.backward();
 
 	        // Update parameters using their gradient
-	        adagrad(params, states, hyperparams);
+	        rmsprop(params, states, hyperparams);
 
 	        t_loss += loss.item<float>();
 	        b_cnt++;
@@ -211,7 +211,7 @@ int main() {
 
 	plt::figure_size(800, 600);
 	plt::named_plot("train", epochs, losses, "b");
-	plt::title("Adagrad scratch");
+	plt::title("RMSProp scratch");
 	plt::xlabel("epoch");
 	plt::ylabel("loss");
 	plt::legend();
@@ -222,8 +222,6 @@ int main() {
 	// Concise Implementation
 	// ------------------------------------------
 
-//	auto trainer = torch::optim::Adagrad();
-
 	auto net = torch::nn::Sequential( torch::nn::Linear(5, 1) );
 
 	// init weight
@@ -233,7 +231,7 @@ int main() {
 		}
 	}
 
-	auto optimizer = torch::optim::Adagrad(net->parameters(), 0.1);
+	auto optimizer = torch::optim::RMSprop(net->parameters(), torch::optim::RMSpropOptions(0.01).alpha(0.9));
 	auto loss_f = torch::nn::MSELoss(torch::nn::MSELossOptions(torch::kNone));
 
 	epochs.clear();
@@ -273,7 +271,7 @@ int main() {
 
 	plt::figure_size(800, 600);
 	plt::plot(epochs, losses, "b");
-	plt::title("Adagrad concise");
+	plt::title("RMSprop concise");
 	plt::xlabel("epoch");
 	plt::ylabel("loss");
 	plt::show();

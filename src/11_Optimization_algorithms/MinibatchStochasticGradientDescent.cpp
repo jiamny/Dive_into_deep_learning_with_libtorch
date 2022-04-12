@@ -10,8 +10,6 @@
 #include "../csvloader.h"
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
 
 using namespace std::chrono;
 

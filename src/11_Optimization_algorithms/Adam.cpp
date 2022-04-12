@@ -8,19 +8,11 @@
 #include <iomanip>
 #include <cmath>
 #include <tuple>
-#include <map>
-#include <string>
-#include <vector>
 #include <chrono>
-#include <functional>
-#include <utility> 		// make_pair etc.
 
 #include "../csvloader.h"
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
-
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
 
 using namespace std::chrono;
 

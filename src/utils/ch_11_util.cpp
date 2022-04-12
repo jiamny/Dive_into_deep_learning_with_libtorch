@@ -29,4 +29,8 @@ std::list<std::pair<torch::Tensor, torch::Tensor>> get_data_ch11(torch::Tensor X
 	return batched_data;
 }
 
+double f_2d(double x1, double x2) {
+    return 0.1 * x1 * x1 + 2 * x2 * x2;
+}
+
 

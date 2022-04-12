@@ -163,4 +163,11 @@ std::vector<unsigned char> tensorToMatrix(torch::Tensor data);
 // data batch indices
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle = true);
 
+template<typename T>
+std::vector<T> range(const T count) {
+    std::vector<T> aVector(count);
+    iota(aVector.begin(), aVector.end(), 1);
+    return aVector;
+}
+
 #endif /* UTILS_H_ */

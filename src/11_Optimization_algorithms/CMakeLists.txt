@@ -116,3 +116,47 @@ target_link_libraries(11_Momentum ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredli
 
 set_target_properties(11_Momentum PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
+#----------------------------------------------------------------------------------
+add_executable(11_StochasticGradientDescent)
+target_sources(11_StochasticGradientDescent PRIVATE  StochasticGradientDescent.cpp
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+)
+
+target_include_directories(11_StochasticGradientDescent PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_StochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_StochasticGradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_RMSProp)
+target_sources(11_RMSProp PRIVATE  RMSProp.cpp
+../csvloader.h
+../utils/ch_11_util.h
+../utils/ch_11_util.cpp
+../utils.h
+../utils.cpp
+)
+
+target_include_directories(11_RMSProp PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_RMSProp ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_RMSProp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+#----------------------------------------------------------------------------------
+add_executable(11_LearningRateScheduling)
+target_sources(11_LearningRateScheduling PRIVATE  LearningRateScheduling.cpp
+../utils.h 
+../utils.cpp
+../fashion.h
+../fashion.cpp
+)
+
+target_include_directories(11_LearningRateScheduling PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(11_LearningRateScheduling ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(11_LearningRateScheduling PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+
+
+

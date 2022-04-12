@@ -185,3 +185,5 @@ std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_siz
 	}
 	return( batch_indices );
 }
+
+

@@ -18,8 +18,6 @@ torch::Tensor g(torch::Tensor x) {
     return (f(x) + 0.2 * torch::cos(5 * M_PI * x)).to(torch::kDouble);
 }
 
-// inline bool annotate(std::string annotation, double x, double y)
-
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
