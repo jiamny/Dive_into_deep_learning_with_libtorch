@@ -67,6 +67,8 @@ add_subdirectory("src/08_RecurrentNeuralNetworks")
 add_subdirectory("src/09_Recurrent_Modern")
 add_subdirectory("src/10_Attention_mechanisms")
 add_subdirectory("src/11_Optimization_algorithms")
+add_subdirectory("src/12_Computational_performance")
+add_subdirectory("src/13_Computer_vision")
 add_subdirectory("src/utils")
 
 if(MSVC)
