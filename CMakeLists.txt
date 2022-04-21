@@ -10,18 +10,32 @@ set(CMAKE_CXX_STANDARD 14)
 
 #--------------------------------------------------------------------------------------------
 # following line solve the issue of Can't link a project using cmake with OpenCV and LibTorch
+# 
+# change libtorch path from the following location:
+#
+# list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake")
+# to:
+# list(APPEND CMAKE_PREFIX_PATH "path/to//libtorch/share/cmake") 
 # -------------------------------------------------------------------------------------------
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake")               
+list(APPEND CMAKE_PREFIX_PATH "/home/stree/git/libtorch/share/cmake")               
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake/Torch")                  
+set(CMAKE_MODULE_PATH "/home/stree/git/libtorch/share/cmake/Torch")                  
 
 # add torch package
-find_package(Torch ${PYTORCH_VERSION} EXACT QUIET PATHS "${CMAKE_SOURCE_DIR}/libtorch") 
+find_package(Torch ${PYTORCH_VERSION} EXACT QUIET PATHS "/home/stree/git/libtorch") 
 
 message(STATUS "Torch library status:")
 message(STATUS "    version: ${Torch_VERSION}")
 message(STATUS "    libraries: ${TORCH_LIBRARIES}")
 message(STATUS "    include path: ${TORCH_INCLUDE_DIRS}") 
+
+# -------------------------------------------------------------------------------------------
+# where to find torchvision include and lib files
+# -------------------------------------------------------------------------------------------
+set(TORCHVISION_INCLUDE_DIRS "/home/stree/git/libtorch/include")
+set(TORCHVISION_LIBRARIES "/home/stree/git/libtorch/lib/libtorchvision.so")
+message(STATUS "    libraries: ${TORCHVISION_LIBRARIES}")
+message(STATUS "    include path: ${TORCHVISION_INCLUDE_DIRS}") 
 
 # add opencv package to the project
 find_package( OpenCV 4.5.3 REQUIRED PATHS "/usr/local/")

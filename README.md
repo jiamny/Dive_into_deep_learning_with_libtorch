@@ -10,6 +10,8 @@ Dive into deep learning with LibTorch C++ API
 
 - PyTorch 1.11.0
 
+- torchvision 0.12.0a0
+
 - python3.9
 
 - opencv 4.5.3/4.5.5
@@ -23,6 +25,25 @@ Dive into deep learning with LibTorch C++ API
 - ubuntu 21.10
 
 - gcc-11/g++-11 for C++ 17
+
+## Compile and install torchvision from source
+
+[download torchvision source from:](https://github.com/pytorch/vision) and place to somewhere convenient.
+make sure the vision version matches your libtorch.
+
+go to vision/CMakeList.txt file. add the two lines near top.
+
+list(APPEND CMAKE_PREFIX_PATH "path/to/your/libtorch")
+set(CMAKE_INSTALL_PREFIX      "path/to/your/libtorch")	
+
+in vision folder, compile the source.
+
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ make install
+
 
 ## Data file
 - [H. G. Wells' The Time Machine (Plain Text UTF-8)](https://www.gutenberg.org/files/35/35-0.txt)
