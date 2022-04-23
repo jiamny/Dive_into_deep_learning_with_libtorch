@@ -10,7 +10,7 @@ Dive into deep learning with LibTorch C++ API
 
 - PyTorch 1.11.0
 
-- torchvision 0.12.0a0
+- torchvision 0.12.0
 
 - python3.9
 
@@ -34,14 +34,19 @@ make sure the vision version matches your libtorch.
 go to vision/CMakeList.txt file. add the two lines near top.
 
 list(APPEND CMAKE_PREFIX_PATH "path/to/your/libtorch")
-set(CMAKE_INSTALL_PREFIX      "path/to/your/libtorch")	
+
+set(CMAKE_INSTALL_PREFIX      "path/to/your/libtorch/torchvision")	
 
 in vision folder, compile the source.
 
 $ mkdir build
+
 $ cd build
-$ cmake ..
+
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
+
 $ make
+
 $ make install
 
 

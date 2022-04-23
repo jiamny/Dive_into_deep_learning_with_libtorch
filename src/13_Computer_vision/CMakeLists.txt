@@ -51,10 +51,46 @@ ${Python3_NumPy_INCLUDE_DIRS}
 )
 
 target_link_libraries(13_TestTorchVision  
-${OpenCV_LIBS} ${TORCH_LIBRARIES} ${TORCHVISION_LIBRARIES}
+${OpenCV_LIBS} 
+${TORCH_LIBRARIES} 
+${TORCHVISION_LIBRARIES}
 ${requiredlibs} Python3::Python Python3::NumPy
 )
 
 set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
+#----------------------------------------------------------------------------------
+add_executable(13_MultiscaleObjectDetection)
+target_sources(13_MultiscaleObjectDetection PRIVATE 
+MultiscaleObjectDetection.cpp 
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp						
+)
+													
+target_include_directories(13_MultiscaleObjectDetection  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(13_MultiscaleObjectDetection  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(13_MultiscaleObjectDetection  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+# -------------------------------------------------------------
+add_executable(13_YOLOV4)
+target_sources(13_YOLOV4 PRIVATE 
+YOLOv4/main.cpp
+YOLOv4/utils.h
+YOLOv4/utils.cpp
+YOLOv4/yolo.h
+YOLOv4/yolo.cpp
+)
+
+target_include_directories(13_YOLOV4  PRIVATE  ${TORCHVISION_INCLUDE_DIRS} )
+
+target_link_libraries(13_YOLOV4 
+${OpenCV_LIBS} 
+${TORCH_LIBRARIES}
+${TORCHVISION_LIBRARIES}
+)
+
+set_target_properties( 13_YOLOV4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
