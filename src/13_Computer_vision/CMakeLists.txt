@@ -74,23 +74,43 @@ target_link_libraries(13_MultiscaleObjectDetection  ${OpenCV_LIBS} ${TORCH_LIBRA
 
 set_target_properties(13_MultiscaleObjectDetection  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
-# -------------------------------------------------------------
-add_executable(13_YOLOV4)
-target_sources(13_YOLOV4 PRIVATE 
-YOLOv4/main.cpp
-YOLOv4/utils.h
-YOLOv4/utils.cpp
-YOLOv4/yolo.h
-YOLOv4/yolo.cpp
+#----------------------------------------------------------------------------------
+add_executable(13_ObjectDetectionDataset)
+target_sources(13_ObjectDetectionDataset PRIVATE 
+ObjectDetectionDataset.cpp 
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp						
 )
+													
+target_include_directories(13_ObjectDetectionDataset  PRIVATE 
+#${TORCHVISION_INCLUDE_DIRS}
+${Python3_INCLUDE_DIRS} 
+${Python3_NumPy_INCLUDE_DIRS})
 
-target_include_directories(13_YOLOV4  PRIVATE  ${TORCHVISION_INCLUDE_DIRS} )
-
-target_link_libraries(13_YOLOV4 
+target_link_libraries(13_ObjectDetectionDataset  
 ${OpenCV_LIBS} 
-${TORCH_LIBRARIES}
-${TORCHVISION_LIBRARIES}
+${TORCH_LIBRARIES} 
+#${TORCHVISION_LIBRARIES}
+${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(13_ObjectDetectionDataset  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+# -------------------------------------------------------------
+add_executable(13_FullyConvolutionalNetworks)
+target_sources(13_FullyConvolutionalNetworks PRIVATE 
+FullyConvolutionalNetworks.cpp
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp	
 )
 
-set_target_properties( 13_YOLOV4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_include_directories(13_ObjectDetectionDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_FullyConvolutionalNetworks ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_FullyConvolutionalNetworks PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
 

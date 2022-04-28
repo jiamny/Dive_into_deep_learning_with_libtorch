@@ -1,4 +1,4 @@
-# Dive into deep learning with pytorch c++
+# Dive into deep learning with libtorch
 
 Dive into deep learning with LibTorch C++ API
 

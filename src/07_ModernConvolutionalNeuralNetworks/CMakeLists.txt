@@ -152,7 +152,6 @@ set_target_properties(07_ResNet PROPERTIES
 )
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_VGG)
 
 target_sources(07_VGG PRIVATE VGG.cpp 

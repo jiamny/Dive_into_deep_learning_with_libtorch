@@ -208,7 +208,7 @@ void setLabel(cv::Mat& im, std::string label, cv::Scalar text_color, cv::Scalar 
     cv::putText(im, label, pt, fontface, scale, text_color, thickness, cv::LINE_AA);
 }
 
-void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> labels, std::vector<cv::Scalar> colors) {
+void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> labels, std::vector<cv::Scalar> colors, int lineWidth) {
     //Show bounding boxes.
     labels = make_list(labels, {});
     colors = make_list(colors, {cv::Scalar( 255, 0, 0 ) , cv::Scalar( 0, 255, 0 ), cv::Scalar( 0, 0, 255 ),
@@ -223,7 +223,7 @@ void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> la
         if( x1 <= 0 ) x1 = 4;
         if( y1 <= 20 ) y1 = 20;
 
-        cv::rectangle(img, cv::Point(x1, y1), cv::Point(x2, y2), color, 1, 4);
+        cv::rectangle(img, cv::Point(x1, y1), cv::Point(x2, y2), color, lineWidth, 4);
 
         // if there is label for the bbox
         if( labels.size() > 0 &&  labels.size() > i ) {
@@ -236,4 +236,45 @@ void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> la
     }
 }
 
+cv::Mat TensorToCvMat(torch::Tensor img, bool bgr) {
 
+	float maxV = torch::max(img).data().item<float>();
+	if( maxV > 1.0 ) img.div_(maxV);
+
+	torch::Tensor data_out = img.contiguous().detach().clone();
+	auto rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+
+	// shape of tensor
+	int64_t height = rev_tensor.size(0);
+	int64_t width = rev_tensor.size(1);
+
+	// Mat takes data form like {0,0,255,0,0,255,...} ({B,G,R,B,G,R,...})
+	// so we must reshape tensor, otherwise we get a 3x3 grid
+	auto tensor = rev_tensor.reshape({width * height * rev_tensor.size(2)});
+
+	// CV_8UC3 is an 8-bit unsigned integer matrix/image with 3 channels
+	cv::Mat rev_rgb_mat(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
+	cv::Mat rev_bgr_mat = rev_rgb_mat.clone();
+
+	if( bgr ) cv::cvtColor(rev_bgr_mat, rev_bgr_mat, cv::COLOR_RGB2BGR);
+
+	return rev_bgr_mat;
+}
+
+
+torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size, bool bgr) {
+	auto image = cv::imread(imgf.c_str());
+
+	// ----------------------------------------------------------
+	// opencv BGR format change to RGB
+	// ----------------------------------------------------------
+	if( bgr ) cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+	if( img_size.size() > 0 ) cv::resize(image, image, cv::Size(img_size[0], img_size[1]));
+
+	torch::Tensor imgT = torch::from_blob(image.data,
+						{image.rows, image.cols, image.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+	imgT = imgT.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+
+	return imgT;
+}

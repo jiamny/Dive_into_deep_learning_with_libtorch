@@ -69,7 +69,6 @@ cmake-build-*/
 .settings/
 *.pdf
 *.docx
-*.py
 references/
 x-file
 .pth
