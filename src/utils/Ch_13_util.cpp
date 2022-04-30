@@ -236,7 +236,7 @@ void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> la
     }
 }
 
-cv::Mat TensorToCvMat(torch::Tensor img, bool bgr) {
+cv::Mat TensorToCvMat(torch::Tensor img) {
 
 	float maxV = torch::max(img).data().item<float>();
 	if( maxV > 1.0 ) img.div_(maxV);
@@ -256,19 +256,19 @@ cv::Mat TensorToCvMat(torch::Tensor img, bool bgr) {
 	cv::Mat rev_rgb_mat(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
 	cv::Mat rev_bgr_mat = rev_rgb_mat.clone();
 
-	if( bgr ) cv::cvtColor(rev_bgr_mat, rev_bgr_mat, cv::COLOR_RGB2BGR);
+	cv::cvtColor(rev_bgr_mat, rev_bgr_mat, cv::COLOR_RGB2BGR);
 
 	return rev_bgr_mat;
 }
 
 
-torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size, bool bgr) {
+torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	auto image = cv::imread(imgf.c_str());
 
 	// ----------------------------------------------------------
 	// opencv BGR format change to RGB
 	// ----------------------------------------------------------
-	if( bgr ) cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+	cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 	if( img_size.size() > 0 ) cv::resize(image, image, cv::Size(img_size[0], img_size[1]));
 
 	torch::Tensor imgT = torch::from_blob(image.data,

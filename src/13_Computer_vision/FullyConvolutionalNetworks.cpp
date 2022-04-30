@@ -13,7 +13,6 @@
 #include <random>
 
 #include "../utils/Ch_13_util.h"
-#include "../utils.h"
 
 torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size) {
     auto factor = static_cast<int>((kernel_size + 1) / 2);
@@ -31,7 +30,13 @@ torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size
 
     auto weight = torch::zeros({in_channels, out_channels, kernel_size, kernel_size});
 
-    weight.index_put_({Slice(0, in_channels), Slice(0, out_channels), Slice(), Slice()}, filt);
+    for( int i = 0; i < in_channels; i++ ) {
+    	for(int j = 0; j < out_channels; j++) {
+    		weight.index_put_({i, j, Slice(0, kernel_size), Slice(0, kernel_size)}, filt);
+    	}
+    }
+    //weight.index_put_({Slice(0, in_channels), Slice(0, out_channels), Slice(), Slice()}, filt);
+
     return weight;
 }
 
@@ -92,8 +97,8 @@ public:
     // Override get() function to return tensor at location index
     Example get(size_t index) override{
 
-    	auto imgT = CvMatToTensor(data_.at(index).first.c_str(), img_size, false);
-    	auto labT = CvMatToTensor(data_.at(index).second.c_str(), img_size, true);
+    	auto imgT = CvMatToTensor(data_.at(index).first.c_str(), img_size);
+    	auto labT = CvMatToTensor(data_.at(index).second.c_str(), img_size);
 
     	return {imgT, labT};
     }
@@ -181,19 +186,35 @@ int main() {
 					num_classes, num_classes, 64).padding(16).stride(32))}} );
 
 	// itializing Transposed Convolutional Layers
-	std::cout << bilinear_kernel(3, 3, 4) << '\n';
+	std::cout << "bilinear: " << bilinear_kernel(3, 3, 4) << '\n';
 
 	// experiment with upsampling of bilinear interpolation
 	auto conv_trans = torch::nn::ConvTranspose2d(
 			torch::nn::ConvTranspose2dOptions(3, 3, 4).padding(1).stride(2).bias(false));
 
+//	torch::autograd::GradMode::set_enabled(false);  	// make parameters copying possible
+/*
+	for (auto& module : conv_trans->modules(true) ) {  //modules(include_self=false))
+		std::cout << "III\n";
+		if (auto M = dynamic_cast<torch::nn::ConvTranspose2dImpl*>(module.get())) {
+			auto W = bilinear_kernel(3, 3, 4);
+		    //M->weight.data().index_put_({Slice(), Slice(), Slice()}, W); // works!!!
+			M->weight.data().copy_(W);
+		}
+	}
+*/
+
 	conv_trans.get()->weight.data().copy_(bilinear_kernel(3, 3, 4));
 
+//	torch::autograd::GradMode::set_enabled(true);
+
 	std::cout << "conv_trans: " << conv_trans << "\n";
+	std::cout << "conv_trans.weights: " << conv_trans.get()->weight.sizes() << "\n";
+	std::cout << "conv_trans.weights: " << conv_trans.get()->weight << "\n";
 
 	std::string imgf = "./data/catdog.jpg";
 	int img_size = 0;
-	bool show_img = true;
+	bool show_img = false;
 
 	auto imgT = CvMatToTensor(imgf, {});
 
@@ -207,9 +228,26 @@ int main() {
 		cv::waitKey(-1);
 	}
 
-	X = imgT.unsqueeze(0);
+	std::cout << "imgT: " << imgT.sizes() << "\n";
+	auto Z = imgT.index({0, Slice(), Slice()});
+	std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
+	Z = imgT.index({1, Slice(), Slice()});
+	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
+	Z = imgT.index({2, Slice(), Slice()});
+	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
 
-	auto Y = conv_trans(X);
+//	X = imgT.unsqueeze(0);
+//	std::cout << "X: " << X.sizes() << "\n";
+//	std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++\n" << X << "\n";
+//	std::cout << "X.min " << torch::min(X) << "\n";
+//	std::cout << "X.max " << torch::max(X) << "\n";
+
+	auto Y = conv_trans(imgT.unsqueeze(0));
+	std::cout << "\n\n\n";
+	std::cout << "Y: " << Y.sizes() << "\n";
+//	std::cout << "Y.data(): " << Y << "\n";
+
 	auto out_imgT = Y[0].detach().clone();
 	std::cout << "output image sizes: " << out_imgT.sizes() << "\n";
 	std::cout << "output image sizes: " << torch::max(out_imgT).data().item<float>() << "\n";
@@ -217,21 +255,24 @@ int main() {
 	cvImg = TensorToCvMat(out_imgT);
 
 	if( show_img ) {
-		cv::imshow("image", cvImg);
+		cv::imshow("image_2", cvImg);
 		cv::waitKey(-1);
 		cv::destroyAllWindows();
 	}
-
+/*
 	// initialize the transposed convolutional layer with upsampling of bilinear interpolation.
 	// For the 1×1 convolutional layer, we use Xavier initialization.
+
+	torch::autograd::GradMode::set_enabled(false);
 	auto W = bilinear_kernel(num_classes, num_classes, 64);
 
-	for (auto& module : classifier->modules(false) ) { //modules(include_self=false))
+	for (auto& module : classifier->modules(true) ) { //modules(include_self=false))
 		if (auto M = dynamic_cast<torch::nn::ConvTranspose2dImpl*>(module.get())) {
 		    //std::cout << module->name() << std::endl;
 		    M->weight.data().copy_(W);
 		}
 	}
+	torch::autograd::GradMode::set_enabled(true);
 
 	bool is_train = true;
 	const std::string voc_dir = "./data/VOCdevkit/VOC2012";
@@ -249,7 +290,7 @@ int main() {
 	auto y     = batch.target.to(device);
 	std::cout << "data: " << data.sizes() << std::endl;
 	std::cout << "y: " << y.sizes() << std::endl;
-/*
+
 	// convert tensor to IValue
 	input.clear();
 	input.push_back(data);
