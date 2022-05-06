@@ -18,7 +18,6 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_AlexNet)
 
 target_sources(07_AlexNet PRIVATE AlexNet.cpp 

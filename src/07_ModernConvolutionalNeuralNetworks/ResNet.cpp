@@ -118,7 +118,7 @@ struct  ResNetImpl : public torch::nn::Module {
 		register_module("classifier", classifier);
 
 		// weights_init
-		for (auto& m : modules(/*include_self=*/false)) {
+		for (auto& module : modules(/*include_self=*/false)) {
 			/*
 		    if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get()))
 		      torch::nn::init::kaiming_normal_(
@@ -131,23 +131,23 @@ struct  ResNetImpl : public torch::nn::Module {
 		      torch::nn::init::constant_(M->bias, 0);
 		    }
 		    */
-		    if ((typeid(m) == typeid(torch::nn::Conv2d)) || (typeid(m) == typeid(torch::nn::Conv2dImpl))) {
-		           auto p = m->named_parameters(false);
+		    if(auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
+		           auto p = M->named_parameters(false);
 		           auto w = p.find("weight");
 		           auto b = p.find("bias");
 		           //if (w != nullptr) torch::nn::init::normal_(*w, /*mean=*/0.0, /*std=*/0.01);
 		           if (w != nullptr) torch::nn::init::kaiming_normal_(*w, /*a=*/0.0, torch::kFanOut, torch::kReLU);
 		           if (b != nullptr) torch::nn::init::constant_(*b, /*bias=*/0.0);
 
-		    } else if ((typeid(m) == typeid(torch::nn::Linear)) || (typeid(m) == typeid(torch::nn::LinearImpl))){
-		           auto p = m->named_parameters(false);
+		    } else if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())){
+		           auto p = M->named_parameters(false);
 		           auto w = p.find("weight");
 		           auto b = p.find("bias");
 		           if (w != nullptr) torch::nn::init::normal_(*w, /*mean=*/0.0, /*std=*/0.01);
 		           if (b != nullptr) torch::nn::init::constant_(*b, /*bias=*/0.0);
 
-		    } else if ((typeid(m) == typeid(torch::nn::BatchNorm2d)) || (typeid(m) == typeid(torch::nn::BatchNorm2dImpl))){
-		           auto p = m->named_parameters(false);
+		    } else if (auto M = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())){
+		           auto p = M->named_parameters(false);
 		           auto w = p.find("weight");
 		           auto b = p.find("bias");
 		           if (w != nullptr) torch::nn::init::constant_(*w, /*weight=*/1.0);

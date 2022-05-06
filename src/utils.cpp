@@ -151,12 +151,7 @@ std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFi
 	return labelMap;
 }
 
-std::vector<unsigned char> tensorToMatrix(torch::Tensor data) {
-	auto mimg = data.permute({1,2,0}).mul(255).to(torch::kByte);
-	std::vector<unsigned char> z(mimg.size(0) * mimg.size(1) * mimg.size(2));
-	std::memcpy(&(z[0]), mimg.data_ptr<unsigned char>(),sizeof(unsigned char)*mimg.numel());
-	return z;
-}
+
 
 // data batch indices
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle) {
@@ -176,7 +171,7 @@ std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_siz
 		std::vector<int64_t> indices(first, last);
 
 		int64_t idx_size = indices.size();
-		torch::Tensor idx = (torch::from_blob(indices.data(), {idx_size}, torch::kInt64)).clone();
+		torch::Tensor idx = (torch::from_blob(indices.data(), {idx_size}, at::TensorOptions(torch::kInt64))).clone();
 
 		//auto batch_x = X.index_select(0, idx);
 		//auto batch_y = Y.index_select(0, idx);
@@ -184,6 +179,15 @@ std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_siz
 		batch_indices.push_back(idx);
 	}
 	return( batch_indices );
+}
+
+torch::Tensor RangeToensorIndex(int64_t num) {
+	std::vector<int64_t> idx;
+	for( int64_t i = 0; i < num; i++ )
+		idx.push_back(i);
+
+	torch::Tensor RngIdx = (torch::from_blob(idx.data(), {num}, at::TensorOptions(torch::kInt64))).clone();
+	return RngIdx;
 }
 
 

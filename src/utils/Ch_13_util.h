@@ -8,9 +8,11 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <vector>
 #include <string>
 #include <map>
+#include <random>
 
 #include "../utils.h"
 
@@ -41,6 +43,14 @@ const std::map<std::string, int> IMAGE_MODEL = {{"UNCHANGED", 0}, {"GRAY", 1}, {
 torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size);
 
 cv::Mat TensorToCvMat(torch::Tensor img);
+
+const uchar* tensorToMatrix4Matplotlib(torch::Tensor data);
+
+torch::Tensor CvMatToTensorAfterFlip(std::string file, std::vector<int> img_size, double fP, int flip_axis=0);
+
+torch::Tensor  CvMatToTensorChangeBrightness(std::string file, std::vector<int> img_size, double alpha, double beta);
+
+torch::Tensor  CvMatToTensorChangeHue(std::string file, std::vector<int> img_size, int hue);
 
 const std::vector<std::string> VOC_CLASSES = {"background", "aeroplane", "bicycle", "bird", "boat",
 								               "bottle", "bus", "car", "cat", "chair", "cow",

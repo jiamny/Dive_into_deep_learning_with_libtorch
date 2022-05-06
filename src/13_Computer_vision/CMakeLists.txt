@@ -8,7 +8,14 @@ set(requiredlibs "python3.9")
 list(APPEND requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
+list(APPEND requiredlibs "png")
 list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
+
+find_package(OpenMP)
+
+if(OpenMP_CXX_FOUND)
+    list(APPEND requiredlibs "OpenMP::OpenMP_CXX")
+endif()
 
 #----------------------------------------------------------------------------------
 add_executable(13_AnchorBoxes)
@@ -41,23 +48,23 @@ target_link_libraries(13_BoundingBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requ
 set_target_properties(13_BoundingBoxes  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-add_executable(13_TestTorchVision)
-target_sources(13_TestTorchVision PRIVATE TestTorchVision.cpp )
+#add_executable(13_TestTorchVision)
+#target_sources(13_TestTorchVision PRIVATE TestTorchVision.cpp )
 													
-target_include_directories(13_TestTorchVision  PRIVATE 
-${TORCHVISION_INCLUDE_DIRS}
-${Python3_INCLUDE_DIRS}  
-${Python3_NumPy_INCLUDE_DIRS}
-)
+#target_include_directories(13_TestTorchVision  PRIVATE 
+#${TORCHVISION_INCLUDE_DIRS}
+#${Python3_INCLUDE_DIRS}  
+#${Python3_NumPy_INCLUDE_DIRS}
+#)
 
-target_link_libraries(13_TestTorchVision  
-${OpenCV_LIBS} 
-${TORCH_LIBRARIES} 
-${TORCHVISION_LIBRARIES}
-${requiredlibs} Python3::Python Python3::NumPy
-)
+#target_link_libraries(13_TestTorchVision  
+#${OpenCV_LIBS} 
+#${TORCH_LIBRARIES} 
+#${TORCHVISION_LIBRARIES}
+#${requiredlibs} Python3::Python Python3::NumPy
+#)
 
-set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+#set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(13_MultiscaleObjectDetection)
@@ -112,5 +119,58 @@ target_link_libraries( 13_FullyConvolutionalNetworks ${OpenCV_LIBS} ${TORCH_LIBR
 					   ${requiredlibs} Python3::Python Python3::NumPy)
 					   
 set_target_properties( 13_FullyConvolutionalNetworks PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
+add_executable(13_TransposedConvolution)
+target_sources(13_TransposedConvolution PRIVATE 
+TransposedConvolution.cpp
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp	
+)
+
+target_include_directories(13_TransposedConvolution PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_TransposedConvolution ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_TransposedConvolution PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
+add_executable(13_ImageAugmentation)
+target_sources(13_ImageAugmentation PRIVATE 
+ImageAugmentation.cpp
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp	
+)
+
+target_include_directories(13_ImageAugmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_ImageAugmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_ImageAugmentation PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
+add_executable(13_Kaggle_cifar10)
+target_sources(13_Kaggle_cifar10 PRIVATE 
+Kaggle_cifar10.cpp
+../utils.h 
+../utils.cpp
+../utils/dataloader.hpp
+../utils/dataloader.cpp
+../utils/datasets.hpp
+../utils/datasets.cpp
+../utils/transforms.hpp
+../utils/transforms.cpp
+)
+
+target_include_directories(13_Kaggle_cifar10 PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_Kaggle_cifar10 ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_Kaggle_cifar10 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
 
 

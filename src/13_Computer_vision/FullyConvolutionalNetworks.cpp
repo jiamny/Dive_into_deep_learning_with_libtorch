@@ -30,12 +30,9 @@ torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size
 
     auto weight = torch::zeros({in_channels, out_channels, kernel_size, kernel_size});
 
-    for( int i = 0; i < in_channels; i++ ) {
-    	for(int j = 0; j < out_channels; j++) {
-    		weight.index_put_({i, j, Slice(0, kernel_size), Slice(0, kernel_size)}, filt);
-    	}
-    }
-    //weight.index_put_({Slice(0, in_channels), Slice(0, out_channels), Slice(), Slice()}, filt);
+    auto in_idx = RangeToensorIndex(in_channels);
+    auto out_idx = RangeToensorIndex(out_channels);
+    weight.index_put_({in_idx, out_idx, Slice(0, kernel_size), Slice(0, kernel_size)}, filt);
 
     return weight;
 }
@@ -70,8 +67,8 @@ std::vector<std::pair<std::string, std::string>> read_voc_images(const std::stri
 		std::string imgf = voc_dir + "/JPEGImages/" + fname + ".jpg";
 		std::string labf = voc_dir + "/SegmentationClass/" + fname + ".png";
 /*
-		auto imgT = CvMatToTensor(labf.c_str(), img_size, true);
-		auto rev_bgr_mat = TensorToCvMat(imgT, true);
+		auto imgT = CvMatToTensor(labf.c_str(), {img_size, img_size});
+		auto rev_bgr_mat = TensorToCvMat(imgT);
 
 		cv::imshow("rev_bgr_mat", rev_bgr_mat);
 		cv::waitKey(-1);
@@ -192,29 +189,28 @@ int main() {
 	auto conv_trans = torch::nn::ConvTranspose2d(
 			torch::nn::ConvTranspose2dOptions(3, 3, 4).padding(1).stride(2).bias(false));
 
-//	torch::autograd::GradMode::set_enabled(false);  	// make parameters copying possible
-/*
+	torch::autograd::GradMode::set_enabled(false);  	// make parameters copying possible
+
 	for (auto& module : conv_trans->modules(true) ) {  //modules(include_self=false))
-		std::cout << "III\n";
 		if (auto M = dynamic_cast<torch::nn::ConvTranspose2dImpl*>(module.get())) {
 			auto W = bilinear_kernel(3, 3, 4);
 		    //M->weight.data().index_put_({Slice(), Slice(), Slice()}, W); // works!!!
 			M->weight.data().copy_(W);
 		}
 	}
-*/
 
 	conv_trans.get()->weight.data().copy_(bilinear_kernel(3, 3, 4));
 
-//	torch::autograd::GradMode::set_enabled(true);
+	torch::autograd::GradMode::set_enabled(true);
 
 	std::cout << "conv_trans: " << conv_trans << "\n";
 	std::cout << "conv_trans.weights: " << conv_trans.get()->weight.sizes() << "\n";
 	std::cout << "conv_trans.weights: " << conv_trans.get()->weight << "\n";
+	std::cout << "conv_trans.bias: " << conv_trans.get()->bias << "\n";
 
 	std::string imgf = "./data/catdog.jpg";
 	int img_size = 0;
-	bool show_img = false;
+	bool show_img = true;
 
 	auto imgT = CvMatToTensor(imgf, {});
 
@@ -237,11 +233,6 @@ int main() {
 	Z = imgT.index({2, Slice(), Slice()});
 	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
 
-//	X = imgT.unsqueeze(0);
-//	std::cout << "X: " << X.sizes() << "\n";
-//	std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++\n" << X << "\n";
-//	std::cout << "X.min " << torch::min(X) << "\n";
-//	std::cout << "X.max " << torch::max(X) << "\n";
 
 	auto Y = conv_trans(imgT.unsqueeze(0));
 	std::cout << "\n\n\n";
@@ -250,7 +241,7 @@ int main() {
 
 	auto out_imgT = Y[0].detach().clone();
 	std::cout << "output image sizes: " << out_imgT.sizes() << "\n";
-	std::cout << "output image sizes: " << torch::max(out_imgT).data().item<float>() << "\n";
+	std::cout << "output max value: " << torch::max(out_imgT).data().item<float>() << "\n";
 
 	cvImg = TensorToCvMat(out_imgT);
 

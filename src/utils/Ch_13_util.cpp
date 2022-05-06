@@ -269,6 +269,7 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	// opencv BGR format change to RGB
 	// ----------------------------------------------------------
 	cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+
 	if( img_size.size() > 0 ) cv::resize(image, image, cv::Size(img_size[0], img_size[1]));
 
 	torch::Tensor imgT = torch::from_blob(image.data,
@@ -278,3 +279,127 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 
 	return imgT;
 }
+
+const uchar* tensorToMatrix4Matplotlib(torch::Tensor imgT) {
+	// OpenCV is BGR, Pillow is RGB
+	torch::Tensor mimg = imgT.permute({1,2,0}).mul(255).to(torch::kByte).clone();
+
+	std::vector<uchar> z(mimg.numel());
+	std::memcpy(&(z[0]), mimg.data_ptr<unsigned char>(),sizeof(uchar)*mimg.numel());
+	const uchar* zptr = &(z[0]);
+
+	return zptr;
+}
+
+torch::Tensor  CvMatToTensorAfterFlip(std::string file, std::vector<int> img_size, double fP, int flip_axis) {
+	cv::Mat image = cv::imread(file.c_str());
+	/*
+	 *  flip Code is set to 0, which flips around the x-axis. If flipCode is set greater than zero (e.g., +1),
+	 *  the image will be flipped around the yaxis, and if set to a negative value (e.g., -1), the image will
+	 *  be flipped about both axes.
+	 */
+	cv::Mat dst;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0, 1);
+	if( dis(gen) > fP ) {
+		cv::flip(image, dst, flip_axis);
+	} else {
+		dst = image;
+	}
+
+	// ----------------------------------------------------------
+	// opencv BGR format change to RGB
+	// ----------------------------------------------------------
+	cv::cvtColor(dst, dst, cv::COLOR_BGR2RGB);
+	if( img_size.size() > 0 ) cv::resize(dst, dst, cv::Size(img_size[0], img_size[1]));
+
+	torch::Tensor imgT = torch::from_blob(dst.data,
+						{dst.rows, dst.cols, dst.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+	imgT = imgT.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+
+	return imgT;
+}
+
+torch::Tensor  CvMatToTensorChangeBrightness(std::string file, std::vector<int> img_size, double alpha, double beta) {
+	cv::Mat image = cv::imread(file.c_str());
+	/*
+	 *  flip Code is set to 0, which flips around the x-axis. If flipCode is set greater than zero (e.g., +1),
+	 *  the image will be flipped around the yaxis, and if set to a negative value (e.g., -1), the image will
+	 *  be flipped about both axes.
+	 */
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0, 1);
+
+	cv::Mat new_image = cv::Mat::zeros( image.size(), image.type() );
+	// randomly change the brightness] of the image to a value between 50% (1−0.5)
+	// and 50% (0.5 - 1) of the original image
+	for( int y = 0; y < image.rows; y++ ) {
+		for( int x = 0; x < image.cols; x++ ) {
+		    for( int c = 0; c < image.channels(); c++ ) {
+		        beta = dis(gen);
+		        new_image.at<cv::Vec3b>(y,x)[c] =
+		        			            cv::saturate_cast<uchar>( alpha*image.at<cv::Vec3b>(y,x)[c] + beta );
+		    }
+		}
+	}
+
+	// ----------------------------------------------------------
+	// opencv BGR format change to RGB
+	// ----------------------------------------------------------
+	cv::cvtColor(new_image, new_image, cv::COLOR_BGR2RGB);
+	if( img_size.size() > 0 ) cv::resize(new_image, new_image, cv::Size(img_size[0], img_size[1]));
+
+	auto imgT = torch::from_blob(new_image.data,
+							{new_image.rows, new_image.cols, new_image.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+	imgT = imgT.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+
+	return imgT;
+}
+
+torch::Tensor  CvMatToTensorChangeHue(std::string file, std::vector<int> img_size, int hue) {
+	cv::Mat image = cv::imread(file.c_str());
+	/*
+	 *  flip Code is set to 0, which flips around the x-axis. If flipCode is set greater than zero (e.g., +1),
+	 *  the image will be flipped around the yaxis, and if set to a negative value (e.g., -1), the image will
+	 *  be flipped about both axes.
+	 */
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0, 1);
+
+	cv::Mat hsv = image.clone();
+	cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+
+	std::vector<cv::Mat> hsv_vec;
+	cv::split(hsv, hsv_vec);
+	cv::Mat &H = hsv_vec[0];	// hue
+	cv::Mat &S = hsv_vec[1];	// saturation
+	cv::Mat &V = hsv_vec[2];	// brightness
+
+	if( dis(gen) > 0.5 ) {
+		//image = (V > 10); 	// non-zero pixels in the original image
+		hsv_vec[0] = hue; 		// H is between 0-180 in OpenCV
+	}
+	cv::merge(hsv_vec, hsv);
+	cv::Mat new_image;
+	cv::cvtColor(hsv, new_image, cv::COLOR_HSV2BGR);
+
+	// ----------------------------------------------------------
+	// opencv BGR format change to RGB
+	// ----------------------------------------------------------
+	cv::cvtColor(new_image, new_image, cv::COLOR_BGR2RGB);
+	if( img_size.size() > 0 ) cv::resize(new_image, new_image, cv::Size(img_size[0], img_size[1]));
+
+	auto imgT = torch::from_blob(new_image.data,
+							{new_image.rows, new_image.cols, new_image.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+	imgT = imgT.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+
+	return imgT;
+}
+
+

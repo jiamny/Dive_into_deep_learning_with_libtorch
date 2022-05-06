@@ -1,5 +1,4 @@
 
-
 #ifndef UTILS_H_
 #define UTILS_H_
 
@@ -19,6 +18,7 @@
 #include <atomic>
 #include <algorithm>
 #include <iostream>
+#include <numeric>   // iota()
 
 
 #include <jsoncpp/json/allocator.h>
@@ -158,15 +158,15 @@ std::pair<torch::Tensor, torch::Tensor> init_params(int64_t num_inputs);
 
 std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFile);
 
-std::vector<unsigned char> tensorToMatrix(torch::Tensor data);
-
 // data batch indices
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle = true);
 
+torch::Tensor RangeToensorIndex(int64_t num);
+
 template<typename T>
-std::vector<T> range(const T count) {
+std::vector<T> range(const T count, T start = 1) {
     std::vector<T> aVector(count);
-    iota(aVector.begin(), aVector.end(), 1);
+    iota(aVector.begin(), aVector.end(), start);
     return aVector;
 }
 

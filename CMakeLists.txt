@@ -26,15 +26,15 @@ message(STATUS "    include path: ${TORCH_INCLUDE_DIRS}")
 # -------------------------------------------------------------------------------------------
 # where to find torchvision include and lib files
 # -------------------------------------------------------------------------------------------
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/torchvision")
+#list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/torchvision")
 
-set(TORCHVISION_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/torchvision/include")
-set(TORCHVISION_LIBRARIES "${CMAKE_SOURCE_DIR}/torchvision/lib/libtorchvision.so")
+#set(TORCHVISION_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/torchvision/include")
+#(TORCHVISION_LIBRARIES "${CMAKE_SOURCE_DIR}/torchvision/lib/libtorchvision.so")
 
-message(STATUS "    ${CMAKE_PREFIX_PATH}")
-message(STATUS "    ${TorchVision_VERSION}")
-message(STATUS "    libraries: ${TORCHVISION_LIBRARIES}")
-message(STATUS "    include path: ${TORCHVISION_INCLUDE_DIRS}") 
+#message(STATUS "    ${CMAKE_PREFIX_PATH}")
+#message(STATUS "    ${TorchVision_VERSION}")
+#message(STATUS "    libraries: ${TORCHVISION_LIBRARIES}")
+#message(STATUS "    include path: ${TORCHVISION_INCLUDE_DIRS}") 
 
 # add opencv package to the project
 find_package( OpenCV 4.5.3 REQUIRED PATHS "/usr/local/")
@@ -82,6 +82,8 @@ add_subdirectory("src/10_Attention_mechanisms")
 add_subdirectory("src/11_Optimization_algorithms")
 add_subdirectory("src/12_Computational_performance")
 add_subdirectory("src/13_Computer_vision")
+
+add_subdirectory("src/18_Appendix_mathematics_4_deep_learning")
 add_subdirectory("src/utils")
 
 if(MSVC)
