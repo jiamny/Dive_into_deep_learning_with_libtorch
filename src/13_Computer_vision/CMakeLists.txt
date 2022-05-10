@@ -172,5 +172,23 @@ target_link_libraries( 13_Kaggle_cifar10 ${OpenCV_LIBS} ${TORCH_LIBRARIES}
 					   
 set_target_properties( 13_Kaggle_cifar10 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
+# -------------------------------------------------------------
+add_executable(13_Kaggle_dog)
+target_sources(13_Kaggle_dog PRIVATE 
+Kaggle_dog.cpp
+../utils.h 
+../utils.cpp
+../utils/dataloader.hpp
+../utils/dataloader.cpp
+../utils/datasets.hpp
+../utils/datasets.cpp
+../utils/transforms.hpp
+../utils/transforms.cpp
+)
 
+target_include_directories(13_Kaggle_dog PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_Kaggle_dog ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_Kaggle_dog PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 

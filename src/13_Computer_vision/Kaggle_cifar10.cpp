@@ -7,7 +7,7 @@
 #include "../utils/transforms.hpp"              // transforms_Compose
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
-//#include "../utils/resnet.h"
+
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
