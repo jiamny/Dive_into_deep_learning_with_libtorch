@@ -36,6 +36,8 @@ int main() {
 
 	plt::figure_size(500, 400);
 	plt::plot(x, y, "b-");
+	plt::xlabel("theta");
+	plt::ylabel("likelihood");
 	plt::show();
 	plt::close();
 

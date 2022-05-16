@@ -100,4 +100,39 @@ set_target_properties(18_MaximumLikelihood PROPERTIES
   CXX_STANDARD_REQUIRED YES
 )
 
+# ---------------------------------------------------------------
+add_executable( 18_MultivariableCalculus )
+
+target_sources( 18_MultivariableCalculus PRIVATE MultivariableCalculus.cpp )
+
+target_include_directories(18_MultivariableCalculus PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(18_MultivariableCalculus ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(18_MultivariableCalculus PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED YES
+)
+
+# ---------------------------------------------------------------
+add_executable( 18_RandomVariables )
+
+target_sources( 18_RandomVariables PRIVATE RandomVariables.cpp )
+
+target_include_directories(18_RandomVariables PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(18_RandomVariables ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(18_RandomVariables PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+# ---------------------------------------------------------------
+add_executable( 18_SingleVariableCalculus )
+
+target_sources( 18_SingleVariableCalculus PRIVATE SingleVariableCalculus.cpp )
+
+target_include_directories(18_SingleVariableCalculus PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(18_SingleVariableCalculus ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(18_SingleVariableCalculus PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+
+
 

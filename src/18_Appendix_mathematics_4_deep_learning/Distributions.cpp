@@ -81,16 +81,6 @@ double BF(double x, double n, std::vector<double> cmf) {
     }
 }
 
-double PF(double x, double n, std::vector<double> cmf) {
-	if( x < 0.0)
-		return 0.0;
-	else {
-		if( x > n )
-			return  1.0;
-		else
-			return cmf[int(x)];
-	}
-}
 
 double phi(double x, double mu, double sigma) {
     return (1.0 + std::erf((x - mu) / (sigma * std::sqrt(2.)))) / 2.0;
@@ -290,7 +280,7 @@ int main() {
 	std::vector<double> xs;
 	y.clear();
 
-	std::cout << std::tgamma(2 + 1) << '\n';
+	std::cout <<"tgamma(3): " << std::tgamma(2 + 1) << '\n';
 
 	for( int i = 0; i < 20; i++ ) {
 		xs.push_back(i*1.0);
@@ -314,7 +304,7 @@ int main() {
 	y.clear();
 	for(double i = -1.0; i <= 21.0; i += 0.01) {
 		x.push_back(i);
-		y.push_back(PF(i, N, ym));
+		y.push_back(BF(i, N, ym));
 	}
 
 	plt::figure_size(700, 500);
@@ -385,7 +375,7 @@ int main() {
 	plt::show();
 
 	// ----------------------------------
-	// Phi
+	// Phi - function for a standard normal distribution
 	// ----------------------------------
 	y.clear();
 
