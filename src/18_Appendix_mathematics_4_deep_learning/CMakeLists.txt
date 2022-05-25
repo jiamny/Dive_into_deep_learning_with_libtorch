@@ -114,6 +114,22 @@ set_target_properties(18_MultivariableCalculus PROPERTIES
 )
 
 # ---------------------------------------------------------------
+add_executable( 18_NaiveBayes )
+
+target_sources( 18_NaiveBayes PRIVATE 
+NaiveBayes.cpp
+../utils.h 
+../utils.cpp
+../fashion.h
+../fashion.cpp 
+)
+
+target_include_directories(18_NaiveBayes PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(18_NaiveBayes ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(18_NaiveBayes PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+# ---------------------------------------------------------------
 add_executable( 18_RandomVariables )
 
 target_sources( 18_RandomVariables PRIVATE RandomVariables.cpp )
@@ -133,6 +149,14 @@ target_link_libraries(18_SingleVariableCalculus ${TORCH_LIBRARIES} ${requiredlib
 
 set_target_properties(18_SingleVariableCalculus PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
+# ---------------------------------------------------------------
+add_executable( 18_Statistics )
 
+target_sources( 18_Statistics PRIVATE Statistics.cpp )
+
+target_include_directories(18_Statistics PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(18_Statistics ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(18_Statistics PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
 

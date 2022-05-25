@@ -96,7 +96,7 @@ int main() {
 	std::vector<float> z(ncols * nrows);
 	for( int j=0; j<nrows; ++j ) {
 	    for( int i=0; i<ncols; ++i ) {
-	            z.at(ncols * j + i) = (tsr.index({j, i})).item<float>();
+	       z.at(ncols * j + i) = (tsr.index({j, i})).item<float>();
 	     }
 	}
 
