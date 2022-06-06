@@ -280,16 +280,85 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	return imgT;
 }
 
-const uchar* tensorToMatrix4Matplotlib(torch::Tensor imgT) {
+std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img) {
 	// OpenCV is BGR, Pillow is RGB
-	torch::Tensor mimg = imgT.permute({1,2,0}).mul(255).to(torch::kByte).clone();
+	torch::Tensor data_out = img.contiguous().detach().clone();
+	auto rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
 
-	std::vector<uchar> z(mimg.numel());
-	std::memcpy(&(z[0]), mimg.data_ptr<unsigned char>(),sizeof(uchar)*mimg.numel());
-	const uchar* zptr = &(z[0]);
+	//std::vector<uint8_t> z(mimg.data_ptr<uint8_t>(), mimg.data_ptr<uint8_t>() + sizeof(uint8_t)*mimg.numel());
+	//uint8_t* zptr = &(z[0]);
+	// shape of tensor
+	int64_t height = rev_tensor.size(0);
+	int64_t width = rev_tensor.size(1);
 
-	return zptr;
+	// Mat takes data form like {0,0,255,0,0,255,...} ({B,G,R,B,G,R,...})
+	// so we must reshape tensor, otherwise we get a 3x3 grid
+	auto tensor = rev_tensor.reshape({width * height * rev_tensor.size(2)});
+
+	// CV_8UC3 is an 8-bit unsigned integer matrix/image with 3 channels
+	cv::Mat rev_rgb_mat(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
+
+	std::vector<uint8_t> z;
+	if(rev_rgb_mat.isContinuous()) {
+	  // z.assign(mat.datastart, mat.dataend); // <- has problems for sub-matrix like mat = big_mat.row(i)
+	  z.assign(rev_rgb_mat.data, rev_rgb_mat.data + rev_rgb_mat.total()*rev_rgb_mat.channels());
+	} else {
+	  for (int i = 0; i < rev_rgb_mat.rows; ++i) {
+	    z.insert(z.end(), rev_rgb_mat.ptr<uchar>(i), rev_rgb_mat.ptr<uchar>(i)+rev_rgb_mat.cols*rev_rgb_mat.channels());
+	  }
+	}
+
+	return z;
 }
+
+torch::Tensor deNormalizeTensor(torch::Tensor imgT, std::vector<float> mean_, std::vector<float> std_) {
+
+	torch::Tensor mean = torch::from_blob((float *)mean_.data(),
+				{(long int)mean_.size(), 1, 1}, at::TensorOptions(torch::kFloat)).clone();  	// mean{C,1,1}
+	torch::Tensor std = torch::from_blob((float *)std_.data(),
+				{(long int)std_.size(), 1, 1}, at::TensorOptions(torch::kFloat)).clone();		// std{C,1,1}
+
+	long int channels = imgT.size(0);
+
+	torch::Tensor meanF = mean;
+	if(channels < meanF.size(0)){
+		meanF = meanF.split(/*split_size=*/channels, /*dim=*/0).at(0);  // meanF{*,1,1} ===> {C,1,1}
+	}
+
+	torch::Tensor stdF = std;
+	if(channels < stdF.size(0)){
+		stdF = stdF.split(/*split_size=*/channels, /*dim=*/0).at(0);	// stdF{*,1,1} ===> {C,1,1}
+	}
+
+	torch::Tensor data_out_src = imgT * stdF.to(imgT.device()) + meanF.to(imgT.device());  // data_in{C,H,W}, meanF{*,1,1}, stdF{*,1,1} ===> data_out_src{C,H,W}
+
+	return data_out_src.contiguous().detach().clone();
+}
+
+
+std::string cvMatType2Str(int type) {
+  std::string r = "";
+
+  uchar depth = type & CV_MAT_DEPTH_MASK;
+  uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+  switch ( depth ) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+  }
+
+  r += "C";
+  r += (chans+'0');
+
+  return r;
+}
+
 
 torch::Tensor  CvMatToTensorAfterFlip(std::string file, std::vector<int> img_size, double fP, int flip_axis) {
 	cv::Mat image = cv::imread(file.c_str());

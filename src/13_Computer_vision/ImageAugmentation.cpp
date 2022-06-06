@@ -47,7 +47,8 @@ int main() {
 	for( int r = 0; r < num_rows; r++ ) {
 		for( int c = 0; c < num_cols; c++ ) {
 			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 0);
-			const uchar* zptr = tensorToMatrix4Matplotlib(imgt.squeeze());
+			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
+			uint8_t* zptr = &(z[0]);
 			plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
 			plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
 		}
@@ -61,7 +62,8 @@ int main() {
 	for( int r = 0; r < num_rows; r++ ) {
 		for( int c = 0; c < num_cols; c++ ) {
 			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 1);
-			const uchar* zptr = tensorToMatrix4Matplotlib(imgt.squeeze());
+			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
+			uint8_t* zptr = &(z[0]);
 			plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
 			plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
 		}
@@ -81,7 +83,8 @@ int main() {
     for( int r = 0; r < num_rows; r++ ) {
     	for( int c = 0; c < num_cols; c++ ) {
     		torch::Tensor imgt = CvMatToTensorChangeBrightness("data/cat1.jpg", {}, alpha, beta);
-    		const uchar* zptr = tensorToMatrix4Matplotlib(imgt.squeeze());
+    		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
+    		uint8_t* zptr = &(z[0]);
     		plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
     		plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
     	}
@@ -97,7 +100,8 @@ int main() {
     for( int r = 0; r < num_rows; r++ ) {
     	for( int c = 0; c < num_cols; c++ ) {
     		torch::Tensor imgt = CvMatToTensorChangeHue("data/cat1.jpg", {}, hue);
-    		const uchar* zptr = tensorToMatrix4Matplotlib(imgt.squeeze());
+    		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
+    		uint8_t* zptr = &(z[0]);
     		plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
     		plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
     	}

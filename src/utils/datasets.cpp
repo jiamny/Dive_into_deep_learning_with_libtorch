@@ -83,7 +83,7 @@ void datasets::collect(std::string root, std::string sub, std::vector<std::strin
 	if(root.back() != '/') {
 		root.push_back('/');
 	}
-//   	std::cout << root << std::endl;
+   	//std::cout << root << std::endl;
    	//it's a directory
    	if( stat(root.c_str(), &s) == 0 ) {
    	    if( s.st_mode & S_IFDIR ){
@@ -516,7 +516,7 @@ datasets::ImageFolderClassesWithPaths::ImageFolderClassesWithPaths(const std::st
         std::vector<std::string> paths_tmp, fnames_tmp;
         class_name = class_names.at(i);
         class_root = root + '/' + class_name;
- std::cout << "class_root = "  << class_root << " class_name = "  << class_name << std::endl;
+ 
         datasets::collect(class_root, class_name + '/', paths_tmp, fnames_tmp);
         std::sort(paths_tmp.begin(), paths_tmp.end());
         std::sort(fnames_tmp.begin(), fnames_tmp.end());

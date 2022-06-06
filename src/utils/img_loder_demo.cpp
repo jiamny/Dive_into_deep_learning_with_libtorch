@@ -14,6 +14,8 @@
 #include <vector>
 #include <cstring>
 #include <sstream>
+#include <unistd.h>
+#include <iomanip>
 
 #include <dirent.h>           //get files in directory
 #include <sys/stat.h>
@@ -21,6 +23,7 @@
 #include <map>
 #include <tuple>
 
+#include "../utils/Ch_13_util.h"
 #include "../utils.h"
 #include "../utils/transforms.hpp"              // transforms_Compose
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
@@ -131,7 +134,7 @@ torch::Tensor load_image(std::string path) {
 void displayImage(std::string f1, std::string f2) {
 	torch::manual_seed(0);
 	plt::figure_size(800, 500);
-	plt::subplot(1, 2, 1);
+	plt::subplot2grid(1, 2, 0, 0, 1, 1);
 
 	torch::Tensor a = load_image(f1);
 	torch::Tensor b = load_image(f2);
@@ -169,7 +172,7 @@ void displayImage(std::string f1, std::string f2) {
 	 std::memcpy(&(za[0]), aa.data_ptr<uchar>(),sizeof(uchar)*aa.numel());
 
 	 const uchar* zptra = &(za[0]);
-	 plt::subplot(1, 2, 2);
+	 plt::subplot2grid(1, 2, 0, 1, 1, 1);
 	 plt::title("image aa");
 	 plt::imshow(zptra, aa.size(0), aa.size(1), aa.size(2));
 	 plt::show();
@@ -189,93 +192,153 @@ void displayImage(std::string f1, std::string f2) {
 
 int main() {
 
-	//std::string f1 = "./data/dog.jpg";
-	//std::string f2 = "./data/dog.jpg";
-	//displayImage(f1, f2);
+	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
 	auto cuda_available = torch::cuda::is_available();
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
-	size_t img_size = 224;
-	size_t batch_size = 16;
-	std::vector<std::string> class_names = {"cat", "fish"};
-	constexpr bool train_shuffle = true;  // whether to shuffle the training dataset
-	constexpr size_t train_workers = 2;  // the number of workers to retrieve data from the training dataset
+	torch::manual_seed(123);
 
-    // (4) Set Transforms
-    std::vector<transforms_Compose> transform {
-        transforms_Resize(cv::Size(img_size, img_size), cv::INTER_LINEAR),        // {IH,IW,C} ===method{OW,OH}===> {OH,OW,C}
-        transforms_ToTensor()                                                     // Mat Image [0,255] or [0,65535] ===> Tensor Image [0,1]
-//        transforms_Normalize(std::vector<float>{0.485, 0.456, 0.406}, std::vector<float>{0.229, 0.224, 0.225})  // Pixel Value Normalization for ImageNet
-    };
+	// -----------------------------------
+	// The Pokemon Dataset
+	// -----------------------------------
+	int64_t batch_size = 2;
+	bool train_shuffle = true;
+	int train_workers = 2;
+	//std::string dataroot = "./data/pokemon";
+	std::string dataroot = "./data/Test";
+	std::vector<std::string> classes;
+	//for(int i = 1; i < 722; i++)
+	//	classes.push_back(std::to_string(i));
 
-	std::string dataroot = "./data/cat_fish/train";
-    std::tuple<torch::Tensor, torch::Tensor, std::vector<std::string>> mini_batch;
-    torch::Tensor loss, image, label, output;
-    datasets::ImageFolderClassesWithPaths dataset;      // valid_dataset;
-    DataLoader::ImageFolderClassesWithPaths dataloader; // valid_dataloader;
+	classes.push_back(std::to_string(484));
+	classes.push_back(std::to_string(485));
 
+	std::vector<float> mean_ = {0.5, 0.5, 0.5};
+	std::vector<float> std_  = {0.5, 0.5, 0.5};
 
-    // -----------------------------------
-    // a1. Preparation
-    // -----------------------------------
+	// Set Transforms
+	std::vector<transforms_Compose> transform {
+	        transforms_Resize(cv::Size(64, 64), cv::INTER_LINEAR),  // {IH,IW,C} ===method{OW,OH}===> {OH,OW,C}
+	        transforms_ToTensor(),                                  // Mat Image [0,255] or [0,65535] ===> Tensor Image [0,1]
+			transforms_Normalize(mean_, std_)  						// Pixel Value Normalization for ImageNet
+	};
 
-    // (1) Get Training Dataset
-    dataset = datasets::ImageFolderClassesWithPaths(dataroot, transform, class_names);
-    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, /*shuffle_=*/train_shuffle, /*num_workers_=*/train_workers);
-    std::cout << "total training images : " << dataset.size() << std::endl;
-    dataloader(mini_batch);
-    image = std::get<0>(mini_batch).to(device);
+	datasets::ImageFolderClassesWithPaths dataset;
+	std::tuple<torch::Tensor, torch::Tensor, std::vector<std::string>> mini_batch;
+	DataLoader::ImageFolderClassesWithPaths dataloader;
 
-    auto t4mat = image[1].detach().clone();
-    t4mat = t4mat.permute({1,2,0}).mul(255).to(torch::kByte);
+	// Get Dataset
+	dataset = datasets::ImageFolderClassesWithPaths(dataroot, transform, classes);
+	dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, train_shuffle, train_workers);
 
-    std::cout << t4mat.sizes() << std::endl;
+	std::cout << "total training images : " << dataset.size() << std::endl;
 
-    int width = t4mat.size(0);
-    int height = t4mat.size(1);
-    cv::Mat mgm(cv::Size{ width, height }, CV_8UC3, t4mat.data_ptr<uchar>());
+	dataloader(mini_batch);
+	torch::Tensor images = std::get<0>(mini_batch).to(device);
+	auto label = std::get<1>(mini_batch).to(device);
+	torch::Tensor imgT = images[0].clone().squeeze();
 
-    cv::cvtColor(mgm, mgm, cv::COLOR_RGB2BGR);
-    cv::imshow("converted color image", mgm.clone());
-    cv::waitKey(0);
-    cv::destroyAllWindows();
+	std::cout << imgT.max() << " " << label[0] << '\n';
 
+	torch::Tensor photo;
+	bool use_photo = false;
+	bool use_cv_imshow = false;
+    bool normalize = true;
 
-/*
-    plt::figure_size(800, 500);
-    plt::subplot(1, 2, 1);
-    dataloader(mini_batch);
-    image = std::get<0>(mini_batch).to(device);
-    label = std::get<1>(mini_batch).to(device);
-    auto fnames = std::get<2>(mini_batch);
+    if( normalize ) {
+    	imgT = deNormalizeTensor(imgT, mean_, std_);
+    }
 
-    std::cout << "images : " << image.sizes() << std::endl;
-    std::cout << "labels : " << label << std::endl;
-    std::cout << "fnames : " << fnames[0] << std::endl;
+	if( use_photo ) {
+		std::string filename = "./data/pokemon/485/485-0.png";
+		cv::Mat img = cv::imread(filename);
 
-    std::vector<unsigned char> z = tensorToMatrix(image[1]);
-    const uchar* zptr = &(z[0]);
-    int id = label[1].item<int64_t>();
-    std::string tlt = class_names[id];
- //   std::string tlt = flowerLabels[t]; //cls[label];
-    plt::title(tlt.c_str());
-    plt::imshow(zptr, img_size, img_size, 3);
+		cv::Mat cvtImg = img.clone();
+		cv::cvtColor(img, cvtImg, cv::COLOR_BGR2RGB);
 
-    plt::subplot(1, 2, 2);
-    std::vector<unsigned char> z2 = tensorToMatrix(image[7]);
-    const uchar* zptr2 = &(z2[0]);
-    id = label[7].item<int64_t>();
-    tlt = class_names[id];
-//    tlt = flowerLabels[t]; //cls[label];
-    plt::title(tlt.c_str());
-    plt::imshow(zptr2, img_size, img_size, 3);
-    plt::show();
-*/
-    auto class_match = std::vector<size_t>(class_names.size(), 0);
-    for(auto& i : class_match) std::cout << i << std::endl;
+		cv::resize(cvtImg, cvtImg, cv::Size(64, 64), 0.0, 0.0, cv::INTER_LINEAR);
+
+		photo = torch::from_blob(cvtImg.data, {cvtImg.rows, cvtImg.cols, cvtImg.channels()}, at::TensorOptions(torch::kByte)).clone();
+		photo = photo.toType(torch::kFloat);
+		photo = photo.permute({2, 0, 1});
+		photo = photo.div_(255.0);
+
+		photo = torch::unsqueeze(photo, 0);
+
+		filename = "./data/pokemon/484/484-0.png";
+		img = cv::imread(filename);
+
+		cvtImg = img.clone();
+		cv::cvtColor(img, cvtImg, cv::COLOR_BGR2RGB);
+		cv::resize(cvtImg, cvtImg, cv::Size(64, 64), 0.0, 0.0, cv::INTER_LINEAR);
+
+		torch::Tensor photo2 = torch::from_blob(cvtImg.data, {cvtImg.rows, cvtImg.cols, cvtImg.channels()}, at::TensorOptions(torch::kByte)).clone();
+		photo2 = photo2.toType(torch::kFloat);
+		photo2 = photo2.permute({2, 0, 1});
+		photo2 = photo2.div_(255.0);
+
+		photo2 = torch::unsqueeze(photo2, 0);
+		photo = torch::cat({photo, photo2}, 0);
+
+		imgT  = photo[0].clone().squeeze();
+	}
+
+	cv::Mat img2 = TensorToCvMat(imgT.clone());
+
+	if( use_cv_imshow ) {
+		std::string ty =  cvMatType2Str( img2.type() );
+		std::cout << "img2_isContinuous: " << img2.isContinuous() << ", Type: " << ty << '\n';
+
+		cv::resize(img2, img2, cv::Size(264, 264));
+		cv::imshow("example", img2);
+		cv::waitKey(0);
+		cv::destroyAllWindows();
+	}
+
+	torch::Tensor imgT2;
+
+	if( ! use_photo) {
+		imgT2 = images[1].clone().squeeze();
+	} else {
+		imgT2 = photo[1].clone().squeeze();
+	}
+
+    if( normalize ) {
+    	imgT2 = deNormalizeTensor(imgT2, mean_, std_);
+    }
+
+	cv::Mat img3 = TensorToCvMat(imgT2.clone());
+
+	if( use_cv_imshow ) {
+		std::string ty =  cvMatType2Str( img3.type() );
+		std::cout << "img3_isContinuous: " << img3.isContinuous() << ", Type: " << ty << '\n';
+
+		cv::resize(img3, img3, cv::Size(264, 264));
+		cv::imshow("example2", img3);
+		cv::waitKey(0);
+		cv::destroyAllWindows();
+	} else {
+		std::string ty =  cvMatType2Str( img2.type() );
+		std::cout << "img2_isContinuous: " << img2.isContinuous() << ", Type: " << ty << '\n';
+
+		plt::figure_size(800, 400);
+
+		std::vector<uint8_t> z1 = tensorToMatrix4Matplotlib(imgT.clone());
+		uint8_t* zptr1 = &(z1[0]);
+
+		plt::subplot2grid(1, 2, 0, 0, 1, 1);
+		plt::imshow(zptr1, imgT.size(1), imgT.size(2), imgT.size(0));
+
+		std::vector<uint8_t> array = tensorToMatrix4Matplotlib(imgT2.clone());
+		uint8_t* zptr = &(array[0]);
+		plt::subplot2grid(1, 2, 0, 1, 1, 1);
+		plt::imshow(zptr, imgT2.size(1), imgT2.size(2), imgT2.size(0));
+		plt::show();
+		plt::close();
+	}
 
     std::cout << "Done!\n";
 }

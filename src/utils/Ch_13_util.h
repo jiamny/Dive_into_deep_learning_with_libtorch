@@ -44,13 +44,17 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size);
 
 cv::Mat TensorToCvMat(torch::Tensor img);
 
-const uchar* tensorToMatrix4Matplotlib(torch::Tensor data);
+std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor data);
 
 torch::Tensor CvMatToTensorAfterFlip(std::string file, std::vector<int> img_size, double fP, int flip_axis=0);
 
 torch::Tensor  CvMatToTensorChangeBrightness(std::string file, std::vector<int> img_size, double alpha, double beta);
 
 torch::Tensor  CvMatToTensorChangeHue(std::string file, std::vector<int> img_size, int hue);
+
+torch::Tensor deNormalizeTensor(torch::Tensor imgT, std::vector<float> mean_, std::vector<float> std_);
+
+std::string cvMatType2Str(int type);
 
 const std::vector<std::string> VOC_CLASSES = {"background", "aeroplane", "bicycle", "bird", "boat",
 								               "bottle", "bus", "car", "cat", "chair", "cow",
