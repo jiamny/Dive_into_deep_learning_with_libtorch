@@ -192,3 +192,54 @@ target_link_libraries( 13_Kaggle_dog ${OpenCV_LIBS} ${TORCH_LIBRARIES}
 					   
 set_target_properties( 13_Kaggle_dog PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
+# -------------------------------------------------------------
+add_executable(13_SemanticSegmentation)
+target_sources(13_SemanticSegmentation PRIVATE 
+SemanticSegmentation.cpp
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp	
+)
+
+target_include_directories(13_SemanticSegmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_SemanticSegmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_SemanticSegmentation PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
+add_executable(13_NeuralStyleTransfer)
+target_sources(13_NeuralStyleTransfer PRIVATE 
+NeuralStyleTransfer.cpp
+../utils.h
+../utils.cpp
+../utils/Ch_13_util.h
+../utils/Ch_13_util.cpp	
+)
+
+target_include_directories(13_NeuralStyleTransfer PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_NeuralStyleTransfer ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_NeuralStyleTransfer PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
+add_executable(13_Yolo4)
+target_sources(13_Yolo4 PRIVATE 
+./yolov4/src/main.cc
+./yolov4/src/darknet.cc
+./yolov4/src/darknet.h
+./yolov4/src/config.cc	
+./yolov4/src/config.h
+./yolov4/src/coco_names.h
+../utils.h
+../utils.cpp
+)
+
+target_include_directories(13_Yolo4 PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+

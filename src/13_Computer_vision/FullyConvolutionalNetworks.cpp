@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <iomanip>
 #include <torch/script.h> // One-stop header.
+#include <vector>
+#include <map>
 
 #include <iostream>
 #include <memory>
@@ -13,6 +15,7 @@
 #include <random>
 
 #include "../utils/Ch_13_util.h"
+
 
 torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size) {
     auto factor = static_cast<int>((kernel_size + 1) / 2);
@@ -37,83 +40,11 @@ torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size
     return weight;
 }
 
-std::vector<std::pair<std::string, std::string>> read_voc_images(const std::string voc_dir,  bool is_train) {
-    //Read the banana detection dataset images and labels
-	std::vector<std::pair<std::string, std::string>> imgpaths;
-
-	std::string txt_fname = "";
-	if( is_train )
-		txt_fname = voc_dir + "/ImageSets/Segmentation/train.txt";
-	else
-		txt_fname = voc_dir + "/ImageSets/Segmentation/val.txt";
-
-    bool rgb = false;
-    std::ifstream file;
-
-    file.open(txt_fname, std::ios_base::in);
-    // Exit if file not opened successfully
-    if( !file.is_open() ) {
-    	std::cout << "File not read successfully" << std::endl;
-    	std::cout << "Path given: " << txt_fname << std::endl;
-    	exit(-1);
-    }
-
-    std::string fname;
-    int img_size = 0;
-
-	while( std::getline(file, fname) ) {
-		//std::cout << fname << '\n';
-
-		std::string imgf = voc_dir + "/JPEGImages/" + fname + ".jpg";
-		std::string labf = voc_dir + "/SegmentationClass/" + fname + ".png";
-/*
-		auto imgT = CvMatToTensor(labf.c_str(), {img_size, img_size});
-		auto rev_bgr_mat = TensorToCvMat(imgT);
-
-		cv::imshow("rev_bgr_mat", rev_bgr_mat);
-		cv::waitKey(-1);
-		cv::destroyAllWindows();
-*/
-		imgpaths.push_back(std::make_pair(imgf, labf));
-	}
-
-	auto rng = std::default_random_engine {};
-	std::shuffle(std::begin(imgpaths), std::end(imgpaths), rng);
-
-	std::cout << "size: " << imgpaths.size() << '\n';
-	return imgpaths;
-}
-
-using VocData = std::vector<std::pair<std::string, std::string>>;
-using Example = torch::data::Example<>;
-
-class VOCSegDataset:public torch::data::Dataset<VOCSegDataset>{
-public:
-	VOCSegDataset(const VocData& data, std::vector<int> imgSize) : data_(data) { img_size = imgSize; }
-
-    // Override get() function to return tensor at location index
-    Example get(size_t index) override{
-
-    	auto imgT = CvMatToTensor(data_.at(index).first.c_str(), img_size);
-    	auto labT = CvMatToTensor(data_.at(index).second.c_str(), img_size);
-
-    	return {imgT, labT};
-    }
-
-    // Return the length of data
-    torch::optional<size_t> size() const override {
-        return data_.size();
-    };
-
-private:
-    VocData data_;
-    std::vector<int> img_size;
-};
 
 torch::Tensor voc_loss(torch::Tensor input, torch::Tensor target) {
 	torch::Tensor ct = torch::nn::functional::cross_entropy(input, target,
 			torch::nn::functional::CrossEntropyFuncOptions().reduction(torch::kNone));
-	return ct.mean(1);
+	return ct.mean().mean();
 }
 
 struct VocNetImpl : public torch::nn::Module {
@@ -148,7 +79,7 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
-	torch::manual_seed(1000);
+	torch::manual_seed(123);
 
 	std::string mdlf = "./src/13_Computer_vision/resnet18_without_last_2_layers.pt";
 	torch::jit::script::Module net;
@@ -210,7 +141,7 @@ int main() {
 
 	std::string imgf = "./data/catdog.jpg";
 	int img_size = 0;
-	bool show_img = true;
+	bool show_img = false;
 
 	auto imgT = CvMatToTensor(imgf, {});
 
@@ -233,9 +164,8 @@ int main() {
 	Z = imgT.index({2, Slice(), Slice()});
 	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
 
-
 	auto Y = conv_trans(imgT.unsqueeze(0));
-	std::cout << "\n\n\n";
+	std::cout << "\n\n";
 	std::cout << "Y: " << Y.sizes() << "\n";
 //	std::cout << "Y.data(): " << Y << "\n";
 
@@ -250,9 +180,10 @@ int main() {
 		cv::waitKey(-1);
 		cv::destroyAllWindows();
 	}
-/*
+
 	// initialize the transposed convolutional layer with upsampling of bilinear interpolation.
 	// For the 1×1 convolutional layer, we use Xavier initialization.
+	std::cout << "Init---" << "\n";
 
 	torch::autograd::GradMode::set_enabled(false);
 	auto W = bilinear_kernel(num_classes, num_classes, 64);
@@ -267,43 +198,119 @@ int main() {
 
 	bool is_train = true;
 	const std::string voc_dir = "./data/VOCdevkit/VOC2012";
-	int batch_size = 32;
+	int batch_size = 4;
+	std::vector<int> crop_size = {480,320};
 
-	auto data_set = read_voc_images(voc_dir, is_train);
+	std::cout << "Read in data" << "\n";
+	auto data_set = read_voc_images(voc_dir, is_train, 64, false, crop_size);
 
-	auto train_set = VOCSegDataset(data_set, {320, 480}).map(torch::data::transforms::Stack<>());
+	auto train_set = VOCSegDataset(data_set, crop_size).map(torch::data::transforms::Stack<>());
 
 	auto train_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
-			          	  	  	  	  	  	  	  	  	  	  std::move(train_set), batch_size);
+			          	  	  	  	  	  	 std::move(train_set), batch_size);
+/*
+def _fast_hist(label_pred, label_true, num_classes):
+    mask = (label_true >= 0) & (label_true < num_classes)
+    hist = np.bincount(
+        num_classes * label_true[mask].astype(int) +
+        label_pred[mask], minlength=num_classes ** 2).reshape(num_classes, num_classes)
+    return hist
+
+
+def evaluate(predictions, gts, num_classes):
+    hist = np.zeros((num_classes, num_classes))
+    for lp, lt in zip(predictions, gts):
+        hist += _fast_hist(lp.flatten(), lt.flatten(), num_classes)
+    # axis 0: gt, axis 1: prediction
+    acc = np.diag(hist).sum() / hist.sum()
+    acc_cls = np.diag(hist) / hist.sum(axis=1)
+    acc_cls = np.nanmean(acc_cls)
+    iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
+    mean_iu = np.nanmean(iu)
+    freq = hist.sum(axis=1) / hist.sum()
+    fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
+    return acc, acc_cls, mean_iu, fwavacc
+
 
 	auto batch = *train_loader->begin();
 	auto data  = batch.data.to(device);
 	auto y     = batch.target.to(device);
 	std::cout << "data: " << data.sizes() << std::endl;
 	std::cout << "y: " << y.sizes() << std::endl;
+	std::cout << "y.max: " << torch::max(y) << std::endl;
 
-	// convert tensor to IValue
-	input.clear();
-	input.push_back(data);
-	auto out = net.forward(input).toTensor();
-std::cout << "out: " << out.sizes() << std::endl;
-	auto y_hat = classifier->forward(out);
-std::cout << "rlt: " << y_hat.sizes() << std::endl;
+	auto model = VocNet(net, classifier);
+	model->to(device);
+	model->train();
 
-	if( y_hat.size(0) > 1 && y_hat.size(1) > 1 )
-		y_hat = torch::argmax(y_hat, 1);
+	float lr = 0.001;
+	double wd = 1e-3;
+	auto trainer = torch::optim::SGD(model->parameters(), torch::optim::SGDOptions(lr).weight_decay(wd));
 
-	y_hat = y_hat.to(y.dtype());
-std::cout << "y_hat: " << y_hat.sizes() << std::endl;
-std::cout << "y_hat_softmax[0:4]: " << y_hat.index({Slice(), Slice(0, 4), Slice(0, 4)}) << std::endl;
+	trainer.zero_grad();
+	auto pred = model->forward(data);
+	std::cout << "pred: " << pred.sizes() << std::endl;
+	auto l = voc_loss(pred, y);
+	l.sum().backward();
+	std::cout << l.sum().data().item<float>() << '\n';
+
+	if( pred.size(0) > 1 && pred.size(1) > 1 )
+		pred = torch::argmax(pred, 1);
+
+	pred = pred.to(y.dtype());
+	pred.index_put_( {pred < 0}, 0);
+	pred.index_put_( {pred > 20}, 0);
+	std::cout << "y_hat: " << pred.min().data().item<long>() << " : " << y.max().data().item<long>() << std::endl;
+	auto index = torch::where(pred == 15);
+	std::cout << "index: " << index.size()<< std::endl;
+	std::cout << "index: " << index[0].data().item<long>()<< std::endl;
+	std::cout << "index: " << index[1].data().item<long>()<< std::endl;
+	std::cout << "index: " << index.size()<< std::endl;
+	std::cout << "y: " << y.min().data().item<long>() << " : " << y.max().data().item<long>() <<  '\n';
 
 
+	std::cout << "--------------------------------------------------\n";
+	std::vector<long> vec(pred.data_ptr<long>(), pred.data_ptr<long>() + pred.numel());
+	std::vector<long> L(y.data_ptr<long>(), y.data_ptr<long>() + y.numel());
+/*
+    // Define an map
+    std::map<long, long> M;
+
+    // Traverse vector vec check if current element is present or not
+    for (long i = 0; i < vec.size(); i++) {
+    	//std::cout << "i: " << vec[i] << " " << i << "/" << vec.size() << '\n';
+        // If the current element
+        // is not found then insert
+        // current element with
+        // frequency 1
+        if (M.find(vec[i]) == M.end()) {
+            M[vec[i]] = 1;
+        }
+        // Else update the frequency
+        else {
+            M[vec[i]]++;
+        }
+    }
+
+    // Traverse the map to print the
+    // frequency
+    for (auto& it : M) {
+        std::cout << it.first << " "
+             << it.second << '\n';
+    }
+
+	//std::cout << " y: " << y << std::endl;
+	std::cout << torch::sum((pred != y).to(torch::kInt)).data().item<int>() << '\n';
+
+*/
 	// -------------------------------------------
 	// Reading the Dataset
 	// -------------------------------------------
-	auto test_data = read_voc_images(voc_dir, false);
+	is_train = false;
 
-	auto test_set = VOCSegDataset(test_data, {320, 480}).map(torch::data::transforms::Stack<>());
+	auto test_data = read_voc_images(voc_dir, is_train, 16, false, crop_size);
+
+	auto test_set = VOCSegDataset(test_data, crop_size).map(torch::data::transforms::Stack<>());
 
 	auto test_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
 				          	  	  	  	  	  	  	  	  	  	  std::move(test_set), batch_size);
@@ -314,7 +321,7 @@ std::cout << "y_hat_softmax[0:4]: " << y_hat.index({Slice(), Slice(0, 4), Slice(
 	auto model = VocNet(net, classifier);
 	model->to(device);
 
-	size_t num_epochs = 1;
+	size_t num_epochs = 10;
 	float lr = 0.001;
 	double wd = 1e-3;
 	auto trainer = torch::optim::SGD(model->parameters(), torch::optim::SGDOptions(lr).weight_decay(wd));
@@ -326,7 +333,7 @@ std::cout << "y_hat_softmax[0:4]: " << y_hat.index({Slice(), Slice(0, 4), Slice(
 	for(size_t epoch = 1; epoch <= num_epochs; epoch++) {
 		model->train();
 
-		std::cout << "--------------- Training --------------------\n";
+		std::cout << "--------------- Training -----------------> " << epoch << " / " << num_epochs << "\n";
 		first = true;
 		float loss_sum = 0.0;
 		int64_t num_correct_imgs = 0, total_imgs = 0;
@@ -336,9 +343,6 @@ std::cout << "y_hat_softmax[0:4]: " << y_hat.index({Slice(), Slice(0, 4), Slice(
 			auto img_data  = batch_data.data.to(device);
 			auto lab_data  = batch_data.target.to(device);
 
-std::cout << "data: " << img_data.sizes() << std::endl;
-std::cout << "y: " << lab_data.sizes() << std::endl;
-
 			trainer.zero_grad();
 			auto pred = model->forward(img_data);
 			auto l = voc_loss(pred, lab_data);
@@ -346,14 +350,32 @@ std::cout << "y: " << lab_data.sizes() << std::endl;
 
 			trainer.step();
 			loss_sum += l.sum().data().item<float>();
-std::cout << "loss: " << loss_sum << '\n';
-			auto correct = accuracy(pred, lab_data);
+/*
+			auto correct = 0;
+			if( pred.size(0) > 1 && pred.size(1) > 1 )
+				pred = torch::argmax(pred, 1);
+
+			pred = pred.to(lab_data.dtype());
+			//std::cout << "y_hat: " << pred.sizes() << " y: " << lab_data.sizes() << std::endl;
+
+
+			for( long i = 0; i < pred.size(0); i++ ) {
+				auto pi = pred[i];
+				auto yi = lab_data[i];
+				if( torch::sum((pi != yi).to(torch::kInt)).data().item<int>() < 1 )
+					correct++;
+			}
+			//std::cout << "accuracy:" << (correct*1.0/img_data.size(0)) << '\n';
+
 			num_correct_imgs += correct;
+*/
 			total_imgs += img_data.size(0);
 			num_batch++;
+			std::cout << "num_batch: " << num_batch << '\n';
 		}
+		std::cout << "loss: " << (loss_sum*1.0/num_batch) << '\n';
 	}
-*/
+
 	std::cout << "Done!\n";
 	return 0;
 }

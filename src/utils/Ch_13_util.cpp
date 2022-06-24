@@ -236,14 +236,23 @@ void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> la
     }
 }
 
-cv::Mat TensorToCvMat(torch::Tensor img) {
+cv::Mat TensorToCvMat(torch::Tensor img, bool is_float) {
 
-	float maxV = torch::max(img).data().item<float>();
-	if( maxV > 1.0 ) img.div_(maxV);
+	if( is_float ) {
+		float maxV = torch::max(img).data().item<float>();
+		if( maxV > 1.0 ) img.div_(maxV);
+	}
 
-	torch::Tensor data_out = img.contiguous().detach().clone();
-	auto rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+	torch::Tensor rev_tensor;
+	if( is_float ) {
+		auto data_out = img.contiguous().detach().clone();
+		rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+	} else {
+		auto data_out = img.contiguous().detach().clone();
+		rev_tensor = data_out.to(torch::kByte).permute({1, 2, 0});
+	}
 
+	//std::cout << "rev_tensor: " << rev_tensor.sizes() << '\n';
 	// shape of tensor
 	int64_t height = rev_tensor.size(0);
 	int64_t width = rev_tensor.size(1);
@@ -270,7 +279,14 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	// ----------------------------------------------------------
 	cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 
-	if( img_size.size() > 0 ) cv::resize(image, image, cv::Size(img_size[0], img_size[1]));
+	if( img_size.size() > 0 ) {
+		// ---------------------------------------------------------------
+		// opencv resize the Size() - should be (width/cols x height/rows)
+		// ---------------------------------------------------------------
+		cv::resize(image, image, cv::Size(img_size[0], img_size[1]));
+	}
+
+	//std::cout << "r: " << image.rows << " c: " << image.cols << '\n';
 
 	torch::Tensor imgT = torch::from_blob(image.data,
 						{image.rows, image.cols, image.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
@@ -280,10 +296,36 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	return imgT;
 }
 
-std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img) {
+torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size) {
+	// ----------------------------------------------------------
+	// opencv BGR format change to RGB
+	// ----------------------------------------------------------
+	cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+
+	if( img_size.size() > 0 ) {
+		// ---------------------------------------------------------------
+		// opencv resize the Size() - should be (width/cols x height/rows)
+		// ---------------------------------------------------------------
+		cv::resize(img, img, cv::Size(img_size[0], img_size[1]));
+	}
+
+	torch::Tensor imgT = torch::from_blob(img.data,
+						{img.rows, img.cols, img.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+	imgT = imgT.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+
+	return imgT;
+}
+
+std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img, bool is_float) {
 	// OpenCV is BGR, Pillow is RGB
 	torch::Tensor data_out = img.contiguous().detach().clone();
-	auto rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+	torch::Tensor rev_tensor;
+	if( is_float ) {
+		rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+	} else {
+		rev_tensor = data_out.to(torch::kByte).permute({1, 2, 0});
+	}
 
 	//std::vector<uint8_t> z(mimg.data_ptr<uint8_t>(), mimg.data_ptr<uint8_t>() + sizeof(uint8_t)*mimg.numel());
 	//uint8_t* zptr = &(z[0]);
@@ -331,6 +373,31 @@ torch::Tensor deNormalizeTensor(torch::Tensor imgT, std::vector<float> mean_, st
 	}
 
 	torch::Tensor data_out_src = imgT * stdF.to(imgT.device()) + meanF.to(imgT.device());  // data_in{C,H,W}, meanF{*,1,1}, stdF{*,1,1} ===> data_out_src{C,H,W}
+
+	return data_out_src.contiguous().detach().clone();
+}
+
+
+torch::Tensor NormalizeTensor(torch::Tensor imgT, std::vector<float> mean_, std::vector<float> std_) {
+
+	torch::Tensor mean = torch::from_blob((float *)mean_.data(),
+				{(long int)mean_.size(), 1, 1}, at::TensorOptions(torch::kFloat)).clone();  	// mean{C,1,1}
+	torch::Tensor std = torch::from_blob((float *)std_.data(),
+				{(long int)std_.size(), 1, 1}, at::TensorOptions(torch::kFloat)).clone();		// std{C,1,1}
+
+	long int channels = imgT.size(0);
+
+	torch::Tensor meanF = mean;
+	if(channels < meanF.size(0)){
+		meanF = meanF.split(/*split_size=*/channels, /*dim=*/0).at(0);  // meanF{*,1,1} ===> {C,1,1}
+	}
+
+	torch::Tensor stdF = std;
+	if(channels < stdF.size(0)){
+		stdF = stdF.split(/*split_size=*/channels, /*dim=*/0).at(0);	// stdF{*,1,1} ===> {C,1,1}
+	}
+
+	torch::Tensor data_out_src = (imgT - meanF.to(imgT.device())) / stdF.to(imgT.device());  // data_in{C,H,W}, meanF{*,1,1}, stdF{*,1,1} ===> data_out_src{C,H,W}
 
 	return data_out_src.contiguous().detach().clone();
 }
@@ -471,4 +538,138 @@ torch::Tensor  CvMatToTensorChangeHue(std::string file, std::vector<int> img_siz
 	return imgT;
 }
 
+
+std::vector<std::pair<std::string, std::string>> read_voc_images(const std::string voc_dir,
+		bool is_train, int num_sample, bool shuffle, std::vector<int> cropSize) {
+    //Read the banana detection dataset images and labels
+	std::vector<std::pair<std::string, std::string>> imgpaths;
+
+	std::string txt_fname = "";
+	if( is_train )
+		txt_fname = voc_dir + "/ImageSets/Segmentation/train.txt";
+	else
+		txt_fname = voc_dir + "/ImageSets/Segmentation/val.txt";
+
+    bool rgb = false;
+    std::ifstream file;
+
+    file.open(txt_fname, std::ios_base::in);
+    // Exit if file not opened successfully
+    if( !file.is_open() ) {
+    	std::cout << "File not read successfully" << std::endl;
+    	std::cout << "Path given: " << txt_fname << std::endl;
+    	exit(-1);
+    }
+
+    std::string fname;
+    int num_images = 0;
+
+	while( std::getline(file, fname) ) {
+		//std::cout << fname << '\n';
+
+		std::string imgf = voc_dir + "/JPEGImages/" + fname + ".jpg";
+		std::string labf = voc_dir + "/SegmentationClass/" + fname + ".png";
+/*
+		auto imgT = CvMatToTensor(labf.c_str(), {img_size, img_size});
+		auto rev_bgr_mat = TensorToCvMat(imgT);
+
+		cv::imshow("rev_bgr_mat", rev_bgr_mat);
+		cv::waitKey(-1);
+		cv::destroyAllWindows();
+*/
+		if( cropSize.size() > 0 ) {
+			cv::Mat fimg = cv::imread(imgf.c_str());
+			cv::Mat limg = cv::imread(labf.c_str());
+			//std::cout << "rows: " << fimg.rows << " cols: " << fimg.cols << '\n';
+			if( fimg.cols >= cropSize[0] && fimg.rows >= cropSize[1] ) {
+				if( num_sample < 1) {
+					imgpaths.push_back(std::make_pair(imgf, labf));
+				} else {
+					if( num_images < num_sample ) {
+						imgpaths.push_back(std::make_pair(imgf, labf));
+						num_images++;
+					}
+				}
+			}
+		} else {
+			if( num_sample < 1) {
+				imgpaths.push_back(std::make_pair(imgf, labf));
+			} else {
+				if( num_images < num_sample ) {
+					imgpaths.push_back(std::make_pair(imgf, labf));
+					num_images++;
+				}
+			}
+		}
+	}
+
+	if( shuffle ) {
+		auto rng = std::default_random_engine {};
+		std::shuffle(std::begin(imgpaths), std::end(imgpaths), rng);
+	}
+
+	std::cout << "read: " << imgpaths.size() << " examples\n";
+	return imgpaths;
+}
+
+torch::Tensor voc_colormap2label() {
+    // Build the mapping from RGB to class indices for VOC labels.
+	// Defined in :numref:`sec_semantic_segmentation`"""
+
+    auto colormap2label = torch::zeros(256*256*256).to(torch::kLong);
+    for(long i = 0; i < VOC_COLORMAP.size(); i++ ) {
+    	std::vector<long> colormap = VOC_COLORMAP[i];
+        colormap2label.index_put_({(colormap[0] * 256 + colormap[1]) * 256 + colormap[2]}, i);
+    }
+    //std::cout << "colormap2label: \n" << torch::max(colormap2label) << std::endl;
+    return colormap2label;
+}
+
+
+torch::Tensor voc_label_indices(torch::Tensor colormap, torch::Tensor colormap2label) {
+    // Map any RGB values in VOC labels to their class indices.
+	// Defined in :numref:`sec_semantic_segmentation`"""
+    colormap = colormap.permute({1, 2, 0}).to(torch::kLong).clone();
+
+    //std::cout << "colormap.max: " << torch::max(colormap) << '\n';
+    // idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256 + colormap[:, :, 2])
+    auto idx = ((colormap.index({Slice(), Slice(), 0}) * 256 + colormap.index({Slice(), Slice(), 1})) * 256
+           + colormap.index({Slice(), Slice(), 2}));
+    //std::cout << "idx: " << idx.sizes() << '\n';
+    //std::cout << "idx.max: " << torch::max(idx) << '\n';
+    for( long r = 0; r < idx.size(0); r++ ) {
+    	for( long c = 0; c < idx.size(1); c++ ) {
+    		auto i = idx.index({r,c}).data().item<long>();
+    		//std::cout << i << " " << colormap2label[i].data().item<long>() << "; ";
+    		idx.index_put_({r,c}, colormap2label[i].data().item<long>());
+    	}
+    	//std::cout << '\n';
+    }
+
+    return idx.detach().clone(); //colormap2label[idx].clone();
+}
+
+std::pair<torch::Tensor, torch::Tensor> voc_rand_crop(torch::Tensor feature, torch::Tensor label,
+		int height, int width, std::vector<float> mean_, std::vector<float> std_) {
+
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> Hdist(0, feature.size(1) - height);
+	std::uniform_int_distribution<std::mt19937::result_type> Wdist(0, feature.size(2) - width);
+	int H = Hdist(rng), W = Wdist(rng);
+
+	feature = deNormalizeTensor(feature, mean_, std_);
+	cv::Mat fmat = TensorToCvMat(feature);
+	cv::Mat lmat = TensorToCvMat(label, false);
+
+	cv::Mat fimage = fmat(cv::Range(H, H + height), cv::Range(W, W + width));
+	cv::Mat limage = lmat(cv::Range(H, H + height), cv::Range(W, W + width));
+
+	torch::Tensor fimg = CvMatToTensor2(fimage.clone(), {});
+	auto ftsr = NormalizeTensor(fimg.clone(), mean_, std_);
+	torch::Tensor ltsr = CvMatToTensor2(limage.clone(), {});
+	ltsr = ltsr.mul(255).to(torch::kByte).clone();
+
+	return std::make_pair(ftsr,ltsr);
+}
 
