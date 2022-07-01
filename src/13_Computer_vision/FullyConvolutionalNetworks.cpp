@@ -16,6 +16,9 @@
 
 #include "../utils/Ch_13_util.h"
 
+#include "../matplotlibcpp.h"
+namespace plt = matplotlibcpp;
+
 
 torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size) {
     auto factor = static_cast<int>((kernel_size + 1) / 2);
@@ -198,117 +201,74 @@ int main() {
 
 	bool is_train = true;
 	const std::string voc_dir = "./data/VOCdevkit/VOC2012";
-	int batch_size = 4;
+	int batch_size = 8;
 	std::vector<int> crop_size = {480,320};
 
 	std::cout << "Read in data" << "\n";
-	auto data_set = read_voc_images(voc_dir, is_train, 64, false, crop_size);
+
+	std::vector<float> mean_ = {0.485, 0.456, 0.406};
+	std::vector<float> std_  = {0.229, 0.224, 0.225};
+
+/*
+	imgT = CvMatToTensor("./data/2007_001704.jpg", {});
+
+	imgT = NormalizeTensor(imgT, mean_, std_);
+
+	auto labT = CvMatToTensor("./data/2007_000063.png", {});
+	labT = labT.mul(255).to(torch::kByte).clone();
+
+	auto dt = voc_rand_crop(imgT.clone(), labT.clone(), crop_size[1], crop_size[0], mean_, std_, true);
+
+	std::cout << "dt.first: " << dt.first.sizes() << '\n'; 		// (3, 320, 480)
+	std::cout << "dt.second: " << dt.second.sizes() << '\n'; 	// (3, 320, 480)
+
+	imgT = dt.first.clone();
+	std::cout << imgT.index({Slice(105,115), Slice(130,140)}) << '\n';
+	imgT = deNormalizeTensor(imgT, mean_, std_);
+	std::cout << imgT.index({Slice(105,115), Slice(130,140)}) << '\n';
+	imgT = imgT.permute({1, 2, 0}).clone();
+	std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgT, true, false);
+	const unsigned char* zptr = &(z[0]);
+	plt::imshow(zptr, static_cast<int>(imgT.size(0)),
+										static_cast<int>(imgT.size(1)), static_cast<int>(imgT.size(2)));
+	plt::show();
+
+	auto colormap = dt.second.clone();
+	colormap = colormap.permute({1, 2, 0}).to(torch::kByte).clone();
+
+	std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(colormap, false, false);
+	const unsigned char* lzptr = &(lz[0]);
+	plt::imshow(lzptr, static_cast<int>(colormap.size(0)),
+									static_cast<int>(colormap.size(1)), static_cast<int>(colormap.size(2)));
+	plt::show();
+
+
+	auto coded = voc_label_indices(dt.second.clone(), voc_colormap2label());
+	std::cout << "coded: " << coded.index({Slice(105,115), Slice(130,140)}) << '\n';
+
+	auto decoded = decode_segmap(coded, num_classes);
+
+	lz = tensorToMatrix4Matplotlib(decoded, false, false);
+	lzptr = &(lz[0]);
+	plt::imshow(lzptr, static_cast<int>(decoded.size(0)),
+										static_cast<int>(decoded.size(1)), static_cast<int>(decoded.size(2)));
+	plt::show();
+*/
+
+	// -------------------------------------------
+	// Reading the Dataset
+	// -------------------------------------------
+	auto data_set = read_voc_images(voc_dir, is_train, 0, false, crop_size);
 
 	auto train_set = VOCSegDataset(data_set, crop_size).map(torch::data::transforms::Stack<>());
 
 	auto train_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
 			          	  	  	  	  	  	 std::move(train_set), batch_size);
-/*
-def _fast_hist(label_pred, label_true, num_classes):
-    mask = (label_true >= 0) & (label_true < num_classes)
-    hist = np.bincount(
-        num_classes * label_true[mask].astype(int) +
-        label_pred[mask], minlength=num_classes ** 2).reshape(num_classes, num_classes)
-    return hist
 
-
-def evaluate(predictions, gts, num_classes):
-    hist = np.zeros((num_classes, num_classes))
-    for lp, lt in zip(predictions, gts):
-        hist += _fast_hist(lp.flatten(), lt.flatten(), num_classes)
-    # axis 0: gt, axis 1: prediction
-    acc = np.diag(hist).sum() / hist.sum()
-    acc_cls = np.diag(hist) / hist.sum(axis=1)
-    acc_cls = np.nanmean(acc_cls)
-    iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
-    mean_iu = np.nanmean(iu)
-    freq = hist.sum(axis=1) / hist.sum()
-    fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-    return acc, acc_cls, mean_iu, fwavacc
-
-
-	auto batch = *train_loader->begin();
-	auto data  = batch.data.to(device);
-	auto y     = batch.target.to(device);
-	std::cout << "data: " << data.sizes() << std::endl;
-	std::cout << "y: " << y.sizes() << std::endl;
-	std::cout << "y.max: " << torch::max(y) << std::endl;
-
-	auto model = VocNet(net, classifier);
-	model->to(device);
-	model->train();
-
-	float lr = 0.001;
-	double wd = 1e-3;
-	auto trainer = torch::optim::SGD(model->parameters(), torch::optim::SGDOptions(lr).weight_decay(wd));
-
-	trainer.zero_grad();
-	auto pred = model->forward(data);
-	std::cout << "pred: " << pred.sizes() << std::endl;
-	auto l = voc_loss(pred, y);
-	l.sum().backward();
-	std::cout << l.sum().data().item<float>() << '\n';
-
-	if( pred.size(0) > 1 && pred.size(1) > 1 )
-		pred = torch::argmax(pred, 1);
-
-	pred = pred.to(y.dtype());
-	pred.index_put_( {pred < 0}, 0);
-	pred.index_put_( {pred > 20}, 0);
-	std::cout << "y_hat: " << pred.min().data().item<long>() << " : " << y.max().data().item<long>() << std::endl;
-	auto index = torch::where(pred == 15);
-	std::cout << "index: " << index.size()<< std::endl;
-	std::cout << "index: " << index[0].data().item<long>()<< std::endl;
-	std::cout << "index: " << index[1].data().item<long>()<< std::endl;
-	std::cout << "index: " << index.size()<< std::endl;
-	std::cout << "y: " << y.min().data().item<long>() << " : " << y.max().data().item<long>() <<  '\n';
-
-
-	std::cout << "--------------------------------------------------\n";
-	std::vector<long> vec(pred.data_ptr<long>(), pred.data_ptr<long>() + pred.numel());
-	std::vector<long> L(y.data_ptr<long>(), y.data_ptr<long>() + y.numel());
-/*
-    // Define an map
-    std::map<long, long> M;
-
-    // Traverse vector vec check if current element is present or not
-    for (long i = 0; i < vec.size(); i++) {
-    	//std::cout << "i: " << vec[i] << " " << i << "/" << vec.size() << '\n';
-        // If the current element
-        // is not found then insert
-        // current element with
-        // frequency 1
-        if (M.find(vec[i]) == M.end()) {
-            M[vec[i]] = 1;
-        }
-        // Else update the frequency
-        else {
-            M[vec[i]]++;
-        }
-    }
-
-    // Traverse the map to print the
-    // frequency
-    for (auto& it : M) {
-        std::cout << it.first << " "
-             << it.second << '\n';
-    }
-
-	//std::cout << " y: " << y << std::endl;
-	std::cout << torch::sum((pred != y).to(torch::kInt)).data().item<int>() << '\n';
-
-*/
-	// -------------------------------------------
-	// Reading the Dataset
-	// -------------------------------------------
 	is_train = false;
 
-	auto test_data = read_voc_images(voc_dir, is_train, 16, false, crop_size);
+	batch_size = 5;
+	auto test_data = read_voc_images(voc_dir, is_train, 10, false, crop_size);
 
 	auto test_set = VOCSegDataset(test_data, crop_size).map(torch::data::transforms::Stack<>());
 
@@ -321,7 +281,7 @@ def evaluate(predictions, gts, num_classes):
 	auto model = VocNet(net, classifier);
 	model->to(device);
 
-	size_t num_epochs = 10;
+	size_t num_epochs = 30;
 	float lr = 0.001;
 	double wd = 1e-3;
 	auto trainer = torch::optim::SGD(model->parameters(), torch::optim::SGDOptions(lr).weight_decay(wd));
@@ -345,7 +305,7 @@ def evaluate(predictions, gts, num_classes):
 
 			trainer.zero_grad();
 			auto pred = model->forward(img_data);
-			auto l = voc_loss(pred, lab_data);
+			auto l = voc_loss(pred, lab_data.to(torch::kLong));  // label has to be long data type
 			l.sum().backward();
 
 			trainer.step();
@@ -369,12 +329,64 @@ def evaluate(predictions, gts, num_classes):
 
 			num_correct_imgs += correct;
 */
+
+
 			total_imgs += img_data.size(0);
 			num_batch++;
 			std::cout << "num_batch: " << num_batch << '\n';
 		}
 		std::cout << "loss: " << (loss_sum*1.0/num_batch) << '\n';
 	}
+
+	model->eval();
+
+	plt::figure_size(300 * batch_size, 900);
+	for(auto& batch : *test_loader) {
+		auto img_data  = batch.data.to(device);
+		auto lab_data  = batch.target.to(device);
+
+		//std::cout << "d: " << img_data.sizes() << '\n';
+		//std::cout << "L: " << lab_data.sizes() << '\n';
+
+		auto pred = model->forward(img_data);
+		//std::cout << "P: " << pred.sizes() << '\n';
+		auto l = voc_loss(pred, lab_data.to(torch::kLong));  // label has to be long data type
+
+		for( int j = 0; j < pred.size(0); j++ ) {
+			imgT = img_data[j].squeeze();
+			auto jimg = deNormalizeTensor(imgT, mean_, std_);
+			jimg = jimg.mul(255).permute({1, 2, 0}).to(torch::kByte).clone();
+			std::vector<uint8_t> iz = tensorToMatrix4Matplotlib(jimg, false, false);
+			const unsigned char* izptr = &(iz[0]);
+			plt::subplot2grid(3, batch_size, 0, j, 1, 1);
+			plt::title("Image");
+			plt::imshow(izptr, static_cast<int>(jimg.size(0)),
+								static_cast<int>(jimg.size(1)), static_cast<int>(jimg.size(2)));
+
+			auto ppred = torch::argmax(pred[j].squeeze(), 0).detach().to(device);
+			auto img = decode_segmap(ppred.squeeze(), num_classes);
+
+			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(img.clone(), false, false);
+			const unsigned char* zptr = &(z[0]);
+
+			plt::subplot2grid(3, batch_size, 1, j, 1, 1);
+			plt::title("pred");
+			plt::imshow(zptr, static_cast<int>(img.size(0)),
+									  static_cast<int>(img.size(1)), static_cast<int>(img.size(2)));
+
+			auto limg = decode_segmap(lab_data[j].squeeze(), num_classes);
+			std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(limg.clone(), false, false);
+			const unsigned char* lzptr = &(lz[0]);
+			plt::subplot2grid(3, batch_size, 2, j, 1, 1);
+			plt::title("label");
+			plt::imshow(lzptr, static_cast<int>(limg.size(0)),
+							   static_cast<int>(limg.size(1)), static_cast<int>(limg.size(2)));
+		}
+
+		break;
+	}
+	plt::show();
+	plt::close();
 
 	std::cout << "Done!\n";
 	return 0;

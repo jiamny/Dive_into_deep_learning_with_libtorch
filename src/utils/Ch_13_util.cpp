@@ -296,11 +296,12 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size) {
 	return imgT;
 }
 
-torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size) {
+torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size, bool toRGB) {
 	// ----------------------------------------------------------
 	// opencv BGR format change to RGB
 	// ----------------------------------------------------------
-	cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+	if( toRGB )
+		cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
 	if( img_size.size() > 0 ) {
 		// ---------------------------------------------------------------
@@ -317,14 +318,20 @@ torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size) {
 	return imgT;
 }
 
-std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img, bool is_float) {
+std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img, bool is_float, bool need_permute) {
 	// OpenCV is BGR, Pillow is RGB
 	torch::Tensor data_out = img.contiguous().detach().clone();
 	torch::Tensor rev_tensor;
 	if( is_float ) {
-		rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+		if( need_permute )
+			rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
+		else
+			rev_tensor = data_out.mul(255).to(torch::kByte);
 	} else {
-		rev_tensor = data_out.to(torch::kByte).permute({1, 2, 0});
+		if( need_permute )
+			rev_tensor = data_out.to(torch::kByte).permute({1, 2, 0});
+		else
+			rev_tensor = data_out.to(torch::kByte);
 	}
 
 	//std::vector<uint8_t> z(mimg.data_ptr<uint8_t>(), mimg.data_ptr<uint8_t>() + sizeof(uint8_t)*mimg.numel());
@@ -612,10 +619,11 @@ std::vector<std::pair<std::string, std::string>> read_voc_images(const std::stri
 	return imgpaths;
 }
 
-torch::Tensor voc_colormap2label() {
+std::unordered_map<std::string, int> voc_colormap2label() {
     // Build the mapping from RGB to class indices for VOC labels.
 	// Defined in :numref:`sec_semantic_segmentation`"""
 
+	/*
     auto colormap2label = torch::zeros(256*256*256).to(torch::kLong);
     for(long i = 0; i < VOC_COLORMAP.size(); i++ ) {
     	std::vector<long> colormap = VOC_COLORMAP[i];
@@ -623,12 +631,25 @@ torch::Tensor voc_colormap2label() {
     }
     //std::cout << "colormap2label: \n" << torch::max(colormap2label) << std::endl;
     return colormap2label;
+    */
+
+	std::unordered_map<std::string, int> HSH_MAPS;
+
+	for(int j = 0; j < VOC_COLORMAP.size(); j++) {
+			std::string ss = std::to_string(VOC_COLORMAP[j][0]) +
+								std::to_string(VOC_COLORMAP[j][1]) +
+								std::to_string(VOC_COLORMAP[j][2]);
+			HSH_MAPS.insert({ss, j});
+	}
+	return HSH_MAPS;
 }
 
 
-torch::Tensor voc_label_indices(torch::Tensor colormap, torch::Tensor colormap2label) {
+torch::Tensor voc_label_indices(torch::Tensor colormap, std::unordered_map<std::string, int> HSH_MAPS) {
     // Map any RGB values in VOC labels to their class indices.
 	// Defined in :numref:`sec_semantic_segmentation`"""
+
+	/*
     colormap = colormap.permute({1, 2, 0}).to(torch::kLong).clone();
 
     //std::cout << "colormap.max: " << torch::max(colormap) << '\n';
@@ -647,10 +668,27 @@ torch::Tensor voc_label_indices(torch::Tensor colormap, torch::Tensor colormap2l
     }
 
     return idx.detach().clone(); //colormap2label[idx].clone();
+    */
+	colormap = colormap.permute({1, 2, 0}).to(torch::kByte).clone();
+
+	torch::Tensor index = torch::zeros({colormap.size(0), colormap.size(1)}, at::TensorOptions(torch::kByte));
+	for( int r = 0; r < colormap.size(0); r++ ) {
+		for(int c = 0; c < colormap.size(1); c++ ) {
+			auto t = colormap.index({r, c, Slice()});
+			std::string ss = std::to_string(t[0].data().item<int>()) +
+					std::to_string(t[1].data().item<int>()) +
+					std::to_string(t[2].data().item<int>());
+			  auto it = HSH_MAPS.find(ss);
+			  if (it != HSH_MAPS.end()) {
+				  index.index_put_({r, c}, HSH_MAPS[ss]);
+			  }
+		}
+	}
+	return index.detach().clone();
 }
 
 std::pair<torch::Tensor, torch::Tensor> voc_rand_crop(torch::Tensor feature, torch::Tensor label,
-		int height, int width, std::vector<float> mean_, std::vector<float> std_) {
+		int height, int width, std::vector<float> mean_, std::vector<float> std_, bool toRGB) {
 
 	std::random_device dev;
 	std::mt19937 rng(dev());
@@ -659,17 +697,42 @@ std::pair<torch::Tensor, torch::Tensor> voc_rand_crop(torch::Tensor feature, tor
 	int H = Hdist(rng), W = Wdist(rng);
 
 	feature = deNormalizeTensor(feature, mean_, std_);
-	cv::Mat fmat = TensorToCvMat(feature);
-	cv::Mat lmat = TensorToCvMat(label, false);
+	cv::Mat fmat = TensorToCvMat(feature);						// to BGR format
+	cv::Mat lmat = TensorToCvMat(label, false);					// to BGR format
 
 	cv::Mat fimage = fmat(cv::Range(H, H + height), cv::Range(W, W + width));
 	cv::Mat limage = lmat(cv::Range(H, H + height), cv::Range(W, W + width));
 
-	torch::Tensor fimg = CvMatToTensor2(fimage.clone(), {});
+	torch::Tensor fimg = CvMatToTensor2(fimage.clone(), {}, toRGB); // to RGB format
 	auto ftsr = NormalizeTensor(fimg.clone(), mean_, std_);
-	torch::Tensor ltsr = CvMatToTensor2(limage.clone(), {});
+	torch::Tensor ltsr = CvMatToTensor2(limage.clone(), {}, toRGB); // to RGB format
 	ltsr = ltsr.mul(255).to(torch::kByte).clone();
 
 	return std::make_pair(ftsr,ltsr);
+}
+
+torch::Tensor decode_segmap(torch::Tensor pred, int nc) {
+
+	auto r = torch::zeros_like(pred).to(torch::kByte);
+	auto g = torch::zeros_like(pred).to(torch::kByte);
+	auto b = torch::zeros_like(pred).to(torch::kByte);
+
+	for( int l = 0; l < nc; l++ ) {
+		std::vector<int> clr = VOC_COLORMAP[l];
+		//std::cout << clr << '\n';
+		auto idx = {pred == l};
+		//std::cout << idx.size() << '\n';
+
+		if( idx.size() > 0 ) {
+			r.index_put_({pred == l}, clr[0]);
+			g.index_put_({pred == l}, clr[1]);
+			b.index_put_({pred == l}, clr[2]);
+		}
+
+	}
+
+	auto imgT = torch::stack({r, g, b}, 2).to(torch::kByte);
+	std::cout << imgT.sizes() << '\n';
+	return imgT;
 }
 
