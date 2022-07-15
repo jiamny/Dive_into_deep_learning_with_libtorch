@@ -45,7 +45,7 @@ torch::Tensor  CvMatToTensor(std::string imgf, std::vector<int> img_size);
 
 torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size, bool toRGB = true);
 
-cv::Mat TensorToCvMat(torch::Tensor img, bool is_float = true );
+cv::Mat TensorToCvMat( torch::Tensor img, bool is_float = true, bool toBGR = true );
 
 std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor data, bool is_float=true, bool need_permute=true);
 

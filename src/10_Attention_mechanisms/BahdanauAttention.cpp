@@ -8,6 +8,7 @@
 
 #include "../utils/ch_10_util.h"
 #include "../utils.h"
+#include "../TempHelpFunctions.hpp"
 
 // ----------------------------------------------------------
 // Prediction

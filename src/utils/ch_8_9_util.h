@@ -7,13 +7,11 @@
 #include <torch/script.h>
 #include <torch/autograd.h>
 #include <torch/utils.h>
-
 #include <iostream>
 #include <unistd.h>
 #include <iomanip>
 #include <regex>
 #include <sstream>
-
 #include <fstream>
 #include <algorithm>
 #include <map>
@@ -45,7 +43,7 @@ std::vector<std::string> read_time_machine( std::string filename );
 
 std::vector<std::pair<std::string, int64_t>> count_corpus( std::vector<std::string> tokens );
 
-std::vector<std::string> tokenize(const std::vector<std::string> lines, const std::string token, bool max_cut);
+std::vector<std::string> tokenize(const std::vector<std::string> lines, const std::string token, bool max_cut=false);
 
 
 // Vocabulary
@@ -362,19 +360,6 @@ std::string preprocess_nmt( std::string raw_test);
 
 std::tuple<std::vector<std::vector<std::string>>, std::vector<std::vector<std::string>>> tokenize_nmt(std::string processed,
 																										size_t num_examples);
-template<typename T>
-std::vector<T> truncate_pad(std::vector<T> line, size_t num_steps, T padding_token) {
-    //Truncate or pad sequences."""
-    if( line.size() > num_steps ) {
-    	std::vector<T> tokens(&line[0], &line[num_steps]);
-        return tokens;  // Truncate
-    } else {
-    	int num_pad = num_steps - line.size();
-    	for( int i = 0; i < num_pad; i++ )
-    		line.push_back(padding_token);
-    	return line;
-    }
-}
 
 std::tuple<torch::Tensor, torch::Tensor> build_array_nmt(std::vector<std::vector<std::string>> lines,
 														 Vocab vocab, int num_steps);

@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <cmath>
 
+#include "../TempHelpFunctions.hpp"
 #include "../utils.h"
 #include "../matplotlibcpp.h"
 

@@ -9,7 +9,7 @@ model = models.resnet34(pretrained=True)
 
 # Set upgrading the gradients to False
 for param in model.parameters():
-	param.requires_grad = False
+    param.requires_grad = False
 
 # Save the model except the final FC Layer
 resnet34 = torch.nn.Sequential(*list(model.children())[:-1])

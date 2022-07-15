@@ -10,6 +10,7 @@
 
 #include "../utils/ch_10_util.h"
 #include "../utils.h"
+#include "../TempHelpFunctions.hpp"
 
 struct PositionWiseFFNImpl : public torch::nn::Module {
 	torch::nn::Linear dense1{nullptr}, dense2{nullptr};

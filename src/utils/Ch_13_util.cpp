@@ -236,7 +236,7 @@ void show_bboxes(cv::Mat& img, torch::Tensor bboxes, std::vector<std::string> la
     }
 }
 
-cv::Mat TensorToCvMat(torch::Tensor img, bool is_float) {
+cv::Mat TensorToCvMat(torch::Tensor img, bool is_float, bool  toBGR) {
 
 	if( is_float ) {
 		float maxV = torch::max(img).data().item<float>();
@@ -265,7 +265,8 @@ cv::Mat TensorToCvMat(torch::Tensor img, bool is_float) {
 	cv::Mat rev_rgb_mat(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
 	cv::Mat rev_bgr_mat = rev_rgb_mat.clone();
 
-	cv::cvtColor(rev_bgr_mat, rev_bgr_mat, cv::COLOR_RGB2BGR);
+	if( toBGR )
+		cv::cvtColor(rev_bgr_mat, rev_bgr_mat, cv::COLOR_RGB2BGR);
 
 	return rev_bgr_mat;
 }
@@ -728,7 +729,6 @@ torch::Tensor decode_segmap(torch::Tensor pred, int nc) {
 			g.index_put_({pred == l}, clr[1]);
 			b.index_put_({pred == l}, clr[2]);
 		}
-
 	}
 
 	auto imgT = torch::stack({r, g, b}, 2).to(torch::kByte);

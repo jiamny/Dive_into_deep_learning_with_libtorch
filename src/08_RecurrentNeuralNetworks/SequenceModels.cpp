@@ -41,7 +41,8 @@ int main() {
 	//===============================================
 
 	/*
-	 * To keep things simple we (generate our sequence data by using a sine function with some additive noise for time steps 1,2,…,1000.)
+	 * To keep things simple we (generate our sequence data by using a sine function with some
+	 * additive noise for time steps 1,2,…,1000.)
 	 */
 
 	int64_t T = 1000; // # Generate a total of 1000 points

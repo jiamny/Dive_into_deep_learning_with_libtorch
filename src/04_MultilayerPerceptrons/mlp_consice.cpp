@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <torch/nn.h>
 
-#include "../utils.h"
+#include "../fashion.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;

@@ -5,7 +5,8 @@
 
 #include "darknet.h"
 #include "coco_names.h"
-#include "../../../utils.h"
+//#include "../../../utils.h"
+#include "../../../TempHelpFunctions.hpp"
 
 void setLabel(cv::Mat& im, std::string label, cv::Scalar text_color, cv::Scalar text_bk_color, const cv::Point& pt) {
     int fontface = cv::FONT_HERSHEY_SIMPLEX;

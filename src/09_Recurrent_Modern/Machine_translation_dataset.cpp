@@ -16,7 +16,8 @@
 #include <random>
 
 #include "../utils/ch_8_9_util.h"
-#include "../utils.h"
+//#include "../utils.h"
+#include "../TempHelpFunctions.hpp"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
@@ -86,7 +87,8 @@ std::vector<std::pair<std::string, int64_t>> count_corpus2( std::vector<std::str
 
 void torch_cat_test() {
 	torch::Tensor src_array = torch::tensor({{1,  1,  1,  0,  0,  0,  0,  0},
-		{1,  1,  1,  1,  1,  0,  0,  0}, {1,  1,  1,  0,  0,  0,  0 , 0}}).to(torch::kLong);
+											 {1,  1,  1,  1,  1,  0,  0,  0},
+											 {1,  1,  1,  0,  0,  0,  0 , 0}}).to(torch::kLong);
 
 	torch::Tensor tgt_array = torch::tensor({{0,  0, 1,  1,  1,  1,  0,  0},
 				{0,  0,  0,  0,  3,  1,  1,  1}, {1,  1,  1,  1,  1,  1,  0,  0}}).to(torch::kLong);
@@ -207,7 +209,8 @@ int main() {
 	torch::Tensor features = torch::cat({src_array, tgt_array}, -1);
 //	std::cout << features << std::endl;
 
-	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape({-1, src_valid_len.size(0)})).transpose(1, 0);
+	torch::Tensor labels = (torch::cat({src_valid_len, tgt_valid_len}, -1).reshape(
+									   {-1, src_valid_len.size(0)})).transpose(1, 0);
 //	std::cout << labels << "\n";
 
 	std::pair<torch::Tensor, torch::Tensor> data_arrays = {features, labels};

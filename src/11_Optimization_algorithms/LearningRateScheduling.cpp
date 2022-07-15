@@ -17,7 +17,9 @@
 #include <functional>
 #include <utility> 		// make_pair etc.
 
-#include "../utils.h"	// range()
+#include "../TempHelpFunctions.hpp" // range()
+#include "../fashion.h"
+#include "../utils.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;

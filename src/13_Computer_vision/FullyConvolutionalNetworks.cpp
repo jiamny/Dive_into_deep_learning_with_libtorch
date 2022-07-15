@@ -334,6 +334,7 @@ int main() {
 			total_imgs += img_data.size(0);
 			num_batch++;
 			std::cout << "num_batch: " << num_batch << '\n';
+
 		}
 		std::cout << "loss: " << (loss_sum*1.0/num_batch) << '\n';
 	}

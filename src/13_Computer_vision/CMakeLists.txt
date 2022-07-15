@@ -233,8 +233,8 @@ target_sources(13_Yolo4 PRIVATE
 ./yolov4/src/config.cc	
 ./yolov4/src/config.h
 ./yolov4/src/coco_names.h
-../utils.h
-../utils.cpp
+#../utils.h
+#../utils.cpp
 )
 
 target_include_directories(13_Yolo4 PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )

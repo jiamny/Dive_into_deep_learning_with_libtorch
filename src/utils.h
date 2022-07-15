@@ -31,8 +31,6 @@
 
 using namespace Json;
 
-#include "fashion.h"
-
 class LRdataset : public torch::data::datasets::Dataset<LRdataset> {
  public:
 
@@ -128,18 +126,6 @@ using precise_timer = Timer<>;
 using system_timer = Timer<std::chrono::system_clock>;
 using monotonic_timer = Timer<std::chrono::steady_clock>;
 
-/*
- * There is no way to change the precision via to_string() but the setprecision IO manipulator could be used instead:
- */
-template <typename T>
-std::string to_string_with_precision(const T a_value, const int n = 6)
-{
-    std::ostringstream out;
-    out.precision(n);
-    out << std::fixed << a_value;
-    return out.str();
-}
-
 std::unordered_map<int, std::string> get_fashion_mnist_labels(void);
 /*
 template<typename Sampler = samplers::RandomSampler, typename Dataset>
@@ -162,12 +148,5 @@ std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFi
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle = true);
 
 torch::Tensor RangeToensorIndex(int64_t num);
-
-template<typename T>
-std::vector<T> range(const T count, T start = 1) {
-    std::vector<T> aVector(count);
-    iota(aVector.begin(), aVector.end(), start);
-    return aVector;
-}
 
 #endif /* UTILS_H_ */

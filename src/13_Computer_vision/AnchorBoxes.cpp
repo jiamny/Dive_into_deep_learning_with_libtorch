@@ -5,6 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+#include "../TempHelpFunctions.hpp"
+
 using torch::indexing::Slice;
 using torch::indexing::None;
 

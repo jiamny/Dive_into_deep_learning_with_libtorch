@@ -73,8 +73,6 @@ add_executable(18_LinearAlgebraicOperations)
 
 target_sources(18_LinearAlgebraicOperations PRIVATE 
 LinearAlgebraicOperations.cpp
-../utils.h
-../utils.cpp
 ../fashion.h
 ../fashion.cpp
 )
@@ -118,8 +116,6 @@ add_executable( 18_NaiveBayes )
 
 target_sources( 18_NaiveBayes PRIVATE 
 NaiveBayes.cpp
-../utils.h 
-../utils.cpp
 ../fashion.h
 ../fashion.cpp 
 )

@@ -15,7 +15,8 @@
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-#include "../utils.h"
+//#include "../utils.h"
+#include "../fashion.h"
 
 torch::Tensor angle(torch::Tensor v, torch::Tensor w) {
     return torch::acos(v.dot(w) / (torch::norm(v) * torch::norm(w)));

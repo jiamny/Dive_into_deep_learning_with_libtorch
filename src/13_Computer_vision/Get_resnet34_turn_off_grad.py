@@ -9,7 +9,7 @@ model = models.resnet34(pretrained=True)
 
 # Set upgrading the gradients to False
 for param in model.parameters():
-	param.requires_grad = False
+    param.requires_grad = False
 
 example_input = torch.rand(1, 3, 256, 256)
 script_module = torch.jit.trace(model, example_input)

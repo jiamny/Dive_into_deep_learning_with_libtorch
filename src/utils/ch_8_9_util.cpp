@@ -1,5 +1,5 @@
 #include "ch_8_9_util.h"
-
+#include "../TempHelpFunctions.hpp"
 
 std::vector<std::string> read_time_machine( std::string filename ) {
 	std::vector<std::string> lines;
@@ -351,6 +351,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab, Vo
 			tgt_tokens.push_back(t);
 		}
 	}
+
 	std::vector<std::pair<std::string, int64_t>> tgt_counter = count_corpus( tgt_tokens );
 	auto tgt_vocab = Vocab(tgt_counter, 2.0, rv);
 
