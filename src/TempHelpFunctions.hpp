@@ -54,4 +54,13 @@ std::vector<T> truncate_pad(std::vector<T> line, size_t num_steps, T padding_tok
     }
 }
 
+template<typename T>
+T vector_sum(std::vector<T> data) {
+    T total = 0;
+    if( data.size() > 0 ) {
+    	total = std::accumulate(data.begin(), data.end(), 0);
+    }
+    return total;
+}
+
 #endif /* SRC_UTILS_TEMPHELPFUNCTIONS_HPP_ */

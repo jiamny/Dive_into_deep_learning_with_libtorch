@@ -8,7 +8,7 @@ Dive into deep learning with LibTorch C++ API
 
 - cmake 3.18+
 
-- PyTorch 1.11.0
+- PyTorch 1.12.0
 
 - python3.9
 

@@ -1,93 +1,124 @@
 #include <unistd.h>
 #include <iomanip>
 #include <torch/utils.h>
-#include <vector>
-#include <cstdio>
 
 #include "../utils/ch_15_util.h"
+#include "../TempHelpFunctions.hpp"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-struct BiRNNImpl : public torch::nn::Module {
-	torch::nn::Linear decoder{nullptr};
-	torch::nn::LSTM encoder{nullptr};
-	torch::nn::Embedding embedding{nullptr};
 
-	BiRNNImpl(int vocab_size, int embed_size, int num_hiddens, int num_layers ) {
+torch::Tensor corr1d(torch::Tensor X, torch::Tensor K) {
+    int w = K.size(0);
+    auto Y = torch::zeros(X.size(0) - w + 1);
+    for(int i = 0; i < Y.size(0); i++) {
+        Y.index_put_({i}, (X.index({Slice(i, i + w)}) * K).sum());
+    }
+    return Y;
+}
+
+
+torch::Tensor corr1d_multi_in(torch::Tensor X, torch::Tensor K) {
+    // First, iterate through the 0th dimension (channel dimension) of `X` and
+    // `K`. Then, add them together
+    // return sum(corr1d(x, k) for x, k in zip(X, K))
+	int w = X.size(1);
+	int wk = K.size(1);
+	auto Y = torch::zeros(X.size(1)-1);
+
+	for( int i = 0; i < (w - wk + 1); i++ ) {
+		auto x = X.index({Slice(), Slice(i, i+wk)});
+		auto y = x * K;
+
+		Y.index_put_({i}, y.sum());
+	}
+	return Y;
+}
+
+// Defining the Model
+
+struct TextCNNImpl : public torch::nn::Module {
+	torch::nn::Embedding embedding{nullptr};
+	torch::nn::Embedding constant_embedding{nullptr};
+	torch::nn::Dropout dropout{nullptr};
+	torch::nn::Linear decoder{nullptr};
+	torch::nn::AdaptiveAvgPool1d pool{nullptr};
+	torch::nn::ReLU relu;
+	//torch::nn::ModuleList convs;
+	std::vector<torch::nn::Conv1d> convs;
+
+	TextCNNImpl(int64_t vocab_size, int64_t embed_size, std::vector<int64_t> kernel_sizes, std::vector<int64_t> num_channels) {
 
         embedding = torch::nn::Embedding(vocab_size, embed_size);
-        // Set `bidirectional` to True to get a bidirectional RNN
-        encoder = torch::nn::LSTM( torch::nn::LSTMOptions(embed_size, num_hiddens)
-        		.num_layers(num_layers)
-				.bidirectional(true));
-        decoder = torch::nn::Linear(4 * num_hiddens, 2);
-        //decoder = torch::nn::Linear(2 * num_hiddens, 2);
+        // The embedding layer not to be trained
+        constant_embedding = torch::nn::Embedding(vocab_size, embed_size);
+        dropout = torch::nn::Dropout(0.5);
+        decoder = torch::nn::Linear(vector_sum(num_channels), 2);
+        // The max-over-time pooling layer has no parameters, so this instance
+        // can be shared
+        pool = torch::nn::AdaptiveAvgPool1d(1);
+        relu = torch::nn::ReLU();
+
+        // Create multiple one-dimensional convolutional layers
+        //convs = torch::nn::ModuleList();
+        //for c, k in zip(num_channels, kernel_sizes):
+        for( int i = 0; i < num_channels.size(); i++ )
+            convs.push_back( torch::nn::Conv1d(
+            		torch::nn::Conv1dOptions(2 * embed_size, num_channels[i], kernel_sizes[i])));
 
         register_module("embedding", embedding);
-        register_module("encoder", encoder);
+        register_module("constant_embedding", constant_embedding);
         register_module("decoder", decoder);
 
-        // init_weights
-        init_weights();
 	}
 
     torch::Tensor forward(torch::Tensor inputs) {
-    	/*
-        # The shape of `inputs` is (batch size, no. of time steps). Because
-        # LSTM requires its input's first dimension to be the temporal
-        # dimension, the input is transposed before obtaining token
-        # representations. The output shape is (no. of time steps, batch size,
-        # word vector dimension)
-        */
-        torch::Tensor embeddings = embedding->forward(inputs.transpose(1, 0));
-        //std::cout << "embeddings: " << embeddings.sizes() << '\n';
-        encoder->flatten_parameters();
-		/*
-        # Returns hidden states of the last hidden layer at different time
-        # steps. The shape of `outputs` is (no. of time steps, batch size,
-        # 2 * no. of hidden units)
-        */
-        //outputs, _ = encoder(embeddings);
+        // Concatenate two embedding layer outputs with shape (batch size, no.
+        // of tokens, token vector dimension) along vectors
+        auto embeddings = torch::cat({
+            embedding->forward(inputs), constant_embedding->forward(inputs)}, 2); // dim=2
+        // Per the input format of one-dimensional convolutional layers,
+        // rearrange the tensor so that the second dimension stores channels
+        embeddings = embeddings.permute({0, 2, 1});
 
-        torch::Tensor outputs = std::get<0>(encoder->forward(embeddings));
-
+        // For each one-dimensional convolutional layer, after max-over-time
+        // pooling, a tensor of shape (batch size, no. of channels, 1) is
+        // obtained. Remove the last dimension and concatenate along channels
+        std::vector<torch::Tensor> convT;
+        for(auto& conv : convs) {
+        	auto T = torch::squeeze(relu->forward(pool->forward(conv->forward(embeddings))), -1);
+        	convT.push_back(T.clone());
+        }
+        auto encoding = torch::cat(convT, 1);
         /*
-        # Concatenate the hidden states of the initial time step and final
-        # time step to use as the input of the fully connected layer. Its
-        # shape is (batch size, 4 * no. of hidden units)
-        */
+        encoding = torch.cat([
+            torch::squeeze(relu(pool(conv(embeddings))), dim=-1)
+            for conv in self.convs], dim=1)
+         */
+        auto outputs = decoder->forward(dropout->forward(encoding));
 
-        //std::cout << "outputs: " << outputs.sizes() << '\n';
-        auto encoding = torch::cat({outputs[0], outputs[outputs.size(0)-1]}, 1);
-        //std::cout << "outputs[0]: " << outputs[0].sizes() << '\n';
-        //std::cout << "outputs[-1]: " << outputs[outputs.size(0)-1].sizes() << '\n';
-        //std::cout << "encoding: " << encoding.sizes() << '\n';
-
-        /*
-        # Concatenate the hidden states at the initial and final time steps as
-        # the input of the fully-connected layer. Its shape is (batch size,
-        # 4 * no. of hidden units)
-        */
-        auto outs = decoder->forward(encoding);
-        //std::cout << "outs: " << outs.sizes() << '\n';
-        return outs;
+        return outputs;
     }
 
     void init_weights() {
     	torch::NoGradGuard noGrad;
         for(auto& module : modules(/*include_self=*/false)) {
-        	if(auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
-        		torch::nn::init::xavier_normal_(M->weight);
-        	}
+            if(auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+            	torch::nn::init::xavier_uniform_(M->weight);
+            }
+            if(auto M = dynamic_cast<torch::nn::Conv1dImpl*>(module.get())) {
+                torch::nn::init::xavier_uniform_(M->weight);
+            }
         }
     }
+
 };
 
-TORCH_MODULE(BiRNN);
+TORCH_MODULE(TextCNN);
 
 
-std::string predict_sentiment(BiRNN net, Vocab vocab, std::string sequence, size_t num_steps, torch::Device device) {
+std::string predict_sentiment(TextCNN net, Vocab vocab, std::string sequence, size_t num_steps, torch::Device device) {
     //Predict the sentiment of a text sequence
 	std::vector<std::string> seqs;
 	seqs.push_back(sequence);
@@ -99,9 +130,9 @@ std::string predict_sentiment(BiRNN net, Vocab vocab, std::string sequence, size
 
 	torch::NoGradGuard no_grad;
 	auto pred = net->forward(seq.reshape({1, -1}));
-	auto label = torch::argmax(pred, 1);
+	auto label = torch::argmax(pred, 1).data().item<int64_t>();
 
-    return  label.item<long>() == 1 ? "positive" : "negative";
+    return  label == 1 ? "positive" : "negative";
 }
 
 
@@ -116,7 +147,29 @@ int main() {
 
 	torch::manual_seed(123);
 
-	size_t num_steps = 500;  // sequence length
+	// ---------------------------------------------
+	// One-Dimensional Convolutions
+	// ---------------------------------------------
+	auto X = torch::tensor({0, 1, 2, 3, 4, 5, 6}).to(torch::kFloat32);
+	auto K = torch::tensor({1, 2}).to(torch::kFloat32);
+	auto Y = corr1d(X, K);
+	std::cout << Y.sizes() << '\n';
+	std::cout << "corr1d(X, K):\n" << Y << '\n';
+
+	// multiple input channels
+	X = torch::tensor({{0, 1, 2, 3, 4, 5, 6},
+	              {1, 2, 3, 4, 5, 6, 7},
+	              {2, 3, 4, 5, 6, 7, 8}}).to(torch::kFloat32);
+
+	K = torch::tensor({{1, 2}, {3, 4}, {-1, -3}}).to(torch::kFloat32);
+
+	Y = corr1d_multi_in(X, K);
+	std::cout << "corr1d_multi_in(X, K):\n" << Y << '\n';
+
+	// -------------------------------------------
+	// The textCNN Model
+	// -------------------------------------------
+	size_t num_steps = 500, embed_size = 100;  // sequence length
 
 	std::string data_dir = "/home/stree/git/Deep_Learning_with_Libtorch/data/aclImdb";
 
@@ -127,12 +180,9 @@ int main() {
 	auto trlab     = std::get<3>(rlt);
 	Vocab vocab    = std::get<4>(rlt);
 
-//	std::cout << features[0] << '\n';
-//	std::cout << rlab << '\n';
-
 	int64_t batch_size = 64;
 
-//	std::cout << "features: " << features.sizes() << ", rlab: " << rlab.sizes() << '\n';
+	//	std::cout << "features: " << features.sizes() << ", rlab: " << rlab.sizes() << '\n';
 
 	auto dataset = LRdataset(std::make_pair(features, rlab)).map(torch::data::transforms::Stack<>());
 	auto data_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
@@ -141,10 +191,6 @@ int main() {
 	auto testset = LRdataset(std::make_pair(tfeatures, trlab)).map(torch::data::transforms::Stack<>());
 	auto test_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
 			        												std::move(testset), batch_size);
-
-	int embed_size = 100, num_hiddens = 100, num_layers = 2;
-	auto net = BiRNN(vocab.length(), embed_size, num_hiddens, num_layers);
-	net->to(device);
 
 	//vocab.idx_to_token
 	std::string embedding_name = "./data/glove.6B.100d/vec.txt";
@@ -155,10 +201,18 @@ int main() {
 	auto embeds = glove_embedding[vocab.idx_to_token];
 	std::cout << embeds.sizes() << '\n';
 
-	// We use these pretrained word vectors to represent tokens in the reviews
-	// and will not update these vectors during training.
+	std::vector<int64_t> kernel_sizes = {3, 4, 5};
+	std::vector<int64_t> nums_channels = {100, 100, 100};
+
+	std::cout << vector_sum(kernel_sizes) << '\n';
+
+	auto net = TextCNN(vocab.length(), embed_size, kernel_sizes, nums_channels);
+	net->init_weights();
+	net->to(device);
+
 	net->embedding->weight.data().copy_(embeds);
-	net->embedding->weight.requires_grad_(false);
+	net->constant_embedding->weight.data().copy_(embeds);
+	net->constant_embedding->weight.requires_grad_(false);
 
 	// ----------------------------------------------------------
 	// Training and Evaluating the Model
@@ -170,7 +224,7 @@ int main() {
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone)); //reduction="none"
 
 	net->train();
-	/*
+/*
 	auto batch_data = *data_loader->begin();
 	auto img_data  = batch_data.data.to(device);
 	auto lab_data  = batch_data.target.to(device).squeeze().flatten();
@@ -183,7 +237,7 @@ int main() {
 
 	trainer.step();
 	std::cout << accuracy(pred, lab_data) << '\n';
-	 */
+*/
 
 	std::vector<double> train_loss, train_acc, test_acc;
 	std::vector<double> train_epochs;
@@ -251,23 +305,14 @@ int main() {
 	// ----------------------------------------------------------
 	std::string sequence = "this movie is so great";
 	std::string review = predict_sentiment(net, vocab, sequence,  num_steps, device);
-	std::cout << "\nreview: " << review << '\n';
+	std::cout << "review: " << review << '\n';
 
 	sequence = "this movie is so bad";
 	review = predict_sentiment(net, vocab, sequence,  num_steps, device);
 	std::cout << "review: " << review << '\n';
 
-	// ----------------------------------------------------------
-	// export model
-	// ----------------------------------------------------------
-
-	torch::save(net, "./src/15_NLP_applications/text_rnn_model.pt");
-
 	std::cout << "Done!\n";
-
 	return 0;
 }
-
-
 
 
