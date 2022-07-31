@@ -32,6 +32,10 @@ std::pair<std::vector<std::string>, int> count_num_tokens(std::string text);
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab>
 load_data_imdb(std::string data_dir, size_t num_steps, int num_files = 0); // num_files = 0, load all data files
 
+std::string extract_text(std::string s);
+
+std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>> read_snli(const std::string data_dir, const bool is_train);
+
 
 class TokenEmbedding {
 //Token Embedding
