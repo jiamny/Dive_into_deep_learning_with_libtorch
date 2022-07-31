@@ -70,6 +70,27 @@ target_link_libraries(15_SentimentAnalysisCNN ${OpenCV_LIBS}  ${TORCH_LIBRARIES}
 
 set_target_properties(15_SentimentAnalysisCNN PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
+# ---------------------------------------------------------------
+add_executable(15_NaturalLanguageInferenceDataset)
+
+target_sources(15_NaturalLanguageInferenceDataset PRIVATE
+NaturalLanguageInferenceDataset.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_15_util.h
+../utils/ch_15_util.cpp
+)
+
+target_include_directories(15_NaturalLanguageInferenceDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+target_link_libraries(15_NaturalLanguageInferenceDataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+
+set_target_properties(15_NaturalLanguageInferenceDataset PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+
+
+
+
 
 
 

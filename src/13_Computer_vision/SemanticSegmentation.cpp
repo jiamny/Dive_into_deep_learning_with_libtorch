@@ -9,7 +9,7 @@
 
 #include <torch/script.h> // One-stop header.
 
-#include "../utils/Ch_13_util.h"
+#include "../utils/ch_13_util.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;

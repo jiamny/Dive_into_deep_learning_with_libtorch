@@ -23,8 +23,8 @@ target_sources(13_AnchorBoxes PRIVATE
 AnchorBoxes.cpp 
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp						
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp						
 )
 													
 target_include_directories(13_AnchorBoxes  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -38,8 +38,8 @@ target_sources(13_BoundingBoxes PRIVATE
 BoundingBoxes.cpp 
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp						
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp						
 )
 													
 target_include_directories(13_BoundingBoxes  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -72,8 +72,8 @@ target_sources(13_MultiscaleObjectDetection PRIVATE
 MultiscaleObjectDetection.cpp 
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp						
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp						
 )
 													
 target_include_directories(13_MultiscaleObjectDetection  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
@@ -87,8 +87,8 @@ target_sources(13_ObjectDetectionDataset PRIVATE
 ObjectDetectionDataset.cpp 
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp						
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp						
 )
 													
 target_include_directories(13_ObjectDetectionDataset  PRIVATE 
@@ -110,8 +110,8 @@ target_sources(13_FullyConvolutionalNetworks PRIVATE
 FullyConvolutionalNetworks.cpp
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp	
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp	
 )
 
 target_include_directories(13_ObjectDetectionDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
@@ -126,8 +126,8 @@ target_sources(13_TransposedConvolution PRIVATE
 TransposedConvolution.cpp
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp	
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp	
 )
 
 target_include_directories(13_TransposedConvolution PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
@@ -142,8 +142,8 @@ target_sources(13_ImageAugmentation PRIVATE
 ImageAugmentation.cpp
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp	
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp	
 )
 
 target_include_directories(13_ImageAugmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
@@ -198,8 +198,8 @@ target_sources(13_SemanticSegmentation PRIVATE
 SemanticSegmentation.cpp
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp	
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp	
 )
 
 target_include_directories(13_SemanticSegmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
@@ -214,8 +214,8 @@ target_sources(13_NeuralStyleTransfer PRIVATE
 NeuralStyleTransfer.cpp
 ../utils.h
 ../utils.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp	
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp	
 )
 
 target_include_directories(13_NeuralStyleTransfer PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )

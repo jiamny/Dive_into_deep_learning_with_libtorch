@@ -21,8 +21,8 @@ add_executable(17_DeepConvolutional_GAN)
 
 target_sources(17_DeepConvolutional_GAN PRIVATE 
 DeepConvolutional_GAN.cpp
-../utils/Ch_13_util.h
-../utils/Ch_13_util.cpp
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp
 ../utils/dataloader.hpp
 ../utils/dataloader.cpp
 ../utils/datasets.hpp

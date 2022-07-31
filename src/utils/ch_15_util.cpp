@@ -1,6 +1,72 @@
 #include "ch_15_util.h"
 
 
+
+std::string extract_text(std::string s) {
+    // Remove information that will not be used by us
+	s = std::regex_replace(s, std::regex("\\("), std::string(""));
+	s = std::regex_replace(s, std::regex("\\)"), std::string(""));
+    // Substitute two or more consecutive whitespace with space
+        //s = re.sub('\\s{2,}', ' ', s)
+	s = std::regex_replace(s, std::regex("\\s{2,}"), std::string(" ")); // [' ']{2,}
+	// strip
+	s = std::regex_replace(s, std::regex("^\\s+"), std::string(""));
+	s = std::regex_replace(s, std::regex("\\s+$"), std::string(""));
+    return s;
+}
+
+std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>> read_snli(const std::string data_dir, const bool is_train) {
+	std::string file_name;
+
+	std::map<std::string, int> label_set;
+	label_set["entailment"] = 0;
+	label_set["contradiction"] = 1;
+	label_set["neutral"] = 2;
+
+	if( is_train )
+		file_name = data_dir + "/snli_1.0_train.txt";
+	else
+		file_name = data_dir + "/snli_1.0_test.txt";
+
+	std::string line;
+	std::ifstream fL(file_name.c_str());
+	std::string delimiter = "\t";
+	std::vector<std::vector<std::string>> rows;
+	std::vector<std::string> premises, hypotheses;
+	std::vector<int> labels;
+
+	if( fL.is_open() ) {
+		std::getline(fL, line);
+
+		while ( std::getline(fL, line) ) {
+			size_t pos = 0;
+			std::vector<std::string> tks;
+			while ((pos = line.find(delimiter)) != std::string::npos) {
+				std::string s = line.substr(0, pos);
+				tks.push_back(s);
+				line.erase(0, pos + delimiter.length());
+			}
+			std::string s = line.substr(0, pos);
+			tks.push_back(s);
+
+			rows.push_back(tks);
+		}
+	}
+	fL.close();
+
+	for(auto& row : rows) {
+		if( label_set.find(row[0]) != label_set.end() ) {
+			// Remove information that will not be used by us
+			premises.push_back(extract_text(row[1]));
+			hypotheses.push_back(extract_text(row[2]));
+			labels.push_back(label_set[row[0]]);
+		}
+	}
+
+    return std::make_tuple(premises, hypotheses, labels);
+}
+
+
 std::pair<std::vector<std::string>, std::vector<int64_t>> read_imdb(std::string data_dir, bool is_train, int num_files) {
 	//Read the IMDb review dataset text sequences and labels.
 	std::vector<std::string> data;
@@ -56,6 +122,10 @@ std::pair<std::vector<std::string>, int> count_num_tokens(std::string text) {
 		count++;
 	    text.erase(0, pos + space_delimiter.length());
 	}
+	std::string s = text.substr(0, pos);
+	if( s.length() > 1 )
+		words.push_back(s);
+
 	return std::make_pair(words, count);
 }
 

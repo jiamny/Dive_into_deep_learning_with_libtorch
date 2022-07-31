@@ -13,7 +13,7 @@
 #include <sstream>
 #include <string>
 
-#include "../utils/Ch_13_util.h"
+#include "../utils/ch_13_util.h"
 
 
 // DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'

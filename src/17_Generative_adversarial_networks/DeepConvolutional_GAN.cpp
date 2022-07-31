@@ -11,7 +11,7 @@
 
 //#include "../utils.h"
 #include "../TempHelpFunctions.hpp" // range()
-#include "../utils/Ch_13_util.h"
+#include "../utils/ch_13_util.h"
 
 #include "../utils/transforms.hpp"              // transforms_Compose
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths

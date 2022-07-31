@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <iomanip>
 #include <torch/utils.h>
-#include "../utils/Ch_18_util.h"
+#include "../utils/ch_18_util.h"
 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;

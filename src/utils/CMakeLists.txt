@@ -23,8 +23,8 @@ add_executable(Utils_img_loder_demo)
 target_sources(Utils_img_loder_demo PRIVATE img_loder_demo.cpp 
 						../utils.h 
 						../utils.cpp
-						Ch_13_util.h
-						Ch_13_util.cpp
+						ch_13_util.h
+						ch_13_util.cpp
 						dataloader.hpp
 						dataloader.cpp
 						datasets.hpp
