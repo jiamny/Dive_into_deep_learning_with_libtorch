@@ -200,8 +200,8 @@ int main() {
 		for(auto& batch_data : *data_loader) {
 			auto ftr_data  = batch_data.data.to(device);
 			auto lab_data  = batch_data.target.to(device).squeeze().flatten();
-			//std::cout << "img_data: " << img_data.sizes() << " y: " << lab_data.sizes() << std::endl;
-			//std::cout << "img_data:\n" << img_data << "\ny:\n" << lab_data << std::endl;
+			//std::cout << "ftr_data: " << ftr_data.sizes() << " y: " << lab_data.sizes() << std::endl;
+			//std::cout << "ftr_data:\n" << ftr_data << "\ny:\n" << lab_data << std::endl;
 
 			trainer.zero_grad();
 			auto pred = net->forward(ftr_data);
@@ -215,7 +215,7 @@ int main() {
 
 			total_samples += ftr_data.size(0);
 			num_batch++;
-			std::cout << "num_batch: " << num_batch << '\n';
+			//std::cout << "num_batch: " << num_batch << '\n';
 		}
 		train_epochs.push_back(epoch*1.0);
 		train_loss.push_back((loss_sum*1.0/num_batch));

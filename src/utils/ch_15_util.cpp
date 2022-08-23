@@ -15,10 +15,11 @@ std::string extract_text(std::string s) {
     return s;
 }
 
-std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>> read_snli(const std::string data_dir, const bool is_train) {
+std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int64_t>>
+read_snli(const std::string data_dir, const bool is_train, const int num_sample) {
 	std::string file_name;
 
-	std::map<std::string, int> label_set;
+	std::map<std::string, int64_t> label_set;
 	label_set["entailment"] = 0;
 	label_set["contradiction"] = 1;
 	label_set["neutral"] = 2;
@@ -33,7 +34,7 @@ std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>>
 	std::string delimiter = "\t";
 	std::vector<std::vector<std::string>> rows;
 	std::vector<std::string> premises, hypotheses;
-	std::vector<int> labels;
+	std::vector<int64_t> labels;
 
 	if( fL.is_open() ) {
 		std::getline(fL, line);
@@ -50,6 +51,9 @@ std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>>
 			tks.push_back(s);
 
 			rows.push_back(tks);
+			if( num_sample != 0 )
+				if( rows.size() > num_sample )
+					break;
 		}
 	}
 	fL.close();
@@ -64,6 +68,28 @@ std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>>
 	}
 
     return std::make_tuple(premises, hypotheses, labels);
+}
+
+
+Vocab get_snil_vocab(std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int64_t>> t_data,
+					 float min_freq, std::vector<std::string> reserved_tokens) {
+
+	std::vector<std::string> data = std::get<0>(t_data);
+
+	for(int i = 0; i < std::get<1>(t_data).size(); i++)
+		data.push_back(std::get<1>(t_data)[i]);
+
+	std::vector<std::string> ttokens = tokenize(data, "word", false);
+
+	int64_t max_tokens = ttokens.size() - 1;
+
+	std::vector<std::string> tokens(&ttokens[0], &ttokens[max_tokens]);
+
+	std::vector<std::pair<std::string, int64_t>> counter = count_corpus( tokens );
+
+	Vocab vocab = Vocab(counter, min_freq, reserved_tokens);
+
+	return vocab;
 }
 
 

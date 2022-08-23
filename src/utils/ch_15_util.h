@@ -34,7 +34,88 @@ load_data_imdb(std::string data_dir, size_t num_steps, int num_files = 0); // nu
 
 std::string extract_text(std::string s);
 
-std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int>> read_snli(const std::string data_dir, const bool is_train);
+std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int64_t>>
+read_snli(const std::string data_dir, const bool is_train, const int num_sample = 0);
+
+Vocab get_snil_vocab(std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int64_t>> dt,
+					 float min_freq, std::vector<std::string> reserved_tokens);
+
+
+class SNLIDataset : public torch::data::datasets::Dataset<SNLIDataset> {
+    //A customized dataset to load the SNLI dataset
+private:
+    int num_steps;
+    Vocab vocab;
+    std::vector<std::string> all_premise_tokens, all_hypothesis_tokens;
+    torch::Tensor labels, features;
+    int premise_w = 0, hypothese_w = 0;
+
+public:
+
+	explicit SNLIDataset(std::tuple<std::vector<std::string>, std::vector<std::string>, std::vector<int64_t>> dataset,
+						 int num_steps, Vocab vocab) {
+        this->num_steps = num_steps;
+        this->all_premise_tokens = std::get<0>(dataset);
+		this->all_hypothesis_tokens = std::get<1>(dataset);
+
+        if( vocab.length() == 0 ) {
+        	float min_freq = 5.0f;
+        	std::vector<std::string> reserved_tokens;
+        	reserved_tokens.push_back("<pad>");
+
+            this->vocab = get_snil_vocab( dataset, min_freq, reserved_tokens);
+
+        } else {
+            this->vocab = vocab;
+        }
+
+        auto premises = _pad(all_premise_tokens);
+        auto hypotheses = _pad(all_hypothesis_tokens);
+
+        this->premise_w = premises.size(1);
+        this->hypothese_w = hypotheses.size(1);
+
+        std::vector<int64_t> labels_dt = std::get<2>(dataset);
+
+        this->labels= torch::from_blob(labels_dt.data(),
+        							 {static_cast<long>(labels_dt.size()), 1}, torch::TensorOptions(torch::kLong)).clone();
+
+        this->labels.to(torch::kLong);
+
+        this->features = torch::concat({premises, hypotheses}, 1).to(torch::kLong);
+
+        std::cout << "read " << features.size(0) << " examples\n";
+
+	}
+
+    torch::Tensor _pad( std::vector<std::string> data) {
+    	size_t num_steps = 50;
+
+    	std::vector<torch::Tensor> tensors;
+
+    	for( int i = 0; i < data.size(); i++ ) {
+    		auto dt = truncate_pad(vocab[count_num_tokens(data[i]).first], num_steps, vocab["<pad>"]);
+
+    		auto TT = torch::from_blob(dt.data(), {1, static_cast<long>(num_steps)}, torch::TensorOptions(torch::kLong)).clone();
+
+    		tensors.push_back(TT);
+    	}
+
+    	torch::Tensor Tdata = torch::concat(tensors, 0).to(torch::kLong);
+        //return torch.tensor([d2l.truncate_pad(
+        //    self.vocab[line], self.num_steps, self.vocab['<pad>'])
+        //                 for line in lines])
+    	return Tdata;
+    }
+
+    torch::data::Example<> get(size_t idx) override {
+        return {features[idx], labels[idx]};
+    }
+
+    torch::optional<size_t> size() const override {
+        return features.size(0);
+    }
+};
 
 
 class TokenEmbedding {
