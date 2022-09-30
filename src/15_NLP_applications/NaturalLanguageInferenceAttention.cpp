@@ -199,8 +199,8 @@ int main() {
 	const std::string data_dir = "./data/snli_1.0";
 	bool is_train = true;
 
-	auto train_data = read_snli(data_dir, is_train);
-	auto test_data = read_snli(data_dir, false);
+	auto train_data = read_snli(data_dir, is_train, 12000);
+	auto test_data = read_snli(data_dir, false, 2000);
 
 	float min_freq = 5.0f;
 	std::vector<std::string> reserved_tokens;
@@ -212,7 +212,8 @@ int main() {
 
 	auto dataset = SNLIDataset(train_data, num_steps, vocab).map(torch::data::transforms::Stack<>());
 	auto train_iter = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
-			        												std::move(dataset), batch_size);
+			        									std::move(dataset),
+														torch::data::DataLoaderOptions().batch_size(batch_size).drop_last(true));
 
 
 /*
@@ -239,7 +240,7 @@ int main() {
 	// Training and Evaluating the Model
 	// ---------------------------------------------------------
 	float lr = 0.01;
-	int num_epochs = 10;
+	int num_epochs = 100;
 
 	auto trainer = torch::optim::Adam(net.parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
@@ -269,7 +270,7 @@ int main() {
 	std::vector<double> train_epochs;
 
 	for(size_t epoch = 1; epoch <= num_epochs; epoch++) {
-		net.train();
+		//net.train();
 
 		std::cout << "--------------- Training -----------------> " << epoch << " / " << num_epochs << "\n";
 
@@ -302,8 +303,8 @@ int main() {
 		train_acc.push_back((total_corrects*1.0/total_samples));
 		std::cout << "loss: " << (loss_sum*1.0/num_batch) << ", train acc: " << (total_corrects*1.0/total_samples) << '\n';
 
-		net.eval();
-		//torch::NoGradGuard no_grad;
+		//net.eval();
+		torch::NoGradGuard no_grad;
 		total_corrects = 0, total_samples = 0;
 		for(auto& b_data : *test_iter) {
 			torch::Tensor t_data  = b_data.data.to(device);
