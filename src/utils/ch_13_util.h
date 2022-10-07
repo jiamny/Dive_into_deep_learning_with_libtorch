@@ -17,14 +17,31 @@
 
 #include "../utils.h"
 
+
 using torch::indexing::Slice;
 using torch::indexing::None;
+using torch::indexing::Ellipsis;
 
 #ifndef SRC_UTILS_CH_13_UTIL_H_
 #define SRC_UTILS_CH_13_UTIL_H_
 
+torch::Tensor box_iou(torch::Tensor boxes1, torch::Tensor boxes2);
 
-std::pair<cv::Mat, torch::Tensor> readImg( std::string filename );
+torch::Tensor assign_anchor_to_bbox(torch::Tensor ground_truth, torch::Tensor anchors,
+													torch::Device device, float iou_threshold=0.5);
+
+torch::Tensor offset_boxes(torch::Tensor anchors, torch::Tensor assigned_bb, float eps=1e-6);
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> multibox_target(torch::Tensor anchors, torch::Tensor labels);
+
+torch::Tensor offset_inverse(torch::Tensor anchors, torch::Tensor offset_preds);
+
+torch::Tensor nms(torch::Tensor boxes, torch::Tensor scores, float iou_threshold);
+
+torch::Tensor multibox_detection(torch::Tensor cls_probs, torch::Tensor offset_preds, torch::Tensor anchors,
+								float nms_threshold=0.5, float pos_threshold=0.009999999);
+
+std::pair<cv::Mat, torch::Tensor> readImg( std::string filename, std::vector<int> imgSize = {} );
 
 torch::Tensor box_corner_to_center(torch::Tensor boxes);
 
@@ -94,6 +111,8 @@ torch::Tensor decode_segmap(torch::Tensor pred, int nc);
 std::pair<torch::Tensor, torch::Tensor> voc_rand_crop(torch::Tensor feature, torch::Tensor label,
 		int height, int width, std::vector<float> mean_, std::vector<float> std_, bool toRGB = true);
 
+std::vector<std::pair<std::string, torch::Tensor>> load_bananas_img_data(const std::string data_dir,  bool is_train, int imgSize);
+
 using VocData = std::vector<std::pair<std::string, std::string>>;
 using Example = torch::data::Example<>;
 
@@ -156,5 +175,41 @@ std::vector<T> make_list(std::vector<T> obj, std::vector<T> default_values) {
     }
     return obj;
 }
+
+using mData = std::vector<std::pair<std::string, torch::Tensor>>;
+
+class BananasDataset:public torch::data::Dataset<BananasDataset>{
+public:
+	BananasDataset(const mData& data, int imgSize) : data_(data) { img_size = imgSize; }
+
+    // Override get() function to return tensor at location index
+    Example get(size_t index) override{
+
+    	auto image = cv::imread(data_.at(index).first.c_str());
+    	// ----------------------------------------------------------
+    	// opencv BGR format change to RGB
+    	// ----------------------------------------------------------
+    	cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+    	cv::resize(image, image, cv::Size(img_size, img_size));
+
+    	//cv::Mat img_float;
+    	//image.convertTo(img_float, CV_32F, 1.0/255);
+    	torch::Tensor img = torch::from_blob(image.data,
+    					{image.rows, image.cols, image.channels()}, at::TensorOptions(torch::kByte)).clone(); // Channels x Height x Width
+
+    	img = img.permute({2, 0, 1}).to(torch::kFloat).div_(255.0);
+    	return {img, data_.at(index).second};
+    }
+
+    // Return the length of data
+    torch::optional<size_t> size() const override {
+        return data_.size();
+    };
+
+private:
+    mData data_;
+    int img_size;
+};
+
 
 #endif /* SRC_UTILS_CH_13_UTIL_H_ */

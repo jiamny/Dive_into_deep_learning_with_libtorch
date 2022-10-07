@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(D2L_pytorch_cpp VERSION 1.0.0 LANGUAGES CXX)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PYTORCH_VERSION "1.12.1")
 
@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD 14)
 #-------------------------------------------------------------------------------------------- 
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/libtorch/share/cmake")
 
-set(CMAKE_MODULE_PATH "/home/stree/git/libtorch/share/cmake/Torch")                  
+#set(CMAKE_MODULE_PATH "/home/stree/git/libtorch/share/cmake/Torch")                  
 
 # add torch package
 find_package(Torch ${PYTORCH_VERSION} EXACT QUIET PATHS "${CMAKE_SOURCE_DIR}/libtorch") 
@@ -22,19 +22,6 @@ message(STATUS "Torch library status:")
 message(STATUS "    version: ${Torch_VERSION}")
 message(STATUS "    libraries: ${TORCH_LIBRARIES}")
 message(STATUS "    include path: ${TORCH_INCLUDE_DIRS}") 
-
-# -------------------------------------------------------------------------------------------
-# where to find torchvision include and lib files
-# -------------------------------------------------------------------------------------------
-#list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/torchvision")
-
-#set(TORCHVISION_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/torchvision/include")
-#(TORCHVISION_LIBRARIES "${CMAKE_SOURCE_DIR}/torchvision/lib/libtorchvision.so")
-
-#message(STATUS "    ${CMAKE_PREFIX_PATH}")
-#message(STATUS "    ${TorchVision_VERSION}")
-#message(STATUS "    libraries: ${TORCHVISION_LIBRARIES}")
-#message(STATUS "    include path: ${TORCHVISION_INCLUDE_DIRS}") 
 
 # add opencv package to the project
 find_package( OpenCV 4.5.3 REQUIRED PATHS "/usr/local/")

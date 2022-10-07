@@ -1,6 +1,6 @@
 # Dive into deep learning with libtorch
 
-Dive into deep learning with LibTorch C++ API
+Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 ![Alt text](./data/front.jpg?raw=true)
 
@@ -8,7 +8,9 @@ Dive into deep learning with LibTorch C++ API
 
 - cmake 3.18+
 
-- PyTorch 1.12.1
+- LibTorch 1.12.1
+
+- LibTorchvision 0.14.0a0
 
 - python3.10
 

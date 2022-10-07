@@ -4,6 +4,215 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/hal/interface.h>
 
+
+// Intersection over Union (IoU)
+torch::Tensor box_iou(torch::Tensor boxes1, torch::Tensor boxes2) {
+    //Compute pairwise IoU across two lists of anchor or bounding boxes."""
+	auto box_area = [](torch::Tensor box) noexcept {
+		return (box.index({Slice(), 2}) - box.index({Slice(), 0})) *
+				(box.index({Slice(), 3}) - box.index({Slice(), 1}));
+	};
+    // Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    // (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    auto areas1 = box_area(boxes1);
+    auto areas2 = box_area(boxes2);
+    // Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    // boxes1, no. of boxes2, 2)
+    auto inter_upperlefts = torch::max(boxes1.index({Slice(), None, Slice(None, 2)}), boxes2.index({Slice(), Slice(None, 2)}));
+    auto inter_lowerrights = torch::min(boxes1.index({Slice(), None, Slice(2, None)}), boxes2.index({Slice(), Slice(2, None)}));
+    auto inters = (inter_lowerrights - inter_upperlefts).clamp(0);
+    // Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    auto inter_areas = inters.index({Slice(), Slice(), 0}) *  inters.index({Slice(), Slice(), 1});
+    auto union_areas = areas1.index({Slice(), None}) + areas2 - inter_areas;
+    return inter_areas / union_areas;
+}
+
+torch::Tensor assign_anchor_to_bbox(torch::Tensor ground_truth, torch::Tensor anchors,
+													torch::Device device, float iou_threshold) {
+    //Assign closest ground-truth bounding boxes to anchor boxes.
+    int num_anchors = anchors.size(0);
+    int num_gt_boxes = ground_truth.size(0);
+
+    // Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    // box i and the ground-truth bounding box j
+    auto jaccard = box_iou(anchors, ground_truth);
+    // Initialize the tensor to hold the assigned ground-truth bounding box for each anchor
+    auto anchors_bbox_map = torch::full({num_anchors,}, -1, at::TensorOptions(torch::kLong)).to(device);
+
+    // Assign ground-truth bounding boxes according to the threshold
+    torch::Tensor max_ious, indices;
+    std::tie(max_ious, indices) = torch::max(jaccard, 1);
+    auto anc_i = torch::nonzero(max_ious >= 0.5).reshape(-1);
+
+    auto box_j = indices.masked_select(max_ious >= 0.5);
+    anchors_bbox_map.index_put_({anc_i}, box_j);
+    auto col_discard = torch::full({num_anchors,}, -1);
+    auto row_discard = torch::full({num_gt_boxes,}, -1);
+
+    for( int i= 0; i < num_gt_boxes; i++ ) {
+       	auto max_idx = torch::argmax(jaccard);  // Find the largest IoU
+        auto box_idx = (max_idx % num_gt_boxes).to(torch::kLong);
+        auto anc_idx = (max_idx / num_gt_boxes).to(torch::kLong);
+
+        anchors_bbox_map.index_put_({anc_idx}, box_idx);
+        jaccard.index_put_({Slice(), box_idx}, col_discard);
+        jaccard.index_put_({anc_idx, Slice()}, row_discard);
+    }
+
+    return anchors_bbox_map;
+}
+
+torch::Tensor offset_boxes(torch::Tensor anchors, torch::Tensor assigned_bb, float eps) {
+	//Transform for anchor box offsets.
+    torch::Tensor c_anc = box_corner_to_center(anchors);
+    torch::Tensor c_assigned_bb = box_corner_to_center(assigned_bb);
+
+    auto offset_xy = 10 * (c_assigned_bb.index({Slice(), Slice(None, 2)}) -
+    						c_anc.index({Slice(), Slice(None, 2)})) / c_anc.index({Slice(), Slice(2, None)});
+
+    auto offset_wh = 5 * torch::log(eps +
+    		c_assigned_bb.index({Slice(), Slice(2, None)}) / c_anc.index({Slice(), Slice(2, None)}));
+
+    auto offset = torch::cat({offset_xy, offset_wh}, 1);
+    return offset;
+}
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> multibox_target(torch::Tensor anchors, torch::Tensor labels) {
+    //Label anchor boxes using ground-truth bounding boxes.
+
+    int batch_size = labels.size(0);
+    anchors = anchors.squeeze(0);
+
+    //std::cout << "batch_size: " << batch_size << '\n';
+
+    std::vector<torch::Tensor> batch_offset, batch_mask, batch_class_labels;
+    torch::Device device = anchors.device();
+	int num_anchors = anchors.size(0);
+	//std::cout << "num_anchors: " << num_anchors << '\n';
+
+    for(int i = 0; i < batch_size; i++ ) {
+
+        auto label = labels.index({i, Slice(), Slice()});
+
+        auto anchors_bbox_map = assign_anchor_to_bbox( label.index({Slice(), Slice(1, None)}), anchors, device );
+
+        auto bbox_mask = ((anchors_bbox_map >= 0).to(torch::kFloat).unsqueeze(-1)).repeat({1, 4});
+
+        // Initialize class labels and assigned bounding box coordinates with zeros
+        auto class_labels = torch::zeros(num_anchors, at::TensorOptions(torch::kLong)).to(device);
+
+        auto assigned_bb = torch::zeros({num_anchors, 4}, at::TensorOptions(torch::kFloat32)).to(device);
+
+        // Label classes of anchor boxes using their assigned ground-truth
+        // bounding boxes. If an anchor box is not assigned any, we label its
+        // class as background (the value remains zero)
+        auto indices_true = torch::nonzero(anchors_bbox_map >= 0).toType(torch::kLong);
+
+        auto bb_idx = anchors_bbox_map.index_select(0, indices_true.squeeze());
+
+        class_labels.index_put_({indices_true.squeeze()}, label.index({bb_idx, 0}).toType(torch::kLong) + 1);
+
+        assigned_bb.index_put_({indices_true.squeeze()}, label.index({bb_idx, Slice(1, None)}));
+
+        // Offset transformation
+        auto offset = offset_boxes(anchors, assigned_bb) * bbox_mask;
+        batch_offset.push_back(offset.reshape(-1).toType(torch::kFloat32));
+        batch_mask.push_back(bbox_mask.reshape(-1).toType(torch::kFloat32));
+        batch_class_labels.push_back(class_labels);
+    }
+    auto bbox_offset = torch::stack(batch_offset);
+    auto bbox_mask = torch::stack(batch_mask);
+    auto class_labels = torch::stack(batch_class_labels);
+    return std::make_tuple(bbox_offset, bbox_mask, class_labels);
+}
+
+torch::Tensor offset_inverse(torch::Tensor anchors, torch::Tensor offset_preds) {
+    //Predict bounding boxes based on anchor boxes with predicted offsets.
+    auto anc = box_corner_to_center(anchors);
+    auto pred_bbox_xy = (offset_preds.index({Slice(), Slice(None, 2)}) * anc.index({Slice(), Slice(2, None)}) / 10) +
+    					anc.index({Slice(), Slice(None, 2)});
+    auto pred_bbox_wh = torch::exp(offset_preds.index({Slice(), Slice(2, None)}) / 5) * anc.index({Slice(), Slice(2, None)});
+    auto pred_bbox = torch::cat({pred_bbox_xy, pred_bbox_wh}, 1);
+    auto predicted_bbox = box_center_to_corner(pred_bbox);
+    return predicted_bbox;
+}
+
+torch::Tensor nms(torch::Tensor boxes, torch::Tensor scores, float iou_threshold) {
+    //Sort confidence scores of predicted bounding boxes.
+    auto B = torch::argsort(scores, -1, true);
+    std::vector<long> keep;	// Indices of predicted bounding boxes that will be kept
+    keep.clear();
+    while( B.numel() > 0 ) {
+    	auto i = B[0].data().item<long>();
+    	keep.push_back(i);
+    	if( B.numel() == 1 ) break;
+
+    	auto boxes1 = boxes.index({i, Slice()}).reshape({-1, 4});
+    	auto boxes2 = boxes.index({B.index({Slice(1, None)}), Slice()}).reshape({-1, 4});
+    	torch::Tensor iou = box_iou(boxes1, boxes2).reshape(-1);
+
+    	auto inds = torch::nonzero(iou <= iou_threshold).reshape(-1);
+    	B = B.index_select(0, inds + 1);
+    }
+    int64_t lgth = keep.size();
+    auto tt = torch::from_blob(keep.data(), {1, lgth}, at::TensorOptions(torch::kLong)).to(boxes.device()).clone();
+    return tt.squeeze_();
+}
+
+
+torch::Tensor multibox_detection(torch::Tensor cls_probs, torch::Tensor offset_preds, torch::Tensor anchors,
+								float nms_threshold, float pos_threshold) {
+    //Predict bounding boxes using non-maximum suppression.
+	torch::Device device = cls_probs.device();
+	int batch_size = cls_probs.size(0);
+	anchors = anchors.squeeze(0);
+
+	int num_classes  = cls_probs.size(1), num_anchors = cls_probs.size(2);
+	std::vector<torch::Tensor> out;
+
+    for(int i = 0; i < batch_size; i++ ) {
+    	auto cls_prob = cls_probs[i];
+    	auto offset_pred = offset_preds[i].reshape({-1, 4});
+
+    	torch::Tensor conf, class_id;
+    	std::tie(conf, class_id) = torch::max(cls_prob.index({Slice(1, None)}), 0);
+
+    	auto predicted_bb = offset_inverse(anchors, offset_pred);
+
+    	auto keep = nms(predicted_bb, conf, nms_threshold);
+
+    	// Find all non-`keep` indices and set the class to background
+    	auto all_idx = torch::arange(num_anchors, at::TensorOptions(torch::kLong)).to(device);
+    	auto combined = torch::cat({keep, all_idx});
+
+    	torch::Tensor uniques, n_inverse , counts;
+    	// sorted = true, return_inverse = false,return_counts = true
+    	std::tie(uniques, n_inverse , counts) = at::_unique2(combined, true, false, true);
+
+    	auto non_keep = uniques.masked_select(counts == 1);
+    	auto all_id_sorted = torch::cat({keep, non_keep});
+
+    	class_id.index_put_({non_keep}, -1);
+    	class_id = class_id.index_select(0, all_id_sorted);
+    	conf = conf.index_select(0, all_id_sorted);
+    	predicted_bb = predicted_bb.index_select(0, all_id_sorted);
+
+    	// Here `pos_threshold` is a threshold for positive (non-background) predictions
+    	auto below_min_idx = (conf < pos_threshold);
+    	class_id.masked_fill_(below_min_idx, -1);
+
+    	conf.masked_select(below_min_idx) = 1 - conf.masked_select(below_min_idx);
+
+    	auto pred_info = torch::cat({class_id.unsqueeze(1),
+    			                     conf.unsqueeze(1),
+    			                     predicted_bb}, 1);
+
+        out.push_back(pred_info);
+    }
+    return torch::stack(out);
+}
+
+
 void ShowManyImages(std::string title, std::vector<cv::Mat> imgs) {
 	int size;
 	int i;
@@ -93,11 +302,21 @@ void ShowManyImages(std::string title, std::vector<cv::Mat> imgs) {
 	cv::destroyAllWindows();
 }
 
-std::pair<cv::Mat, torch::Tensor> readImg( std::string filename ) {
+std::pair<cv::Mat, torch::Tensor> readImg( std::string filename, std::vector<int> imgSize ) {
 
 	cv::Mat img = cv::imread(filename);
 	int h = img.rows;
 	int w = img.cols;
+
+	if( imgSize.size() > 0 ) {
+		// ---------------------------------------------------------------
+		// opencv resize the Size() - should be (width/cols x height/rows)
+		// ---------------------------------------------------------------
+		cv::resize(img, img, cv::Size(imgSize[0], imgSize[1]));
+		h = imgSize[1];
+		w = imgSize[0];
+	}
+
 
 	cv::Mat cvtImg = img.clone();
 	cv::cvtColor(img, cvtImg, cv::COLOR_BGR2RGB);
@@ -734,5 +953,65 @@ torch::Tensor decode_segmap(torch::Tensor pred, int nc) {
 	auto imgT = torch::stack({r, g, b}, 2).to(torch::kByte);
 	std::cout << imgT.sizes() << '\n';
 	return imgT;
+}
+
+// DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
+std::vector<std::pair<std::string, torch::Tensor>> load_bananas_img_data(
+		const std::string data_dir,  bool is_train, int imgSize) {
+    //Read the banana detection dataset images and labels
+	std::vector<std::pair<std::string, torch::Tensor>> imgpath_tgt;
+	std::ifstream file;
+
+	std::string img_dir;
+	std::string csv_fname = "";
+	if( is_train ) {
+	    csv_fname = data_dir + "/bananas_train/label.csv";
+		img_dir = data_dir + "/bananas_train/images/";
+	} else {
+	    csv_fname = data_dir + "/bananas_val/label.csv";
+	    img_dir = data_dir + "/bananas_val/images/";
+	}
+
+	file.open(csv_fname, std::ios_base::in);
+	// Exit if file not opened successfully
+	if( !file.is_open() ) {
+		std::cout << "File not read successfully" << std::endl;
+	    std::cout << "Path given: " << csv_fname << std::endl;
+	    exit(-1);
+	}
+
+	// skip head line
+	std::string line;
+	std::getline(file, line);
+
+	while( std::getline(file, line) ) {
+		std::stringstream lineStream(line);
+		std::string token;
+
+		int cnt = 0;
+		std::vector<float> t_data;
+		std::string img_f;
+		while (std::getline(lineStream, token, ',')) {
+			if( token.length() > 0 ) {
+				if( cnt == 0 ) {
+					img_f = img_dir + token;
+				} else {
+					t_data.push_back(stof(token));
+				}
+				cnt++;
+			}
+		}
+
+		auto image = cv::imread(img_f.c_str());
+		// check if image is ok
+		if(! image.empty() ) {
+			torch::Tensor target = torch::from_blob(t_data.data(), {1, static_cast<long>(t_data.size())},
+												at::TensorOptions(torch::kFloat)).clone().div_(imgSize);
+			//std::cout << "target: " << target << '\n';
+			imgpath_tgt.push_back(std::make_pair(img_f, target));
+		}
+	}
+	std::cout << "size: " << imgpath_tgt.size() << '\n';
+	return imgpath_tgt;
 }
 

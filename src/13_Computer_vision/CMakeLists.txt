@@ -48,25 +48,6 @@ target_link_libraries(13_BoundingBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requ
 set_target_properties(13_BoundingBoxes  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-#add_executable(13_TestTorchVision)
-#target_sources(13_TestTorchVision PRIVATE TestTorchVision.cpp )
-													
-#target_include_directories(13_TestTorchVision  PRIVATE 
-#${TORCHVISION_INCLUDE_DIRS}
-#${Python3_INCLUDE_DIRS}  
-#${Python3_NumPy_INCLUDE_DIRS}
-#)
-
-#target_link_libraries(13_TestTorchVision  
-#${OpenCV_LIBS} 
-#${TORCH_LIBRARIES} 
-#${TORCHVISION_LIBRARIES}
-#${requiredlibs} Python3::Python Python3::NumPy
-#)
-
-#set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
-
-#----------------------------------------------------------------------------------
 add_executable(13_MultiscaleObjectDetection)
 target_sources(13_MultiscaleObjectDetection PRIVATE 
 MultiscaleObjectDetection.cpp 
@@ -243,3 +224,81 @@ target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES}
 					   
 set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
+get_filename_component(_fullpath "/home/stree/git/Dive_into_deep_learning_with_libtorch/torchvision" REALPATH)
+if(EXISTS "${_fullpath}")
+
+	# -------------------------------------------------------------------------------------------
+	# where to find torchvision include and lib files
+	# -------------------------------------------------------------------------------------------
+	list(APPEND CMAKE_PREFIX_PATH "${_fullpath}")
+
+	set(TORCHVISION_INCLUDE_DIRS "${_fullpath}/include")
+	set(TORCHVISION_LIBRARIES "${_fullpath}/lib/libtorchvision.so")
+
+	message(STATUS "    ${CMAKE_PREFIX_PATH}")
+	message(STATUS "    libraries: ${TORCHVISION_LIBRARIES}")
+	message(STATUS "    include path: ${TORCHVISION_INCLUDE_DIRS}") 
+
+
+	#----------------------------------------------------------------------------------
+	add_executable(13_TestTorchVision)
+	target_sources(13_TestTorchVision PRIVATE TestTorchVision.cpp )
+													
+	target_include_directories(13_TestTorchVision  PRIVATE 
+		${TORCHVISION_INCLUDE_DIRS}
+		${Python3_INCLUDE_DIRS}  
+		${Python3_NumPy_INCLUDE_DIRS}
+	)
+
+	target_link_libraries(13_TestTorchVision  
+		${OpenCV_LIBS} 
+		${TORCH_LIBRARIES} 
+		${TORCHVISION_LIBRARIES}
+		${requiredlibs} Python3::Python Python3::NumPy
+	)
+
+	set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+	# -------------------------------------------------------------
+	add_executable(13_Region_based_CNNs )
+	target_sources(13_Region_based_CNNs PRIVATE RegionBasedCNNs.cpp)
+
+	target_include_directories(13_Region_based_CNNs  PRIVATE 
+		${TORCHVISION_INCLUDE_DIRS}
+		${Python3_INCLUDE_DIRS}  
+		${Python3_NumPy_INCLUDE_DIRS}
+	)
+
+	target_link_libraries(13_Region_based_CNNs  
+		${OpenCV_LIBS} 
+		${TORCH_LIBRARIES} 
+		${TORCHVISION_LIBRARIES}
+		${requiredlibs} Python3::Python Python3::NumPy
+	)
+
+	set_target_properties(13_Region_based_CNNs  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+	
+	#-------------------------------------------------------------------------------------
+	add_executable(13_SingleShotMultiboxDetection )
+	target_sources(13_SingleShotMultiboxDetection PRIVATE 
+		SingleShotMultiboxDetection.cpp
+		../utils/ch_13_util.h
+		../utils/ch_13_util.cpp	
+	)
+
+	target_include_directories(13_SingleShotMultiboxDetection  PRIVATE 
+		${TORCHVISION_INCLUDE_DIRS}
+		${Python3_INCLUDE_DIRS}  
+		${Python3_NumPy_INCLUDE_DIRS}
+	)
+
+	target_link_libraries(13_SingleShotMultiboxDetection  
+		${OpenCV_LIBS} 
+		${TORCH_LIBRARIES} 
+		${TORCHVISION_LIBRARIES}
+		${requiredlibs} Python3::Python Python3::NumPy
+	)
+
+	set_target_properties(13_SingleShotMultiboxDetection  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+
+endif()

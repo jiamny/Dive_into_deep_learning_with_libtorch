@@ -33,7 +33,7 @@ void initialize_weights(const torch::nn::Module& module) {
     }
 }
 
-struct VGGNetImpl : public torch::nn::Module {
+class VGGNetImpl : public torch::nn::Module {
  public:
     VGGNetImpl(const std::vector<Layer>& config, const std::vector<size_t>& selected, const std::vector<size_t>& style,
         bool batch_norm, const std::string& scriptmodule_file_path) {
