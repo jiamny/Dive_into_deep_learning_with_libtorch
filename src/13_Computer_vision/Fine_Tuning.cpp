@@ -1,48 +1,25 @@
-#include <torch/torch.h>
-#include <torch/autograd.h>
-#include <torch/utils.h>
-#include <iostream>
 #include <unistd.h>
 #include <iomanip>
-#include <torch/script.h> // One-stop header.
+#include <torch/utils.h>
+#include <torch/script.h>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+//#include <torchvision/vision.h>
 
 #include <iostream>
 #include <memory>
 #include <algorithm>
 #include <random>
 
+#include "resnet.h"
 #include "../utils/ch_13_util.h"
-
 #include "../utils/transforms.hpp"              // transforms_Compose
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
+
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
-
-
-struct DogNetImpl : public torch::nn::Module {
-	torch::nn::Sequential classifier{nullptr};
-	torch::jit::script::Module features;
-
-	DogNetImpl(torch::jit::script::Module& net, torch::nn::Sequential& cls) {
-		features = net;
-		classifier = cls;
-		register_module("classifier", classifier);
-	}
-
-	torch::Tensor forward(torch::Tensor x) {
-;
-		// convert tensor to IValue
-		std::vector<torch::jit::IValue> input;
-		input.push_back(x);
-		x = features.forward(input).toTensor();
-
-		return classifier->forward(x);
-	}
-};
-TORCH_MODULE(DogNet);
-
 
 int main() {
 
@@ -53,51 +30,16 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
-	torch::manual_seed(123);
+	torch::manual_seed(1000);
 
-	std::string mdlf = "./src/13_Computer_vision/resnet34_turn_off_grad.pt";
-	torch::jit::script::Module net;
+	std::vector<std::string> class_names = {"hotdog", "not-hotdog"};
+	std::vector<float> rgb_mean = {0.485, 0.456, 0.406};
+	std::vector<float> rgb_std = {0.229, 0.224, 0.225};
 
-	try {
-		// Deserialize the ScriptModule from a file using torch::jit::load().
-		net = torch::jit::load(mdlf);
-	} catch (const c10::Error& e) {
-		std::cerr << e.backtrace() << "error loading the model\n";
-		return -1;
-	}
-
-	// Freeze parameters of feature layers
-    // for(auto& param : net.named_parameters(true) )
-    //    param..requires_grad_(false);
-
-	// Define a new output network (there are 120 output categories)
-	auto output_new = torch::nn::Sequential(torch::nn::Linear(1000, 256),
-                                        torch::nn::ReLU(),
-                                        torch::nn::Linear(256, 120));
-
-
-	size_t img_size = 256;
-	size_t batch_size = 32;
-	const size_t class_num = 10;
+	size_t img_size = 224;
+	size_t batch_size = 128;
+	const size_t class_num = 2;
 	const size_t valid_batch_size = 1;
-	std::vector<std::string> class_names = {
-			"affenpinscher", "afghan_hound", "african_hunting_dog", "airedale", "american_staffordshire_terrier", "appenzeller",
-	"australian_terrier", "basenji", "basset", "beagle", "bedlington_terrier", "bernese_mountain_dog", "black-and-tan_coonhound",
-	"blenheim_spaniel", "bloodhound", "bluetick", "border_collie", "border_terrier", "borzoi", "boston_bull", "bouvier_des_flandres",
-	"boxer", "brabancon_griffon", "briard", "brittany_spaniel", "bull_mastiff", "cairn", "cardigan", "chesapeake_bay_retriever",
-	"chihuahua", "chow", "clumber", "cocker_spaniel", "collie", "dandie_dinmont", "dhole", "dingo", "doberman", "english_foxhound",
-	"english_setter", "english_springer", "entlebucher", "eskimo_dog", "flat-coated_retriever", "french_bulldog", "german_shepherd",
-	"german_short-haired_pointer", "giant_schnauzer", "golden_retriever", "gordon_setter", "great_dane", "greater_swiss_mountain_dog",
-	"great_pyrenees", "groenendael", "ibizan_hound", "irish_setter", "irish_terrier", "irish_water_spaniel", "irish_wolfhound",
-	"italian_greyhound", "japanese_spaniel", "keeshond", "kelpie", "kerry_blue_terrier", "komondor", "kuvasz", "labrador_retriever",
-	"lakeland_terrier", "leonberg", "lhasa", "malamute", "malinois", "maltese_dog", "mexican_hairless", "miniature_pinscher",
-	"miniature_poodle", "miniature_schnauzer", "newfoundland", "norfolk_terrier", "norwegian_elkhound", "norwich_terrier",
-	"old_english_sheepdog", "otterhound","papillon", "pekinese", "pembroke", "pomeranian", "pug", "redbone", "rhodesian_ridgeback",
-	"rottweiler", "saint_bernard", "saluki", "samoyed", "schipperke", "scotch_terrier", "scottish_deerhound", "sealyham_terrier",
-	"shetland_sheepdog", "shih-tzu", "siberian_husky", "silky_terrier", "soft-coated_wheaten_terrier", "staffordshire_bullterrier",
-	"standard_poodle", "standard_schnauzer", "sussex_spaniel", "tibetan_mastiff", "tibetan_terrier", "toy_poodle", "toy_terrier",
-	"vizsla", "walker_hound", "weimaraner", "welsh_springer_spaniel", "west_highland_white_terrier", "whippet",
-	"wire-haired_fox_terrier", "yorkshire_terrier"};
 
 	constexpr bool train_shuffle = true;    // whether to shuffle the training dataset
 	constexpr size_t train_workers = 2;  	// the number of workers to retrieve data from the training dataset
@@ -106,12 +48,12 @@ int main() {
 
     // Set Transforms
     std::vector<transforms_Compose> transform {
-        transforms_Resize(cv::Size(img_size, img_size), cv::INTER_LINEAR),        // {IH,IW,C} ===method{OW,OH}===> {OH,OW,C}
-        transforms_ToTensor(),                                                     // Mat Image [0,255] or [0,65535] ===> Tensor Image [0,1]
-		transforms_Normalize(std::vector<float>{0.485, 0.456, 0.406}, std::vector<float>{0.229, 0.224, 0.225})  // Pixel Value Normalization for ImageNet
+        transforms_Resize(cv::Size(img_size, img_size), cv::INTER_LINEAR),  // {IH,IW,C} ===method{OW,OH}===> {OH,OW,C}
+        transforms_ToTensor(),                                              // Mat Image [0,255] or [0,65535] ===> Tensor Image [0,1]
+		transforms_Normalize(rgb_mean, rgb_std)  							// Pixel Value Normalization for ImageNet
     };
 
-	std::string dataroot = "./data/kaggle_dog_tiny/train_valid_test/train";
+	std::string dataroot = "./data/hotdog/train";
     std::tuple<torch::Tensor, torch::Tensor, std::vector<std::string>> mini_batch;
     torch::Tensor loss, image, label, output;
     datasets::ImageFolderClassesWithPaths dataset, valid_dataset, test_dataset;      		// dataset;
@@ -119,51 +61,106 @@ int main() {
 
     // Get Dataset
     dataset = datasets::ImageFolderClassesWithPaths(dataroot, transform, class_names);
-    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, /*shuffle_=*/train_shuffle, /*num_workers_=*/train_workers);
+    std::cout << "total training images : " << dataset.size() << std::endl;
 
-	std::cout << "total training images : " << dataset.size() << std::endl;
+    std::string fname;
+    torch::Tensor img;
+    torch::Tensor cid;
+    std::tuple<torch::Tensor, torch::Tensor, std::string> itdata = std::make_tuple(img, cid, fname);
+    int hdog = 0;
+    int nhdog = 0;
 
-    std::string valid_dataroot = "./data/kaggle_dog_tiny/train_valid_test/valid";
+    plt::figure_size(1500, 680);
+    for( int64_t i = 0; i < dataset.size(); i++ ) {
+    	dataset.get(i, itdata);
+    	if( std::get<1>(itdata).data().item<long>() == 0 && hdog < 5 ) {
+    		torch::Tensor imgT = std::get<0>(itdata);
+    		imgT.to(device);
+    		imgT = deNormalizeTensor(imgT, rgb_mean, rgb_std);
+    		imgT = torch::clamp(imgT, 0, 1);
+    		std::vector<uint8_t> zz = tensorToMatrix4Matplotlib(imgT);
+    		unsigned char* zptr = &(zz[0]);
+    		plt::subplot2grid(2, 5, 0, hdog, 1, 1);
+    		plt::title("hotdog");
+    		plt::imshow(zptr, static_cast<int>(imgT.size(1)),
+    		    							static_cast<int>(imgT.size(2)), static_cast<int>(imgT.size(0)));
+    		hdog++;
+    	} else {
+        	if( std::get<1>(itdata).data().item<long>() == 1 && nhdog < 5 ) {
+        		torch::Tensor imgN = std::get<0>(itdata);
+        		imgN.to(device);
+        		imgN = deNormalizeTensor(imgN, rgb_mean, rgb_std);
+        		imgN = torch::clamp(imgN, 0, 1);
+        		std::vector<uint8_t> nzz = tensorToMatrix4Matplotlib(imgN);
+        		unsigned char* nzptr = &(nzz[0]);
+        		plt::subplot2grid(2, 5, 1, nhdog, 1, 1);
+        		plt::title("not-hotdog");
+        		plt::imshow(nzptr, static_cast<int>(imgN.size(1)),
+        		    							static_cast<int>(imgN.size(2)), static_cast<int>(imgN.size(0)));
+        		nhdog++;
+        	}
+    	}
+    }
+
+	plt::show();
+	plt::close();
+
+	std::string mdlf = "./src/13_Computer_vision/resnet18-f37072fd.pth";
+
+	ResNet18 net(1000, true);
+	//torch::load(net, mdlf, device);
+	auto X = torch::rand({1, 3, 224, 224}).to(device);
+
+	auto ot = net->forward(X);
+
+	std::cout << "ot: " << ot.sizes() << "\n";
+	std::cout << (*(net->named_modules()["fc"])) << '\n';
+	//torch::nn::Linear fc = (*(net->named_modules()["fc"]));
+	//fc->parameters();
+
+	auto dict = net->named_parameters();
+	for (auto n = dict.begin(); n != dict.end(); n++) {
+		std::cout << (*n).key() << "\n"; // << (*n).value() << std::endl;
+	}
+
+    std::string valid_dataroot = "./data/hotdog/test";
+
     valid_dataset = datasets::ImageFolderClassesWithPaths(valid_dataroot, transform, class_names);
-    valid_dataloader = DataLoader::ImageFolderClassesWithPaths(valid_dataset, valid_batch_size, /*shuffle_=*/valid_shuffle, /*num_workers_=*/valid_workers);
-
     std::cout << "total validation images : " << valid_dataset.size() << std::endl;
 
-    bool valid = true;
-    bool test  = true;
-    bool vobose = false;
-    float lr = 1e-4, wd = 1e-4;
+    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, train_shuffle, train_workers);
+    valid_dataloader = DataLoader::ImageFolderClassesWithPaths(valid_dataset, valid_batch_size, valid_shuffle, valid_workers);
 
-    DogNet model(net, output_new);
+    bool param_group = false;
+    float lr = 5e-4;
 
-    //auto X = torch::rand({1, 3, 256, 256}).to(device);
-    //auto out = model->forward(X);
-    //std::cout << out << '\n';
+    torch::optim::SGD optimizer(net->parameters(), torch::optim::SGDOptions(lr).weight_decay(0.001));
 
     const unsigned step_size = 2;
     const double gamma = 0.9;
 
-    torch::optim::SGD optimizer(model->parameters(), torch::optim::SGDOptions(lr).momentum(0.9).weight_decay(wd));
     auto scheduler = torch::optim::StepLR(optimizer, step_size, gamma);
 
     auto criterion = torch::nn::NLLLoss(torch::nn::NLLLossOptions().ignore_index(-100).reduction(torch::kMean));
-    //auto criterion = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
-
-    model->to(device);
 
     size_t epoch;
     size_t total_iter = dataloader.get_count_max();
     size_t start_epoch, total_epoch;
     start_epoch = 1;
     total_iter = dataloader.get_count_max();
-    total_epoch = 50;
+    total_epoch = 20;
     bool first = true;
+    bool valid = true;
+    //bool test  = true;
+    bool vobose = false;
     std::vector<float> train_loss_ave;
     std::vector<float> train_epochs;
     std::vector<float> valid_loss_ave;
 
+    net->to(device);
+
     for (epoch = start_epoch; epoch <= total_epoch; epoch++) {
-       	model->train();
+       	net->train();
        	std::cout << "--------------- Training --------------------\n";
        	first = true;
        	float loss_sum = 0.0;
@@ -184,7 +181,7 @@ int main() {
 
        		image = std::get<0>(mini_batch).to(device);
        		label = std::get<1>(mini_batch).to(device);
-       		output = model->forward(image);
+       		output = net->forward(image);
 
        		auto out = torch::nn::functional::log_softmax(output, 1);
        		//std::cout << output.sizes() << "\n" << out.sizes() << std::endl;
@@ -209,7 +206,7 @@ int main() {
        		std::cout << "--------------- validation --------------------\n";
        		torch::NoGradGuard nograd;
 
-       		model->eval();
+       		net->eval();
        		size_t iteration = 0;
        		float total_loss = 0.0;
        		total_match = 0;
@@ -230,7 +227,7 @@ int main() {
        			}
 
        			// evaluate_loss
-       			output = model->forward(image);
+       			output = net->forward(image);
        			auto out = torch::nn::functional::log_softmax(output, 1);
        			loss = criterion(out, label);
 
@@ -258,4 +255,6 @@ int main() {
 
 	std::cout << "Done!\n";
 }
+
+
 

@@ -86,6 +86,30 @@ ${requiredlibs} Python3::Python Python3::NumPy)
 set_target_properties(13_ObjectDetectionDataset  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
 
 # -------------------------------------------------------------
+add_executable(13_Fine_Tuning)
+target_sources(13_Fine_Tuning PRIVATE 
+Fine_Tuning.cpp
+resnet.h
+resnet.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_13_util.h
+../utils/ch_13_util.cpp		
+../utils/dataloader.hpp
+../utils/dataloader.cpp
+../utils/datasets.hpp
+../utils/datasets.cpp
+../utils/transforms.hpp
+../utils/transforms.cpp
+)
+
+target_include_directories(13_Fine_Tuning PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
+target_link_libraries( 13_Fine_Tuning ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
+					   ${requiredlibs} Python3::Python Python3::NumPy)
+					   
+set_target_properties( 13_Fine_Tuning PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+
+# -------------------------------------------------------------
 add_executable(13_FullyConvolutionalNetworks)
 target_sources(13_FullyConvolutionalNetworks PRIVATE 
 FullyConvolutionalNetworks.cpp
