@@ -20,11 +20,6 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
-
 	torch::manual_seed(1000);
 
 	const std::string data_dir = "./data/banana-detection";
@@ -40,8 +35,8 @@ int main() {
 			          	  	  	  	  	  	  	  	  	  	  std::move(train_set), batch_size);
 
 	auto batch = *train_loader->begin();
-	auto data  = batch.data.to(device);
-	auto y     = batch.target.to(device);
+	auto data  = batch.data;
+	auto y     = batch.target;
 	std::cout << "data: " << data.sizes() << std::endl;
 	std::cout << "y: " << y.sizes() << std::endl;
 

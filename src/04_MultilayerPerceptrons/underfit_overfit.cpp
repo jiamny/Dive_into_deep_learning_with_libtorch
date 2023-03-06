@@ -9,8 +9,8 @@
 
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -19,7 +19,7 @@ using torch::indexing::Ellipsis;
 
 void train_ana_test(torch::Tensor train_features, torch::Tensor train_labels,
 		torch::Tensor test_features, torch::Tensor test_labels,
-		std::vector<float> &train_loss, std::vector<float> &test_loss, std::vector<float> &xx) {
+		std::vector<double> &train_loss, std::vector<double> &test_loss, std::vector<double> &xx) {
 
 	int64_t num_epochs=400;
 	auto loss = torch::nn::MSELoss();
@@ -108,11 +108,6 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
-
 	// Underfitting or Overfitting
 	/*
 	 * Generating the Dataset
@@ -158,9 +153,9 @@ int main() {
 
 	// -------------------------------------------------------------------------
 	// Training and Testing the Model
-	std::vector<float> train_loss1;
-	std::vector<float> test_loss1;
-	std::vector<float> xx1;
+	std::vector<double> train_loss1;
+	std::vector<double> test_loss1;
+	std::vector<double> xx1;
 
 	auto train_features =  poly_features.index({Slice(None, n_train), Slice(None, 4)});
 	auto train_labels = labels.index({Slice(None, n_train)});
@@ -171,9 +166,9 @@ int main() {
 	train_ana_test(train_features, train_labels, test_features, test_labels, train_loss1, test_loss1, xx1);
 
 	// Linear Function Fitting (Underfitting)
-	std::vector<float> train_loss2;
-	std::vector<float> test_loss2;
-	std::vector<float> xx2;
+	std::vector<double> train_loss2;
+	std::vector<double> test_loss2;
+	std::vector<double> xx2;
 
 	train_features =  poly_features.index({Slice(None, n_train), Slice(None, 2)});
 	train_labels = labels.index({Slice(None, n_train)});
@@ -184,9 +179,9 @@ int main() {
 	train_ana_test(train_features, train_labels, test_features, test_labels, train_loss2, test_loss2, xx2);
 
 	// Higher-Order Polynomial Function Fitting (Overfitting)
-	std::vector<float> train_loss3;
-	std::vector<float> test_loss3;
-	std::vector<float> xx3;
+	std::vector<double> train_loss3;
+	std::vector<double> test_loss3;
+	std::vector<double> xx3;
 
 	train_features =  poly_features.index({Slice(None, n_train), Slice()});
 	train_labels = labels.index({Slice(None, n_train)});
@@ -196,35 +191,43 @@ int main() {
 
 	train_ana_test(train_features, train_labels, test_features, test_labels, train_loss3, test_loss3, xx3);
 
-	plt::figure_size(1500, 500);
-//	plt::subplot(1, 3, 1);
-	plt::subplot2grid(1, 3, 0, 0, 1, 1);
-	plt::named_plot("Train loss", xx1, train_loss1, "b");
-	plt::named_plot("Test loss", xx1, test_loss1, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::title("Third-Order Polynomial Fitting");
-	plt::legend();
+	auto F = figure(true);
+	F->size(500, 1500);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(3, 1);
+	F->position(0, 0);
 
-//	plt::subplot(1, 3, 2);
-	plt::subplot2grid(1, 3, 0, 1, 1, 1);
-	plt::named_plot("Train loss", xx2, train_loss2, "b");
-	plt::named_plot("Test loss", xx2, test_loss2, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::title("Linear Function Fitting (Underfitting)");
-	plt::legend();
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xx1, train_loss1, "b")->line_width(2);
+	matplot::plot(ax1, xx1, test_loss1, "c:")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+	matplot::title(ax1, "Third-Order Polynomial Fitting");
+	matplot::legend(ax1, {"Train loss", "Test loss"});
 
-//	plt::subplot(1, 3, 3);
-	plt::subplot2grid(1, 3, 0, 2, 1, 1);
-	plt::named_plot("Train loss", xx3, train_loss3, "b");
-	plt::named_plot("Test loss", xx3, test_loss3, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::title("Higher-Order Fitting (Overfitting)");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto ax2 = F->nexttile();
+	matplot::hold(ax2, true);
+	matplot::plot(ax2, xx2, train_loss2, "b")->line_width(2);
+	matplot::plot(ax2, xx2, test_loss2, "c:")->line_width(2);
+	matplot::hold(ax2, false);
+	matplot::xlabel(ax2, "epoch");
+	matplot::ylabel(ax2, "loss");
+	matplot::title(ax2, "Linear Function Fitting (Underfitting)");
+	matplot::legend(ax2, {"Train loss", "Test loss"});
+
+	auto ax3 = F->nexttile();
+	matplot::hold(ax3, true);
+	matplot::plot(ax3, xx3, train_loss3, "b")->line_width(2);
+	matplot::plot(ax3, xx3, test_loss3, "c:")->line_width(2);
+	matplot::hold(ax3, false);
+	matplot::xlabel(ax3, "epoch");
+	matplot::ylabel(ax3, "loss");
+	matplot::title(ax3, "Higher-Order Fitting (Overfitting)");
+	matplot::legend(ax3, {"Train loss", "Test loss"});
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

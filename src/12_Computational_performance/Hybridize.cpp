@@ -7,8 +7,6 @@
 #include <iomanip>
 #include <chrono>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
 
 using namespace std::chrono;
 

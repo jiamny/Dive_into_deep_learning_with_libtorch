@@ -1,11 +1,6 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-find_package(Python3 COMPONENTS Development NumPy)
 
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -33,19 +28,21 @@ target_sources(Utils_img_loder_demo PRIVATE img_loder_demo.cpp
 						transforms.cpp
 						)
 													
-target_include_directories(Utils_img_loder_demo PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(Utils_img_loder_demo ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(Utils_img_loder_demo PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(Utils_img_loder_demo ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(Utils_img_loder_demo PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 # ------------------------------------------------------------------------
-add_executable(Utils_matplotlib_subplot)
+add_executable(Utils_matplot_plot)
 
-target_sources(Utils_matplotlib_subplot PRIVATE Matplotlib_subplot.cpp)
+target_sources(Utils_matplot_plot PRIVATE Matplot_plot.cpp)
 													
-target_include_directories(Utils_matplotlib_subplot PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(Utils_matplotlib_subplot ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
+target_link_libraries(Utils_matplot_plot ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(Utils_matplot_plot PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-set_target_properties(Utils_matplotlib_subplot PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+# ------------------------------------------------------------------------
+add_executable(Utils_matplot_exp)
 
-
+target_sources(Utils_matplot_exp PRIVATE matplot_exp.cpp)
+													
+target_link_libraries(Utils_matplot_exp ${requiredlibs} matplot)
+set_target_properties(Utils_matplot_exp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)

@@ -12,9 +12,8 @@
 #include <random>
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 torch::Tensor update_D(torch::Tensor X, torch::Tensor Z, torch::nn::Sequential& net_D, torch::nn::Sequential& net_G,
 									torch::nn::BCEWithLogitsLoss& loss, torch::optim::Adam& trainer_D) {
@@ -71,16 +70,22 @@ int main() {
 	auto b = torch::tensor({1.0, 2.0});
 	auto data = torch::matmul(X, A) + b;
 
-	std::vector<float> x, y;
+	std::vector<double> x, y;
 	for( int64_t i = 0; i < 100; i++) {
-		x.push_back(data[i][0].item<float>());
-		y.push_back(data[i][1].item<float>());
+		x.push_back(data[i][0].item<float>()*1.0);
+		y.push_back(data[i][1].item<float>()*1.0);
 	}
 
-	plt::figure_size(450, 400);
-	plt::scatter(x, y, 10.0);
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::scatter(x, y);
+	matplot::show();
 
 	std::cout << "The covariance matrix is\n" << torch::matmul(A.t(), A) << '\n';
 
@@ -169,26 +174,40 @@ int main() {
 	auto fkdata = torch::cat(fake_X, 0);
 	std::cout << "fkdata\n" << fkdata.sizes() << '\n';
 
-	std::vector<float> px, py;
+	std::vector<double> px, py;
 	for( int64_t i = 0; i < 100; i++) {
-		px.push_back(fkdata[i][0].item<float>());
-		py.push_back(fkdata[i][1].item<float>());
+		px.push_back(fkdata[i][0].item<float>()*1.0);
+		py.push_back(fkdata[i][1].item<float>()*1.0);
 	}
 
-	plt::figure_size(450, 800);
-	plt::subplot2grid(2, 1, 0, 0, 1, 1);
-	plt::named_plot("discriminator", ept, d_loss, "b-");
-	plt::named_plot("generated", ept, g_loss, "m-.");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
 
-	plt::subplot2grid(2, 1, 1, 0, 1, 1);
-	plt::scatter(x, y, 10.0, {{"color", "blue"}, {"label", "real"}});
-	plt::scatter(px, py, 10.0, {{"color", "orange"}, {"label", "generated"}});
-	plt::legend();
-	plt::show();
-	plt::close();
+	matplot::subplot(2, 1, 0);
+	matplot::legend();
+	matplot::hold(true);
+	matplot::plot(ept, d_loss, "b-")->line_width(2)
+					.display_name("discriminator");
+	matplot::plot(ept, g_loss, "m-.")->line_width(2)
+					.display_name("generated");
+	matplot::hold(false);
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+	f->draw();
+
+	matplot::subplot(2, 1, 1);
+	matplot::legend();
+	matplot::hold(true);
+	matplot::scatter(x, y)->marker_color({0.f, .5f, .5f})
+					.display_name("real");
+	matplot::scatter(px, py)->marker_color({0.5f, .0f, .5f})
+					.display_name("generated");
+	matplot::hold(false);
+	f->draw();
+	matplot::show();
 
 	std::cout << "Done!\n";
 }

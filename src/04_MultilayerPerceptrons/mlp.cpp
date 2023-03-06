@@ -8,13 +8,13 @@
 
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
-	auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
+	auto options = torch::TensorOptions().dtype(torch::kDouble).device(torch::kCPU);
 
 	// Activation Functions
 	/*
@@ -28,32 +28,26 @@ int main() {
 
 	auto x = torch::arange(-8.0, 8.0, 1.0, torch::requires_grad(true)).to(options);
 	auto y = torch::relu(x);
+	x.retain_grad();
 
 	y.backward(torch::ones_like(x), true);
 
 	auto relu_grad = x.grad();
-	std::cout << "torch::ones_like(x):" << relu_grad.data() << std::endl;
+	std::cout << "torch::ones_like(x):\n" << relu_grad.data() << std::endl;
 
-	plt::figure_size(800, 1200);
-	//plt::subplot(3,2, true); // true - constrained_layout adjusts subplots and decorations automatically to fit them in the figure as best as possible.
-/*
-	plt::subplots_adjust(0.125, // left
-            0.1,    // bottom=
-            0.9, 	// right=
-            0.9,    // top=
-           0.2, 	//  wspace=
-            0.35);  // hspace=
-*/
-	plt::tight_layout();
-//	plt::subplot(3, 2, 1);
-	plt::subplot2grid(3, 2, 0, 0, 1, 1);
+	auto F = figure(true);
+	F->size(1000, 1500);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(3, 2);
+	F->position(0, 0);
 
-	std::vector<float> xx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
-	std::vector<float> yy(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
-	plt::plot(xx, yy, "b");
-//	plt::xlabel("x");
-	plt::ylabel("relu(x)");
-	plt::title("ReLU");
+	auto ax1 = F->nexttile();
+	std::vector<double> xx(x.data_ptr<double>(), x.data_ptr<double>() + x.numel());
+	std::vector<double> yy(y.data_ptr<double>(), y.data_ptr<double>() + y.numel());
+	matplot::plot(ax1, xx, yy, "b")->line_width(2);
+	matplot::ylabel(ax1, "relu(x)");
+	matplot::title(ax1, "ReLU");
 
 	/*
 	 * When the input is negative, the derivative of the ReLU function is 0, and when the input is positive, the derivative of the ReLU function is 1.
@@ -63,39 +57,37 @@ int main() {
 	 * apply here. We plot the derivative of the ReLU function plotted below.
 	 */
 
-	std::vector<float> gyy(relu_grad.data().data_ptr<float>(), relu_grad.data().data_ptr<float>() + relu_grad.data().numel());
+	std::vector<double> gyy(relu_grad.data().data_ptr<double>(),
+						relu_grad.data().data_ptr<double>() + relu_grad.data().numel());
 
-//	plt::subplot(3, 2, 2);
-	plt::subplot2grid(3, 2, 0, 1, 1, 1);
-	plt::plot(xx, gyy, "g--");
-//	plt::xlabel("x");
-	plt::ylabel("grad of relu");
-	plt::title("ReLU grad");
+	auto ax2 = F->nexttile();
+	matplot::plot(ax2, xx, gyy, "g--")->line_width(2);
+	matplot::ylabel(ax2, "grad of relu");
+	matplot::title(ax2, "ReLU grad");
 
 	// Sigmoid Function
 	/*
 	 * Below, we plot the sigmoid function. Note that when the input is close to 0, the sigmoid function approaches a linear transformation.
 	 */
 	y = torch::sigmoid(x);
-	std::vector<float> sx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
-	std::vector<float> sy(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
-//	plt::subplot(3, 2, 3);
-	plt::subplot2grid(3, 2, 1, 0, 1, 1);
-	plt::plot(sx, sy, "b");
-//	plt::xlabel("x");
-	plt::ylabel("sigmoid(x)");
-	plt::title("Sigmoid");
+	std::vector<double> sx(x.data_ptr<double>(), x.data_ptr<double>() + x.numel());
+	std::vector<float> sy(y.data_ptr<double>(), y.data_ptr<double>() + y.numel());
+
+	auto ax3 = F->nexttile();
+	matplot::plot(ax3, sx, sy, "b")->line_width(2);
+	matplot::ylabel(ax3, "sigmoid(x)");
+	matplot::title(ax3, "Sigmoid");
 
 	//Clear out previous gradients
 	x.grad().data().zero_();
 	y.backward(torch::ones_like(x), true);
-	std::vector<float> gy(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());
-//	plt::subplot(3, 2, 4);
-	plt::subplot2grid(3, 2, 1, 1, 1, 1);
-	plt::plot(sx, gy, "g--");
-//	plt::xlabel("x");
-	plt::ylabel("grad of sigmoid");
-	plt::title("Sigmoid grad");
+	std::vector<double> gy(x.grad().data().data_ptr<double>(),
+						x.grad().data().data_ptr<double>() + x.grad().data().numel());
+
+	auto ax4 = F->nexttile();
+	matplot::plot(ax4, sx, gy, "g--")->line_width(2);
+	matplot::ylabel(ax4, "grad of sigmoid");
+	matplot::title(ax4, "Sigmoid grad");
 
 	// Tanh Function
 	/*
@@ -103,26 +95,30 @@ int main() {
 	 * elements on the interval (between -1 and 1):
 	 */
 	y = torch::tanh(x);
-	std::vector<float> tx(x.detach().data_ptr<float>(), x.detach().data_ptr<float>() + x.detach().numel());
-	std::vector<float> ty(y.detach().data_ptr<float>(), y.detach().data_ptr<float>() + y.detach().numel());
-//	plt::subplot(3, 2, 5);
-	plt::subplot2grid(3, 2, 2, 0, 1, 1);
-	plt::plot(tx, ty, "b");
-	plt::xlabel("x");
-	plt::ylabel("tanh(x)");
-	plt::title("Tanh");
+	std::vector<double> tx(x.detach().data_ptr<double>(),
+						x.detach().data_ptr<double>() + x.detach().numel());
+	std::vector<double> ty(y.detach().data_ptr<double>(),
+						y.detach().data_ptr<double>() + y.detach().numel());
+
+	auto ax5 = F->nexttile();
+	matplot::plot(ax5, tx, ty, "b")->line_width(2);
+	matplot::xlabel(ax5, "x");
+	matplot::ylabel(ax5, "tanh(x)");
+	matplot::title(ax5, "Tanh");
 
 	//# Clear out previous gradients.
 	x.grad().data().zero_();
 	y.backward(torch::ones_like(x), true);
-	std::vector<float> tgy(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());
-//	plt::subplot(3, 2, 6);
-	plt::subplot2grid(3, 2, 2, 1, 1, 1);
-	plt::plot(tx, tgy, "g--");
-	plt::xlabel("x");
-	plt::ylabel("grad of tanh");
-	plt::title("Tanh grad");
-	plt::show();
+	std::vector<double> tgy(x.grad().data().data_ptr<double>(),
+						x.grad().data().data_ptr<double>() + x.grad().data().numel());
+
+	auto ax6 = F->nexttile();
+	matplot::plot(ax6, tx, tgy, "g--")->line_width(2);
+	matplot::xlabel(ax6, "x");
+	matplot::ylabel(ax6, "grad of tanh");
+	matplot::title(ax6, "Tanh grad");
+
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

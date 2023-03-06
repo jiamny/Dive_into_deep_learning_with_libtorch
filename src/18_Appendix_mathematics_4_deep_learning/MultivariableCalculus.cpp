@@ -5,8 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 torch::Tensor f(torch::Tensor x, torch::Tensor y) {
     return torch::log(torch::exp(x) + torch::exp(y));
@@ -49,18 +49,24 @@ int main() {
 	// -------------------------------------------------
 	// f(x)=3x^4−4x^3−12x^2. => has derivative: 12x(x−2)(x+1).
 
-	auto xf = torch::arange(-2, 3, 0.01);
-	auto yf = (3 * torch::pow(xf, 4)) - (4 * torch::pow(xf, 3)) - (12 * torch::pow(xf, 2));
+	auto xf = torch::arange(-2, 3, 0.01).to(torch::kDouble);
+	auto yf = (3 * torch::pow(xf, 4)) - (4 * torch::pow(xf, 3)) - (12 * torch::pow(xf, 2)).to(torch::kDouble);
 
-	std::vector<float> xx(xf.data_ptr<float>(), xf.data_ptr<float>() + xf.numel());
-	std::vector<float> yy(yf.data_ptr<float>(), yf.data_ptr<float>() + yf.numel());
+	std::vector<double> xx(xf.data_ptr<double>(), xf.data_ptr<double>() + xf.numel());
+	std::vector<double> yy(yf.data_ptr<double>(), yf.data_ptr<double>() + yf.numel());
 
-	plt::figure_size(500, 400);
-	plt::plot(xx, yy, "b-");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, xx, yy, "b-")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::show();
 
 	// -----------------------------------------------
 	// Multivariate Chain Rule
@@ -149,11 +155,11 @@ int main() {
 	// --------------------------------------------
 	// Construct grid and compute function
 
-	std::vector<std::vector<float>> x_, y_, z_;
+	std::vector<std::vector<double>> x_, y_, z_;
 
-	for( float i = -2.0; i < 2.0; i += 0.2 ) {
-		std::vector<float> x_row, y_row, z_row;
-		for( float j = -2.0; j < 2.0; j += 0.2 ) {
+	for( double i = -2.0; i < 2.0; i += 0.2 ) {
+		std::vector<double> x_row, y_row, z_row;
+		for( double j = -2.0; j < 2.0; j += 0.2 ) {
 		            x_row.push_back(i);
 		            y_row.push_back(j);
 		        	//z = x*torch.exp(- x**2 - y**2)
@@ -161,7 +167,7 @@ int main() {
 		}
 		// Compute approximating quadratic with gradient and Hessian at (1, 0)
 		// w = torch.exp(torch.tensor([-1.]))*(-1 - (x + 1) + 2 * (x + 1)**2 + 2 * y**2)
-		for( float j = -2.0; j < 2.0; j += 0.2 ) {
+		for( double j = -2.0; j < 2.0; j += 0.2 ) {
 			x_row.push_back(i);
 			y_row.push_back(j);
 			z_row.push_back(std::exp( -1 )* (-1 - (i + 1) + 2 * std::pow((i + 1), 2) + 2 * std::pow(j, 2)));
@@ -172,14 +178,21 @@ int main() {
 	}
 
 	// Plot function
-	plt::plot_surface(x_, y_, z_);
-	plt::xlabel("x");
-	plt::ylabel("y");
-	plt::set_zlabel("z");
-	plt::xlim(-2, 2);
-	plt::ylim(-2, 2);
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::xlim(ax1, {-2, 2});
+	matplot::ylim(ax1, {-2, 2});
+	matplot::surf(ax1, x_, y_, z_);
+	matplot::xlabel(ax1, "x");
+	matplot::ylabel(ax1, "y");
+	matplot::zlabel(ax1, "z");
+	matplot::show();
 
 	std::cout << "Done!\n";
 }

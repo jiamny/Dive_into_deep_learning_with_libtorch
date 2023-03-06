@@ -25,9 +25,9 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -47,39 +47,50 @@ int main() {
 
 	auto pos_encoding = PositionalEncoding(encoding_dim, 0);
 	pos_encoding->eval();
-	X = pos_encoding->forward(torch::zeros({1, num_steps, encoding_dim}).to(device));
+
+	X = pos_encoding->forward(torch::zeros({1, num_steps, encoding_dim}));
 
 	auto P = pos_encoding->P.index({Slice(), Slice(0, X.size(1)), Slice()});
 	std::cout << "P: " << P.sizes() << "\n";
 
-	auto xL = torch::arange(num_steps).to(torch::kFloat); //torch::arange(num_steps).to(torch::kFloat);
-	std::vector<float> xx(xL.data_ptr<float>(), xL.data_ptr<float>() + xL.numel());
-	auto yP = P.index({0, Slice(), Slice(6,10)}).clone();
+	auto xL = torch::arange(num_steps).to(torch::kDouble); //torch::arange(num_steps).to(torch::kFloat);
+	std::vector<double> xx(xL.data_ptr<double>(), xL.data_ptr<double>() + xL.numel());
 
+	auto yP = P.index({0, Slice(), Slice(6,10)}).clone().to(torch::kDouble);
 	std::cout << "yP: " << yP.sizes() << "\n";
 
 	auto yL = yP.index({Slice(), 0}).clone();
-	std::vector<float> col6(yL.data_ptr<float>(), yL.data_ptr<float>() + yL.numel());
+	std::vector<double> col6(yL.data_ptr<double>(), yL.data_ptr<double>() + yL.numel());
+
 	yL = yP.index({Slice(), 1}).clone();
-	std::vector<float> col7(yL.data_ptr<float>(), yL.data_ptr<float>() + yL.numel());
+	std::vector<double> col7(yL.data_ptr<double>(), yL.data_ptr<double>() + yL.numel());
+
 	yL = yP.index({Slice(), 2}).clone();
-	std::vector<float> col8(yL.data_ptr<float>(), yL.data_ptr<float>() + yL.numel());
+	std::vector<double> col8(yL.data_ptr<double>(), yL.data_ptr<double>() + yL.numel());
+
 	yL = yP.index({Slice(), 3}).clone();
-	std::vector<float> col9(yL.data_ptr<float>(), yL.data_ptr<float>() + yL.numel());
+	std::vector<double> col9(yL.data_ptr<double>(), yL.data_ptr<double>() + yL.numel());
 
 	std::for_each(std::begin(col7), std::end(col7), [](const auto & element) { std::cout << element << " "; });
 	std::cout << std::endl;
 
-	plt::figure_size(800, 600);
-	plt::named_plot("Col 6", xx, col6, "b");
-	plt::named_plot("Col 7", xx, col7, "g--");
-	plt::named_plot("Col 8", xx, col8, "r-.");
-	plt::named_plot("Col 9", xx, col9, "c:");
-	plt::xlabel("Row (position)");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1,  xx, col6, "b")->line_width(2);
+	matplot::plot(ax1, xx, col7, "g--")->line_width(2);
+	matplot::plot(ax1, xx, col8, "r-.")->line_width(2);
+	matplot::plot(ax1, xx, col9, "c:")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "Row (position)");
+    matplot::legend(ax1, {"Col 6", "Col 7", "Col 8", "Col 9"});
+    matplot::show();
 
 	// Absolute Positional Information
 	for( int64_t i = 0; i < 8; i++) {
@@ -91,27 +102,8 @@ int main() {
 	std::cout << tsr.sizes() << "\n";
 	std::string xlab = "Column (encoding dimension)";
 	std::string ylab = "Row (position)";
-	int nrows = tsr.size(0), ncols = tsr.size(1);
 
-	std::vector<float> z(ncols * nrows);
-	for( int j=0; j<nrows; ++j ) {
-	    for( int i=0; i<ncols; ++i ) {
-	       z.at(ncols * j + i) = (tsr.index({j, i})).item<float>();
-	     }
-	}
-
-	const float* zptr = &(z[0]);
-	const int colors = 1;
-	PyObject* mat;
-
-	plt::title("heatmap");
-	plt::imshow(zptr, nrows, ncols, colors, {}, &mat);
-	plt::xlabel(xlab);
-	plt::ylabel(ylab);
-	plt::colorbar(mat);
-	plt::show();
-    plt::close();
-    Py_DECREF(mat);
+	plot_heatmap(tsr, xlab, ylab);
 
 	std::cout << "Done!\n";
 	return 0;

@@ -18,17 +18,18 @@
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -70,7 +71,12 @@ int main() {
     int hdog = 0;
     int nhdog = 0;
 
-    plt::figure_size(1500, 680);
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2.5);
+	f->x_position(0);
+	f->y_position(0);
+
     for( int64_t i = 0; i < dataset.size(); i++ ) {
     	dataset.get(i, itdata);
     	if( std::get<1>(itdata).data().item<long>() == 0 && hdog < 5 ) {
@@ -78,12 +84,10 @@ int main() {
     		imgT.to(device);
     		imgT = deNormalizeTensor(imgT, rgb_mean, rgb_std);
     		imgT = torch::clamp(imgT, 0, 1);
-    		std::vector<uint8_t> zz = tensorToMatrix4Matplotlib(imgT);
-    		unsigned char* zptr = &(zz[0]);
-    		plt::subplot2grid(2, 5, 0, hdog, 1, 1);
-    		plt::title("hotdog");
-    		plt::imshow(zptr, static_cast<int>(imgT.size(1)),
-    		    							static_cast<int>(imgT.size(2)), static_cast<int>(imgT.size(0)));
+
+    		matplot::subplot(2, 5, hdog);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgT.clone());
+			matplot::imshow(z);
     		hdog++;
     	} else {
         	if( std::get<1>(itdata).data().item<long>() == 1 && nhdog < 5 ) {
@@ -91,19 +95,16 @@ int main() {
         		imgN.to(device);
         		imgN = deNormalizeTensor(imgN, rgb_mean, rgb_std);
         		imgN = torch::clamp(imgN, 0, 1);
-        		std::vector<uint8_t> nzz = tensorToMatrix4Matplotlib(imgN);
-        		unsigned char* nzptr = &(nzz[0]);
-        		plt::subplot2grid(2, 5, 1, nhdog, 1, 1);
-        		plt::title("not-hotdog");
-        		plt::imshow(nzptr, static_cast<int>(imgN.size(1)),
-        		    							static_cast<int>(imgN.size(2)), static_cast<int>(imgN.size(0)));
+
+        		matplot::subplot(2, 5, 5 + nhdog);
+    			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgN.clone());
+    			matplot::imshow(z);
         		nhdog++;
         	}
     	}
     }
 
-	plt::show();
-	plt::close();
+	matplot::show();
 
 	std::string mdlf = "./src/13_Computer_vision/resnet18-f37072fd.pth";
 
@@ -245,13 +246,23 @@ int main() {
        	}
     }
 
-   	plt::figure_size(600, 500);
-   	plt::named_plot("Train loss", train_epochs, train_loss_ave, "b");
-   	plt::named_plot("Valid loss", train_epochs, valid_loss_ave, "m-.");
-   	plt::xlabel("epoch");
-   	plt::legend();
-   	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, train_epochs, train_loss_ave, "b")->line_width(2)
+					.display_name("Train loss");
+	matplot::plot(ax1, train_epochs, valid_loss_ave, "m-.")->line_width(2)
+						.display_name("Valid loss");
+	matplot::hold(ax1, false);
+   	matplot::xlabel("epoch");
+   	matplot::show();
 
 	std::cout << "Done!\n";
 }

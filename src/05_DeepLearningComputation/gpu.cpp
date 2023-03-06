@@ -53,8 +53,13 @@ int main() {
 	std::cout << X << std::endl;
 
 	// Assuming that you have at least two GPUs, the following code will (create a random tensor on the second GPU.)
-	auto Y = torch::ones({2, 3}, torch::TensorOptions().device(try_gpu(1)));
+	torch::Tensor Y;
+	if( torch::cuda::device_count() >  1 )
+		Y = torch::ones({2, 3}, torch::TensorOptions().device(try_gpu(1)));
+	else
+		Y = torch::ones({2, 3}, torch::TensorOptions().device(try_gpu(0)));
 	std::cout << Y << std::endl;
+
 
 	// Copying
 	auto Z = X.cuda();

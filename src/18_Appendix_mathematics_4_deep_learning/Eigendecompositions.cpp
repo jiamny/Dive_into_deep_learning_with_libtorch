@@ -5,8 +5,8 @@
 #include <torch/script.h>
 #include <torch/autograd.h>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -68,13 +68,19 @@ int main() {
     	x.push_back(i*1.0);
     }
 
-	plt::figure_size(400, 300);
-	plt::plot(x, norm_list);
-	plt::title("Calculate the sequence of norms");
-	plt::xlabel("Iteration");
-	plt::ylabel("Value");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, x, norm_list, "b")->line_width(2);
+    matplot::xlabel(ax1, "Iteration");
+    matplot::ylabel(ax1, "Value");
+    matplot::title("Calculate the sequence of norms");
+    matplot::show();
 
 	// The norm is growing uncontrollably! Indeed if we take the list of quotients, we will see a pattern.
 	// Compute the scaling factor of the norms
@@ -88,13 +94,19 @@ int main() {
 	//    cum += norm_list[i];
 	}
 
-	plt::figure_size(400, 300);
-	plt::plot(x, norm_ratio_list);
-	plt::title("Compute the scaling factor of the norms");
-	plt::xlabel("Iteration");
-	plt::ylabel("Ratio");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, x, norm_ratio_list, "b")->line_width(2);
+    matplot::xlabel(ax1, "Iteration");
+    matplot::ylabel(ax1, "Ratio");
+    matplot::title("Compute the scaling factor of the norms");
+    matplot::show();
 
 	// ----------------------------------------
 	// Relating Back to Eigenvectors
@@ -130,13 +142,19 @@ int main() {
 	    x.push_back(i*1.0);
 	}
 
-	plt::figure_size(400, 300);
-	plt::plot(x, norm_list);
-	plt::title("Fixing the Normalization");
-	plt::xlabel("Iteration");
-	plt::ylabel("Value");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, x, norm_list, "b")->line_width(2);
+    matplot::xlabel(ax1, "Iteration");
+    matplot::ylabel(ax1, "Value");
+    matplot::title("Fixing the Normalization");
+    matplot::show();
 
 	norm_ratio_list.clear();
 	x.clear();
@@ -147,13 +165,19 @@ int main() {
 		x.push_back(i*1.0);
 	}
 
-	plt::figure_size(400, 300);
-	plt::plot(x, norm_ratio_list);
-	plt::title("The ratio between consecutive norms");
-	plt::xlabel("Iteration");
-	plt::ylabel("Ratio");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, x, norm_ratio_list, "b")->line_width(2);
+    matplot::xlabel(ax1, "Iteration");
+    matplot::ylabel(ax1, "Ratio");
+    matplot::title("The ratio between consecutive norms");
+    matplot::show();
 
 	std::cout << "Done!\n";
 }

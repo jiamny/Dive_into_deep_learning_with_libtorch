@@ -8,24 +8,26 @@
 
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 		std::pair<torch::Tensor, torch::Tensor> test_data,
 		int64_t num_inputs,
 		int64_t batch_size,
-		float lambd,
+		double lambd,
 		std::vector<double>& train_loss,
 		std::vector<double>& test_loss,
 		std::vector<double>& xx,
-		bool scratch) {
+		bool scratch, torch::Device device) {
 	// -----------------------------------------------------------------------------------------
 	// init_params
 	// -----------------------------------------------------------------------------------------
-	torch::Tensor w = torch::empty({num_inputs, 1}, torch::TensorOptions().requires_grad(true));
+	torch::Tensor w = torch::empty({num_inputs, 1},
+						torch::TensorOptions().requires_grad(true)).to(device);
 	torch::nn::init::normal_(w, 0.0, 1.0);
-	torch::Tensor b = torch::zeros(1, torch::TensorOptions().requires_grad(true));
+	torch::Tensor b = torch::zeros(1,
+						torch::TensorOptions().requires_grad(true)).to(device);
 
 	int64_t num_epochs = 100;
 	float lr = 0.003;
@@ -53,10 +55,13 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 			for (auto &batch : *train_loader) {
 
-				auto X = batch.data;
-				auto y = batch.target;
+				auto X = batch.data.to(device);
+				auto y = batch.target.to(device);
 
 			    auto t = linreg(X, w, b);
+			    w.retain_grad();
+			    b.retain_grad();
+
 			    auto loss = squared_loss(t, y) + lambd * l2_penalty(w);
 
 			    epoch_train_loss += loss.sum().item<float>() * X.size(0);
@@ -74,8 +79,8 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 			for (auto &batch : *test_loader) {
 
-				auto X = batch.data;
-				auto y = batch.target;
+				auto X = batch.data.to(device);
+				auto y = batch.target.to(device);
 
 				auto out = linreg(X, w, b);
 				auto loss = squared_loss(out, y) + lambd * l2_penalty(w);
@@ -85,9 +90,9 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 				num_test_samples += X.size(0);
 			}
 
-			train_loss.push_back(epoch_train_loss/num_train_samples);
-			test_loss.push_back(epoch_test_loss/num_test_samples);
-			xx.push_back((epoch + 1));
+			train_loss.push_back(epoch_train_loss*1.0/num_train_samples);
+			test_loss.push_back(epoch_test_loss*1.0/num_test_samples);
+			xx.push_back((epoch + 1)*1.0);
 		}
 
 		std::cout << "Scratch implementation, " << "lambd=" << lambd << ": L2 norm of w: " << torch::norm(w).item<float>() << std::endl;
@@ -107,6 +112,7 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 
 		auto net = torch::nn::Sequential(torch::nn::Linear(num_inputs, 1));
+		net->to(device);
 
 		// initialize the weights at random with zero mean and standard deviation 0.01
 		if (auto M = dynamic_cast<torch::nn::LinearImpl*>(net.get())) {
@@ -126,8 +132,8 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 			for (auto &batch : *train_loader) {
 
-				auto X = batch.data;
-				auto y = batch.target;
+				auto X = batch.data.to(device);
+				auto y = batch.target.to(device);
 
 			    auto t = net->forward(X);
 			    auto loss = criterion(t, y) + lambd * l2_penalty(w);
@@ -145,8 +151,8 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 			for (auto &batch : *test_loader) {
 
-				auto X = batch.data;
-				auto y = batch.target;
+				auto X = batch.data.to(device);
+				auto y = batch.target.to(device);
 
 				auto out = net->forward(X);
 				auto loss = criterion(out, y) + lambd * l2_penalty(w);
@@ -158,7 +164,7 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 
 			train_loss.push_back(epoch_train_loss/num_train_samples);
 			test_loss.push_back(epoch_test_loss/num_test_samples);
-			xx.push_back((epoch + 1));
+			xx.push_back((epoch + 1)*1.0);
 		}
 
 		std::cout << "Consice implementation, " << "lambd=" << lambd << ": L2 norm of w: " << torch::norm(w).item<float>() << std::endl;
@@ -210,10 +216,10 @@ int main() {
 	std::vector<double> train_loss;
 	std::vector<double> test_loss;
 	std::vector<double> xx;
-	float lambd = 0;
+	double lambd = 0;
 
 	train_test( train_data, test_data, num_inputs, batch_size,
-			lambd, train_loss, test_loss, xx, true);
+			lambd, train_loss, test_loss, xx, true, device);
 
 	std::vector<double> train_loss2;
 	std::vector<double> test_loss2;
@@ -221,7 +227,7 @@ int main() {
 
 	lambd = 3;
 	train_test( train_data, test_data, num_inputs, batch_size,
-				lambd, train_loss2, test_loss2, xx2, true);
+				lambd, train_loss2, test_loss2, xx2, true, device);
 
 	/* ---------------------------------------------------------
 	 * Concise Implementation
@@ -233,7 +239,7 @@ int main() {
 	lambd = 0;
 
 	train_test( train_data, test_data, num_inputs, batch_size,
-				lambd, train_loss3, test_loss3, xx3, false);
+				lambd, train_loss3, test_loss3, xx3, false, device);
 
 	std::vector<double> train_loss4;
 	std::vector<double> test_loss4;
@@ -241,45 +247,55 @@ int main() {
 	lambd = 3;
 
 	train_test( train_data, test_data, num_inputs, batch_size,
-				lambd, train_loss4, test_loss4, xx4, false);
+				lambd, train_loss4, test_loss4, xx4, false, device);
 
-	plt::figure_size(1200, 1000);
-//	plt::subplot(2, 2, 1);
-	plt::subplot2grid(2, 2, 0, 0, 1, 1);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::title("Scratch implementation: lambd = 0");
+	auto F = figure(true);
+	F->size(1200, 1000);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(2, 2);
+	F->position(0, 0);
 
-//	plt::subplot(2, 2, 2);
-	plt::subplot2grid(2, 2, 0, 1, 1, 1);
-	plt::named_plot("Train loss", xx2, train_loss2, "b");
-	plt::named_plot("Test loss", xx2, test_loss2, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::title("Scratch implementation: lambd = 3");
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "c:")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+	matplot::title(ax1, "Scratch implementation: lambd=0");
+	matplot::legend(ax1, {"Train loss", "Test loss"});
 
-//	plt::subplot(2, 2, 3);
-	plt::subplot2grid(2, 2, 1, 0, 1, 1);
-	plt::named_plot("Train loss", xx3, train_loss3, "b");
-	plt::named_plot("Test loss", xx3, test_loss3, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::title("Concise implementation: lambd = 0");
+	auto ax2 = F->nexttile();
+	matplot::hold(ax2, true);
+	matplot::plot(ax2, xx2, train_loss2, "b")->line_width(2);
+	matplot::plot(ax2, xx2, test_loss2, "c:")->line_width(2);
+	matplot::hold(ax2, false);
+	matplot::xlabel(ax2, "epoch");
+	matplot::ylabel(ax2, "loss");
+	matplot::title(ax2, "Scratch implementation: lambd=3");
+	matplot::legend(ax2, {"Train loss", "Test loss"});
 
-//	plt::subplot(2, 2, 4);
-	plt::subplot2grid(2, 2, 1, 1, 1, 1);
-	plt::named_plot("Train loss", xx4, train_loss4, "b");
-	plt::named_plot("Test loss", xx4, test_loss4, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::title("Concise implementation: lambd = 3");
-	plt::show();
+	auto ax3 = F->nexttile();
+	matplot::hold(ax3, true);
+	matplot::plot(ax3, xx3, train_loss3, "b")->line_width(2);
+	matplot::plot(ax3, xx3, test_loss3, "c:")->line_width(2);
+	matplot::hold(ax3, false);
+	matplot::xlabel(ax3, "epoch");
+	matplot::ylabel(ax3, "loss");
+	matplot::title(ax3, "Concise implementation: lambd=0");
+	matplot::legend(ax3, {"Train loss", "Test loss"});
+
+	auto ax4 = F->nexttile();
+	matplot::hold(ax4, true);
+	matplot::plot(ax4, xx4, train_loss4, "b")->line_width(2);
+	matplot::plot(ax4, xx4, test_loss4, "c:")->line_width(2);
+	matplot::hold(ax4, false);
+	matplot::xlabel(ax4, "epoch");
+	matplot::ylabel(ax4, "loss");
+	matplot::title(ax4, "Concise implementation: lambd=3");
+	matplot::legend(ax4, {"Train loss", "Test loss"});
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -8,9 +8,8 @@
 
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -18,23 +17,38 @@ int main() {
 
 	// Vanishing and Exploding Gradients
 
-	auto x = torch::arange(-8.0, 8.0, 0.1, torch::requires_grad(true));
+	auto x = torch::arange(-8.0, 8.0, 0.1, torch::requires_grad(true)).to(torch::kDouble);
 	auto y = torch::sigmoid(x);
+	x.retain_grad();
+
 	y.backward(torch::ones_like(x));
 
 	std::cout << "x.grad: " << x.grad().sizes() << std::endl;
-	plt::figure_size(800, 600);
-	plt::tight_layout();
-	std::vector<float> xx(x.detach().data_ptr<float>(), x.detach().data_ptr<float>() + x.detach().numel());
-	std::vector<float> yy(y.detach().data_ptr<float>(), y.detach().data_ptr<float>() + y.detach().numel());
-	std::vector<float> yy2(x.grad().data().data_ptr<float>(), x.grad().data().data_ptr<float>() + x.grad().data().numel());
-	plt::named_plot("sigmoid", xx, yy, "b");
-	plt::named_plot("gradient", xx, yy2, "g:");
-	plt::xlabel("x");
-	plt::ylabel("sigmoid(x)");
-	plt::title("Sigmoid");
-	plt::legend();
-	plt::show();
+
+	std::vector<double> xx(x.detach().data_ptr<double>(),
+						x.detach().data_ptr<double>() + x.detach().numel());
+	std::vector<double> yy(y.detach().data_ptr<double>(),
+						y.detach().data_ptr<double>() + y.detach().numel());
+	std::vector<double> yy2(x.grad().data().data_ptr<double>(),
+						x.grad().data().data_ptr<double>() + x.grad().data().numel());
+
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xx, yy, "b")->line_width(2);
+	matplot::plot(ax1, xx, yy2, "g:")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "sigmoid(x)");
+    matplot::title(ax1, "Sigmoid");
+    matplot::legend(ax1, {"sigmoid", "gradient"});
+    matplot::show();
 
 	//Exploding Gradients
 	/*

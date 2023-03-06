@@ -10,10 +10,10 @@
 #include <cmath>
 #include <map>
 
-#include "../matplotlibcpp.h"
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using namespace torch::autograd;
-namespace plt = matplotlibcpp;
 
 /*
  * To illustrate derivatives, let us experiment with an example. (Define 𝑢=𝑓(𝑥)=3𝑥2−4𝑥.)
@@ -50,9 +50,6 @@ int main() {
 	std::printf("f(x):  y = %.2f - %.2f * x + %.2f * x^2 \n", b_target.item<double>(),
 	    		w_target[0].item<double>(), w_target[1].item<double>());
 
-	plt::figure_size(700, 500);
-	plt::subplot(1, 1, 1);
-
 	auto x_sample = torch::arange(0, 3, 0.1, options);
 
     auto f1 = torch::mul(x_sample, w_target[0].item<double>());
@@ -73,13 +70,23 @@ int main() {
     std::vector<double> txx(x_sample.data_ptr<double>(), x_sample.data_ptr<double>() + x_sample.numel());
     std::vector<double> tyy(ty_sample.data_ptr<double>(), ty_sample.data_ptr<double>() + ty_sample.numel());
 
-	plt::named_plot("f(x)", xx, yy, "r");
-	plt::named_plot("Tangent line(x=1)", txx, tyy, "b");
-	plt::legend();
-    plt::title("function u=f(x) and its tangent line y=2x−3 at x=1");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-    plt::show();
+	auto F = figure(true);
+	F->size(600, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+    matplot::plot(ax1, xx, yy, "r")->line_width(2);
+    matplot::hold(ax1, true);
+    matplot::plot(ax1, txx, tyy, "b")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::legend(ax1, {"f(x)", "Tangent line(x=1)"});
+    matplot::title(ax1, "function u=f(x) and its tangent line y=2x−3 at x=1");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

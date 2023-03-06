@@ -12,8 +12,8 @@
 #include <functional>
 #include <utility> 		// make_pair etc.
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -58,26 +58,40 @@ int main() {
     std::for_each( yg.begin(), yg.end(), [](const auto & elem ) {std::cout << elem << " "; });
     printf("\n");
 
-    plt::figure_size(1500, 450);
-    plt::subplot2grid(1, 3, 0, 0, 1, 1);
-    plt::plot(x, yf, "b-");
-    plt::plot(sx, sf, "m--");
-    plt::xlabel("x");
-    plt::title("f(x)");
+	auto F = figure(true);
+	F->width(F->width() * 2);
+	F->height(F->height() * 2);
+	F->x_position(0);
+	F->y_position(0);
 
-    plt::subplot2grid(1, 3, 0, 1, 1, 1);
-    plt::plot(x, yg, "b-");
-    plt::plot(sx, sg, "m--");
-    plt::xlabel("x");
-    plt::title("g(x)");
+	matplot::subplot(3, 1, 0);
+    matplot::hold(true);
+    matplot::plot(x, yf, "b-")->line_width(2);
+    matplot::plot(sx, sf, "m--")->line_width(2);
+    matplot::hold(false);
+    matplot::xlabel("x");
+    matplot::title("f(x)");
+    F->draw();
 
-    plt::subplot2grid(1, 3, 0, 2, 1, 1);
-    plt::plot(x, yh, "b-");
-    plt::plot(sx, sh, "m--");
-    plt::xlabel("x");
-    plt::title("h(x)");
-    plt::show();
-    plt::close();
+    matplot::subplot(3, 1, 1);
+    matplot::hold(true);
+    matplot::plot(x, yg, "b-")->line_width(2);
+    matplot::plot(sx, sg, "m--")->line_width(2);
+    matplot::hold(false);
+    matplot::xlabel("x");
+    matplot::title("g(x)");
+    F->draw();
+
+    matplot::subplot(3, 1, 2);
+    matplot::hold(true);
+    matplot::plot(x, yh, "b-")->line_width(2);
+    matplot::plot(sx, sh, "m--")->line_width(2);
+    matplot::hold(false);
+    matplot::xlabel("x");
+    matplot::title("h(x)");
+    F->draw();
+    matplot::show();
+
 
     // -----------------------------------------------------------------------------------------
     // Properties
@@ -98,13 +112,21 @@ int main() {
     std::transform(yf2.begin(), yf2.end(), yf2.begin(), f2);
     std::transform(sf2.begin(), sf2.end(), sf2.begin(), f2);
 
-    plt::figure_size(500, 450);
-    plt::plot(x2, yf2, "b-");
-    plt::plot(sx2, sf2, "m--");
-    plt::xlabel("x");
-    plt::ylabel("f(x)");
-    plt::show();
-    plt::close();
+    F = figure(true);
+    F->size(800, 600);
+    F->add_axes(false);
+    F->reactive_mode(false);
+    F->tiledlayout(1, 1);
+    F->position(0, 0);
+
+    auto ax1 = F->nexttile();
+    matplot::hold(ax1, true);
+    matplot::plot(ax1, x2, yf2, "b-")->line_width(2);
+    matplot::plot(ax1, sx2, sf2, "m--")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

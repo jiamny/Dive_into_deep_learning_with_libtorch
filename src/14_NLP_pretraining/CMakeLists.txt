@@ -1,10 +1,5 @@
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -29,9 +24,7 @@ BERT_pretraining_dataset.cpp
 ../utils/ch_14_util.cpp
 )
 
-target_include_directories(14_BERT_pretraining_dataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(14_BERT_pretraining_dataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(14_BERT_pretraining_dataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} )
 set_target_properties(14_BERT_pretraining_dataset PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 

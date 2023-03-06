@@ -9,9 +9,9 @@
 
 #include "../TempHelpFunctions.hpp"
 #include "../utils.h"
-#include "../matplotlibcpp.h"
 
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 std::vector<double> normal(std::vector<double> x, double mu, double sigma) {
 	std::cout << "mu = " << mu << " sigma = " << sigma << std::endl;
@@ -95,11 +95,19 @@ int main() {
 	//Mean and standard deviation pairs
 	double params[3][2] = {{0, 1}, {0, 2}, {3, 1}};
 
-	plt::figure_size(800, 600);
-
 	//std:: cout << params[0][0] << " " << params[0][1] << std::endl;
 	//normal(xx, params[0][0], params[0][1]);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+
+	std::vector<std::string> lgd;
 
 	for( int r = 0; r < 3; r++ ) {
 		std::vector<double> yy = normal(xx, params[r][0], params[r][1]);
@@ -109,23 +117,26 @@ int main() {
 				to_string_with_precision(params[r][1], 0);
 		switch( r ) {
 			case 0:
-				plt::named_plot(legend_label.c_str(), xx, yy, "b");
+				matplot::plot(ax1, xx, yy, "b")->line_width(2);
 			break;
 			case 1:
-				plt::named_plot(legend_label.c_str(), xx, yy, "g--");
+				matplot::plot(ax1, xx, yy, "g--")->line_width(2);
 				break;
 			case 2:
-				plt::named_plot(legend_label.c_str(), xx, yy, "r-.");
+				matplot::plot(ax1, xx, yy, "r-.")->line_width(2);
 			break;
 			default:
 			break;
 		}
+		lgd.push_back(legend_label);
 	}
-	plt::xlabel("x");
-	plt::ylabel("p(x)");
-	plt::legend();
-	plt::show();
-	plt::close();
+
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p(x)");
+    matplot::legend(ax1, lgd);
+    matplot::title(ax1, "Linear regression");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

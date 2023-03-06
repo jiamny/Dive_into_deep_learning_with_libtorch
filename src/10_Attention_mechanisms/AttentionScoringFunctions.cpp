@@ -19,7 +19,7 @@ int main() {
 	// Device
 	auto cuda_available = torch::cuda::is_available();
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	std::cout << (cuda_available ? "CUDA available. Use GPU." : "Use CPU.") << '\n';
 
 	torch::manual_seed(1000);
 

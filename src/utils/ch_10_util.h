@@ -15,8 +15,8 @@
 #include <iomanip>
 
 #include "ch_8_9_util.h"
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;

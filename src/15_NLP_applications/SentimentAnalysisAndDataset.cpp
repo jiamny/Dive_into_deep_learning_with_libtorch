@@ -7,22 +7,19 @@
 
 #include "../utils/ch_15_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
 
 	torch::manual_seed(123);
 
-	std::string data_dir = "/home/stree/git/Deep_Learning_with_Libtorch/data/aclImdb";
+	std::string data_dir = "./data/aclImdb";
 	bool is_train = true;
 
 	auto acimdb = read_imdb(data_dir, is_train);
@@ -57,12 +54,18 @@ int main() {
 	for(int i = 0; i < data.size(); i++)
 		tknum.push_back(count_num_tokens(data[i]).second);
 
-	plt::figure_size(700, 500);
-	plt::hist(tknum, 5);
-	plt::xlabel("# tokens per review");
-	plt::ylabel("count");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hist(tknum);
+	matplot::xlabel("# tokens per review");
+	matplot::ylabel("count");
+	matplot::show();
 
 	size_t num_steps = 500;  // sequence length
 	auto t = vocab[count_num_tokens(data[0]).first];

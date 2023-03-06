@@ -9,19 +9,19 @@
 
 #include "../fashion.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
-	auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
 
 	// Device
 	auto cuda_available = torch::cuda::is_available();
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+
+	auto options = torch::TensorOptions().dtype(torch::kDouble).device(device);
 
 
 	// Concise Implementation of Multilayer Perceptrons
@@ -33,6 +33,7 @@ int main() {
 
 	auto net = torch::nn::Sequential(torch::nn::Flatten(), torch::nn::Linear(784, 256), torch::nn::ReLU(),
 	                    torch::nn::Linear(256, 10));
+	net->to(device);
 
 	/*
 	 * init_weights
@@ -166,15 +167,25 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.3, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.3, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::title(ax1, "Concise implementation");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

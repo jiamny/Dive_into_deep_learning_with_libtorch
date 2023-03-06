@@ -9,9 +9,8 @@
 #include "../utils/ch_8_9_util.h"
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 
 struct RNNModel : public torch::nn::Module {
@@ -287,12 +286,18 @@ int main() {
 
 	std::pair<std::vector<double>, std::vector<double>> trlt = train_ch8( net, train_iter, vocab, device, lr, num_epochs, use_random_iter);
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", trlt.first, trlt.second, "b");
-	plt::xlabel("epoch");
-	plt::ylabel("perplexity");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, trlt.first, trlt.second, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "perplexity");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -5,8 +5,8 @@
 
 #include "../utils/ch_8_9_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -48,11 +48,18 @@ int main() {
 	}
 	//std::reverse(x.begin(), x.end());
 
-	plt::figure_size(700, 500);
-	plt::loglog(x, freqs, "b");
-	plt::xlabel("token: x");
-	plt::ylabel("frequency: n(x)");
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::loglog(ax1, x, freqs, "b")->line_width(2);
+    matplot::xlabel(ax1, "token: x");
+    matplot::ylabel(ax1, "frequency: n(x)");
+    matplot::show();
 
 	// bigrams
 	std::vector<std::string> bigram_tokens;
@@ -102,13 +109,23 @@ int main() {
 		i++;
 	}
 
-	plt::figure_size(700, 500);
-	plt::named_loglog("unigram",x, freqs, "b");
-	plt::named_loglog("bigram",bigram_x, bigram_freqs, "m-");
-	plt::named_loglog("trigram",trigram_x, trigram_freqs, "g.");
-	plt::xlabel("token: x");
-	plt::ylabel("frequency: n(x)");
-	plt::show();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::loglog(ax1, x, freqs, "b")->line_width(2);
+	matplot::loglog(ax1, bigram_x, bigram_freqs, "m-")->line_width(2);
+	matplot::loglog(ax1, trigram_x, trigram_freqs, "g.")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "token: x");
+	matplot::ylabel(ax1, "frequency: n(x)");
+	matplot::legend(ax1, {"unigram", "bigram", "trigram"});
+	matplot::show();
 
 	//=============================================
 	// Reading Long Sequence Data

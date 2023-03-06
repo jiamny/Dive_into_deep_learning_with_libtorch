@@ -9,8 +9,8 @@
 #include <utility>
 #include <tuple>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -273,13 +273,13 @@ int main() {
 
 	auto cimg = CvMatToTensor("./data/rainier.jpg", image_size);
 
-	std::vector<uint8_t> z = tensorToMatrix4Matplotlib(cimg);
-	const unsigned char* zptr1 = &(z[0]);
+//	std::vector<uint8_t> z = tensorToMatrix4Matplotlib(cimg);
+//	const unsigned char* zptr1 = &(z[0]);
 
 	auto simg = CvMatToTensor("./data/autumn-oak.jpg", image_size);
 	std::cout << "simg: " << simg.sizes() << '\n';
-	std::vector<uint8_t> z2 = tensorToMatrix4Matplotlib(simg);
-	const unsigned char* zptr2 = &(z2[0]);
+//	std::vector<uint8_t> z2 = tensorToMatrix4Matplotlib(simg);
+//	const unsigned char* zptr2 = &(z2[0]);
 
 	// ------------------------------------------
 	// Preprocessing and Postprocessing
@@ -368,7 +368,7 @@ int main() {
 
 	auto gimg = postprocess(X, device, rgb_mean, rgb_std);
 	//std::cout << "gimg: " << gimg.sizes() << '\n';
-
+/*
 	std::vector<uint8_t> z3 = tensorToMatrix4Matplotlib(gimg);
 	const unsigned char* zptr3 = &(z3[0]);
 
@@ -388,14 +388,50 @@ int main() {
 	plt::imshow(zptr3, static_cast<int>(gimg.size(1)),
 									static_cast<int>(gimg.size(2)), static_cast<int>(gimg.size(0)));
 	plt::subplot2grid(2, 2, 1, 1, 1, 1);
-	plt::named_plot("Content", nepoch, c_loss, "b");
-	plt::named_plot("Style", nepoch, s_loss, "g--");
-	plt::named_plot("TV", nepoch, tv_loss, "r-.");
+	plt::named_plot("", );
+	plt::named_plot("", );
+	plt::named_plot("TV", );
 	plt::ylabel("loss");
 	plt::xlabel("epoch");
 	plt::legend();
 	plt::show();
 	plt::close();
+*/
+	auto f = figure(true);
+	f->width(f->width() * 3);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
+	matplot::subplot(2, 2, 0);
+	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(cimg.clone());
+	matplot::imshow(z);
+	matplot::title("Content image");
+
+	matplot::subplot(2, 2, 1);
+	z = tensorToMatrix4MatplotPP(simg.clone());
+	matplot::imshow(z);
+	matplot::title("Style image");
+
+	matplot::subplot(2, 2, 2);
+	z = tensorToMatrix4MatplotPP(gimg.clone());
+	matplot::imshow(z);
+	matplot::title("Style image");
+
+	matplot::subplot(2, 2, 3);
+	matplot::legend();
+	matplot::hold(true);
+	matplot::plot(nepoch, c_loss, "b")->line_width(2)
+				.display_name("Content");
+	matplot::plot(nepoch, s_loss, "g--")->line_width(2)
+					.display_name("Style");
+	matplot::plot(nepoch, tv_loss, "r-.")->line_width(2)
+					.display_name("TV");
+	matplot::hold(false);
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+	f->draw();
+	matplot::show();
 
 	std::cout << "Done!\n";
 }

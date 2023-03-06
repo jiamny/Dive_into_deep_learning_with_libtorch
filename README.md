@@ -8,15 +8,19 @@ Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 - cmake 3.18+
 
-- LibTorch 1.12.1
+- PyTorch 1.13.1
 
-- LibTorchvision 0.14.0a0
+- NVIDIA CUDA 11.7
+
+- NVIDIA cudnn 8.7
+
+- LibTorchvision 
 
 - python3.10
 
 - opencv 4.5.3/4.5.5/4.6.0
 
-- matplotlib-cpp
+- Matplot++
 
 - jsoncpp
 
@@ -40,9 +44,11 @@ Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 - [LibtorchTutorials](https://github.com/AllentDan/LibtorchTutorials)
 
-- [matplotlib-cpp](https://github.com/lava/matplotlib-cpp)
+- [Matplot++](https://github.com/alandefreitas/matplotplusplus)
 
 - [hymenoptera-data](https://www.kaggle.com/ajayrana/hymenoptera-data)
+
+- [LibTorchvision](https://github.com/pytorch/vision)
 
 ## License
 This repository is licensed under MIT as given in [LICENSE](LICENSE).

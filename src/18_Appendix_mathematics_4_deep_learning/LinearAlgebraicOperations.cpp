@@ -12,9 +12,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include <vector>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
 //#include "../utils.h"
 #include "../fashion.h"
 
@@ -72,23 +69,14 @@ int main() {
 	torch::Tensor data_out = xtrain_0.contiguous().detach().clone();
 	auto rev_tensor = data_out.mul(255).to(torch::kByte).permute({1, 2, 0});
 
-	if( ! useCvMat ) {
-		std::vector<uchar> z(rev_tensor.data_ptr<uchar>(), rev_tensor.data_ptr<uchar>() + rev_tensor.numel());
-		plt::title("Xtrain_0");
-		plt::imshow(&(z[0]), rev_tensor.size(0), rev_tensor.size(1), rev_tensor.size(2), {{"cmap", "Greys"}});
-		plt::show();
-		plt::close();
-	} else {
+	auto tensor = rev_tensor.reshape({ rev_tensor.size(0) * rev_tensor.size(1) * rev_tensor.size(2)});
 
-		auto tensor = rev_tensor.reshape({ rev_tensor.size(0) * rev_tensor.size(1) * rev_tensor.size(2)});
+	// CV_8UC1 is an 8-bit unsigned integer matrix/image with 1 channels
+	cv::Mat cvmat(cv::Size(rev_tensor.size(0), rev_tensor.size(1)), CV_8UC1, tensor.data_ptr());
 
-		// CV_8UC1 is an 8-bit unsigned integer matrix/image with 1 channels
-		cv::Mat cvmat(cv::Size(rev_tensor.size(0), rev_tensor.size(1)), CV_8UC1, tensor.data_ptr());
-
-		cv::imshow("Xtrain_0", cvmat);
-		cv::waitKey(-1);
-		cv::destroyAllWindows();
-	}
+	cv::imshow("Xtrain_0", cvmat);
+	cv::waitKey(-1);
+	cv::destroyAllWindows();
 
 	// Invertibility
 	auto M = torch::tensor({{1, 2}, {1, 4}}).to(torch::kFloat32);

@@ -6,14 +6,14 @@
 #include <iostream>
 #include <unistd.h>
 #include <iomanip>
+#include <string>
 
-#include "../matplotlibcpp.h"
-
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
-	auto options = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCPU);
+	auto options = torch::TensorOptions().dtype(torch::kDouble).device(torch::kCPU);
 
 	// -----------------------------------------------------------
 	// Basic Probability Theory
@@ -77,47 +77,63 @@ int main() {
 
 	auto x_sample = torch::arange(0, rep, 1, options);
 	auto h_sample = torch::zeros({rep}, options);
+	std::cout << "x_sample.options(): \n" << x_sample.options() << std::endl;
+	std::cout << "h_sample.options(): \n" << h_sample.options() << std::endl;
 
 	using torch::indexing::Slice;
 	using torch::indexing::None;
 
-	plt::figure_size(800, 600);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
-	std::vector<float> xx(x_sample.data_ptr<float>(), x_sample.data_ptr<float>() + x_sample.numel());
-	std::vector<float> w(rep, 0.167);
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+
+	std::vector<double> xx(x_sample.data_ptr<double>(), x_sample.data_ptr<double>() + x_sample.numel());
+	std::vector<double> w(rep, 0.167);
+	std::vector<std::string> lgd;
+
+	estimates = estimates.to(torch::kDouble);
 
 	for(int i = 0; i < 6; i++ ) {
 		auto y = estimates.index({Slice(), i});
-		std::vector<float> yy(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
+		std::vector<double> yy(y.data_ptr<double>(), y.data_ptr<double>() + y.numel());
 		std::string die_label = "P(die=" + std::to_string(i+1) + ")";
+
 		switch( i ) {
 		case 0:
-			plt::named_plot(die_label, xx, yy, "b");
+			matplot::plot(ax1, xx, yy, "b")->line_width(2);
 			break;
 		case 1:
-			plt::named_plot(die_label.c_str(), xx, yy, "g");
+			matplot::plot(ax1, xx, yy, "g")->line_width(2);
 			break;
 		case 2:
-			plt::named_plot(die_label.c_str(), xx, yy, "r");
+			matplot::plot(ax1, xx, yy, "r")->line_width(2);
 			break;
 		case 3:
-			plt::named_plot(die_label.c_str(), xx, yy, "c");
+			matplot::plot(ax1, xx, yy, "c")->line_width(2);
 			break;
 		case 4:
-			plt::named_plot(die_label.c_str(), xx, yy, "m");
+			matplot::plot(ax1, xx, yy, "m")->line_width(2);
 			break;
 		case 5:
-			plt::named_plot(die_label.c_str(), xx, yy, "y");
+			matplot::plot(ax1, xx, yy, "k")->line_width(2);
 			break;
 		default:
 			break;
 		}
+		lgd.push_back(die_label);
 	}
-	plt::xlabel("Groups of experiments");
-	plt::ylabel("Estimated probability");
-	plt::plot(xx, w, "k--");
-	plt::legend();
-	plt::show();
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "Groups of experiments");
+    matplot::ylabel(ax1, "Estimated probability");
+    matplot::legend(ax1, lgd);
+    matplot::title(ax1, "Basic Probability Theory");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

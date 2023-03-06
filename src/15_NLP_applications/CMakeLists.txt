@@ -1,10 +1,5 @@
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -29,9 +24,7 @@ SentimentAnalysisAndDataset.cpp
 ../utils/ch_15_util.cpp
 )
 
-target_include_directories(15_SentimentAnalysisAndDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(15_SentimentAnalysisAndDataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(15_SentimentAnalysisAndDataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(15_SentimentAnalysisAndDataset PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
@@ -47,9 +40,7 @@ SentimentAnalysisRNN.cpp
 ../utils/ch_15_util.cpp
 )
 
-target_include_directories(15_SentimentAnalysisRNN PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(15_SentimentAnalysisRNN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(15_SentimentAnalysisRNN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(15_SentimentAnalysisRNN PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
@@ -65,9 +56,7 @@ SentimentAnalysisCNN.cpp
 ../utils/ch_15_util.cpp
 )
 
-target_include_directories(15_SentimentAnalysisCNN PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(15_SentimentAnalysisCNN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(15_SentimentAnalysisCNN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(15_SentimentAnalysisCNN PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
@@ -83,9 +72,7 @@ NaturalLanguageInferenceDataset.cpp
 ../utils/ch_15_util.cpp
 )
 
-target_include_directories(15_NaturalLanguageInferenceDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(15_NaturalLanguageInferenceDataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(15_NaturalLanguageInferenceDataset ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(15_NaturalLanguageInferenceDataset PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
@@ -101,9 +88,7 @@ NaturalLanguageInferenceAttention.cpp
 ../utils/ch_15_util.cpp
 )
 
-target_include_directories(15_NaturalLanguageInferenceAttention PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(15_NaturalLanguageInferenceAttention ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(15_NaturalLanguageInferenceAttention ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(15_NaturalLanguageInferenceAttention PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 

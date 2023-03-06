@@ -11,8 +11,8 @@
 
 #include "../utils/ch_13_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -44,7 +44,12 @@ int main() {
 	auto data  = batch.data.to(device);
 	auto y     = batch.target.to(device);
 
-	plt::figure_size(1000, 500);
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
 	for(int r = 0; r < 2; r++) {
 		for(int c = 0; c < 5; c++) {
 			torch::Tensor img;
@@ -54,17 +59,21 @@ int main() {
 			} else {
 				img = y[c].clone().squeeze();
 			}
-
+/*
 			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(img);
 			const unsigned char* zptr = &(z[0]);
 
 			plt::subplot2grid(2, 5, r, c, 1, 1);
 			plt::imshow(zptr, static_cast<int>(img.size(1)),
 					static_cast<int>(img.size(2)), static_cast<int>(img.size(0)));
+*/
+			matplot::subplot(2, 5, r*5 + c);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(img);
+			matplot::imshow(z);
 		}
+		f->draw();
 	}
-	plt::show();
-	plt::close();
+	matplot::show();
 
 	auto sgimg = CvMatToTensor("./data/2007_000032.png", {});
 
@@ -90,7 +99,7 @@ int main() {
 	torch::Tensor feature = data[0].clone().squeeze();
 	torch::Tensor label = y[0].clone().squeeze();
 
-	plt::figure_size(1000, 500);
+//	plt::figure_size(1000, 500);
 	for(int c = 0; c < 5; c++) {
 
 		auto dt = voc_rand_crop(feature.clone(), label.clone(), height, width, mean_, std_);
@@ -98,21 +107,16 @@ int main() {
 		auto img = deNormalizeTensor(dt.first.clone(), mean_, std_);
 		auto limg = dt.second.clone();
 
-		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(img);
-		const unsigned char* zptr = &(z[0]);
+		matplot::subplot(2, 5, c);
+		std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(img);
+		matplot::imshow(z);
 
-		plt::subplot2grid(2, 5, 0, c, 1, 1);
-		plt::imshow(zptr, static_cast<int>(img.size(1)),
-					static_cast<int>(img.size(2)), static_cast<int>(img.size(0)));
-
-		std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(limg);
-		const unsigned char* lzptr = &(lz[0]);
-		plt::subplot2grid(2, 5, 1, c, 1, 1);
-		plt::imshow(lzptr, static_cast<int>(limg.size(1)),
-						static_cast<int>(limg.size(2)), static_cast<int>(limg.size(0)));
+		matplot::subplot(2, 5, 5 + c);
+		std::vector<std::vector<std::vector<unsigned char>>> z1 = tensorToMatrix4MatplotPP(limg);
+		matplot::imshow(z1);
+		f->draw();
 	}
-	plt::show();
-	plt::close();
+	matplot::show();
 
 
 	batch_size = 32;
@@ -213,7 +217,7 @@ int main() {
 	std::cout << "y: " << y.sizes() << '\n';
 
 	int wct = 10;
-	plt::figure_size(200 * wct, 700);
+//	plt::figure_size(200 * wct, 700);
 
 	for( int i = 0; i < wct; i ++ ) {
 		auto x = data[i].unsqueeze(0);
@@ -223,13 +227,14 @@ int main() {
 		auto jimg = x.squeeze().clone();
 		jimg = deNormalizeTensor(jimg, mean_, std_);
 		jimg = jimg.mul(255).permute({1, 2, 0}).to(torch::kByte).clone();
+/*
 		std::vector<uint8_t> iz = tensorToMatrix4Matplotlib(jimg, false, false);
 		const unsigned char* izptr = &(iz[0]);
 		plt::subplot2grid(3, wct, 0, i, 1, 1);
 		plt::title("Image");
 		plt::imshow(izptr, static_cast<int>(jimg.size(0)),
 								   static_cast<int>(jimg.size(1)), static_cast<int>(jimg.size(2)));
-
+*/
 		std::vector<torch::jit::IValue> input;
 		input.push_back(x);
 		auto out = net.forward(input).toGenericDict();
@@ -244,6 +249,7 @@ int main() {
 		std::cout << "t: " << t << '\n';
 
 		auto img = decode_segmap(pred.squeeze(), num_classes);
+/*
 		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(img.clone(), false, false);
 		const unsigned char* zptr = &(z[0]);
 
@@ -251,17 +257,19 @@ int main() {
 		plt::title("pred");
 		plt::imshow(zptr, static_cast<int>(img.size(0)),
 						  static_cast<int>(img.size(1)), static_cast<int>(img.size(2)));
-
+*/
 		auto limg = decode_segmap(lab.squeeze(), num_classes);
+/*
 		std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(limg.clone(), false, false);
 		const unsigned char* lzptr = &(lz[0]);
 		plt::subplot2grid(3, wct, 2, i, 1, 1);
 		plt::title("label");
 		plt::imshow(lzptr, static_cast<int>(limg.size(0)),
 						   static_cast<int>(limg.size(1)), static_cast<int>(limg.size(2)));
+*/
 	}
-	plt::show();
-	plt::close();
+//	plt::show();
+//	plt::close();
 
 	std::cout << "Done!\n";
 }

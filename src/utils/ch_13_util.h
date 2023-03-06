@@ -64,7 +64,11 @@ torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size, bool toRGB
 
 cv::Mat TensorToCvMat( torch::Tensor img, bool is_float = true, bool toBGR = true );
 
-std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor data, bool is_float=true, bool need_permute=true);
+std::vector<std::vector<std::vector<unsigned char>>> tensorToMatrix4MatplotPP(torch::Tensor data,
+																				bool is_float=true, bool need_permute=true);
+
+std::vector<std::vector<std::vector<unsigned char>>>  CvMatToMatPlotVec(cv::Mat img,
+														std::vector<int> img_size, bool toRGB = true, bool is_float = false);
 
 torch::Tensor CvMatToTensorAfterFlip(std::string file, std::vector<int> img_size, double fP, int flip_axis=0);
 

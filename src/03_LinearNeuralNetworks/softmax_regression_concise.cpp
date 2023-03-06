@@ -9,9 +9,8 @@
 #include "../fashion.h"
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -63,6 +62,7 @@ int main() {
 	 * # PyTorch does not implicitly reshape the inputs. Thus we define the flatten layer to reshape the inputs before the linear layer in our network
 	 */
 	torch::nn::Linear net(784, 10);
+	net->to(device);
 
 	// initialize the weights at random with zero mean and standard deviation 0.01
 	if (auto M = dynamic_cast<torch::nn::LinearImpl*>(net.get())) {
@@ -110,7 +110,7 @@ int main() {
 
 			auto y_hat = net->forward(x);
 			auto loss = criterion(y_hat, y); //torch::cross_entropy_loss(y_hat, y);
-			//std::cout << loss.item<double>() << std::endl;
+			std::cout << "loss: " << loss.item<double>() << std::endl;
 
 			// Update running loss
 			epoch_loss += loss.item<double>() * x.size(0);
@@ -179,15 +179,24 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.3, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.3, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -128,43 +128,19 @@ void train_momentum_sgd(float lr, float momentum, int64_t num_epochs,
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, losses, "b");
-	plt::title("Momentum scratch");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
-}
-
-
-void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
-
-//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
-//	printf("\n");
-	plt::figure_size(700, 500);
-	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
-
-	std::vector<std::vector<double>> x, y, z;
-	for (double i = -5.5; i <= 1.0;  i += 0.1) {
-	    std::vector<double> x_row, y_row, z_row;
-	    for (double j = -3.0; j <= 1.0; j += 0.1) {
-	            x_row.push_back(i);
-	            y_row.push_back(j);
-	            z_row.push_back(f_2d(i, j));
-	    }
-	    x.push_back(x_row);
-	    y.push_back(y_row);
-	    z.push_back(z_row);
-	}
-
-	plt::contour(x, y, z);
-	plt::xlabel("x1");
-	plt::ylabel("x2");
-	plt::show();
-	plt::close();
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::title(ax1, "Momentum scratch");
+    matplot::show();
 }
 
 
@@ -207,7 +183,18 @@ int main() {
 	std::vector<double> betas = {0.95, 0.9, 0.6, 0};
 	std::vector<std::string> strs = {"b-", "y-", "g-", "r-"};
 
-	plt::figure_size(700, 500);
+//	plt::figure_size(700, 500);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	std::vector<std::string> lgd;
+	matplot::hold(ax1, true);
+
 	int i = 0;
 	for( auto& b : betas ) {
 		std::vector<double> x, y;
@@ -215,13 +202,14 @@ int main() {
 			x.push_back(t);
 			y.push_back(std::pow(b, t));
 		}
-		plt::named_plot(("beta = " + std::to_string(b)).c_str(), x, y, strs[i].c_str() );
+		matplot::plot(ax1, x, y, strs[i].c_str() )->line_width(2);
+		lgd.push_back(("beta = " + std::to_string(b)).c_str());
 		i++;
 	}
-	plt::xlabel("time");
-	plt::legend();
-	plt::show();
-	plt::close();
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "time");
+	matplot::legend(ax1, lgd);
+	matplot::show();
 
 	// --------------------------------------------------
 	// Practical Experiments
@@ -322,19 +310,36 @@ int main() {
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	plt::figure_size(800, 600);
-	plt::plot(epochs, losses, "b");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+	matplot::title("Momentum concise");
+	matplot::show();
 
 	// Theoretical Analysis
 	std::vector<double> lambdas = {0.1, 1.0, 10.0, 19.0};
 	double leta = 0.1;
 	std::vector<std::string> lstrs = {"b-", "y-", "g-", "r-"};
 
-	plt::figure_size(700, 500);
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	lgd.clear();
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+
 	i = 0;
 	for( auto& l : lambdas ) {
 		std::vector<double> x, y;
@@ -342,13 +347,14 @@ int main() {
 			x.push_back(t);
 			y.push_back(std::pow(1 - leta * l, t));
 		}
-		plt::named_plot(("lambda = " + std::to_string(l)).c_str(), x, y, lstrs[i].c_str() );
+		matplot::plot(ax1, x, y, lstrs[i].c_str() )->line_width(2);
+		lgd.push_back(("lambda = " + std::to_string(l)).c_str());
 		i++;
 	}
-	plt::xlabel("time");
-	plt::legend();
-	plt::show();
-	plt::close();
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "time");
+	matplot::legend(ax1, lgd);
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

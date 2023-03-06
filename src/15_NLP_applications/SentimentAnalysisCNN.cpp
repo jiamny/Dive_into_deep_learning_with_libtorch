@@ -5,9 +5,8 @@
 #include "../utils/ch_15_util.h"
 #include "../TempHelpFunctions.hpp"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 torch::Tensor corr1d(torch::Tensor X, torch::Tensor K) {
     int w = K.size(0);
@@ -141,9 +140,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -171,7 +171,7 @@ int main() {
 	// -------------------------------------------
 	size_t num_steps = 500, embed_size = 100;  // sequence length
 
-	std::string data_dir = "/home/stree/git/Deep_Learning_with_Libtorch/data/aclImdb";
+	std::string data_dir = "./data/aclImdb";
 
 	auto rlt = load_data_imdb(data_dir, num_steps, 0);
 	auto features  = std::get<0>(rlt);
@@ -291,14 +291,25 @@ int main() {
 		test_acc.push_back((total_corrects*1.0/total_samples));
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train loss", train_epochs, train_loss, "b");
-	plt::named_plot("train acc", train_epochs, train_acc, "g--");
-	plt::named_plot("test acc", train_epochs, test_acc, "r-.");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, train_epochs, train_loss, "b")->line_width(2)
+			.display_name("train loss");
+	matplot::plot(ax1, train_epochs, train_acc, "g--")->line_width(2)
+			.display_name("train acc");
+	matplot::plot(ax1, train_epochs, test_acc, "r-.")->line_width(2)
+			.display_name("test acc");
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::show();
 
 	// ----------------------------------------------------------
 	//  predict the sentiment of a text sequence using the trained model

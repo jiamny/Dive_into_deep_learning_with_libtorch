@@ -8,8 +8,9 @@
 
 #include "../utils.h"
 #include "../fashion.h"
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -38,6 +39,8 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
+	auto options = torch::TensorOptions().dtype(torch::kDouble).device(device).requires_grad(true);
+
 	// Initializing Model Parameters
 	/*
 	 * we can think of this as simply a classification dataset with 784 input features and 10 classes. To begin, we will [implement an MLP with one
@@ -49,10 +52,11 @@ int main() {
 	 */
 	int64_t num_inputs = 784, num_outputs=10, num_hiddens = 256;
 
-	torch::Tensor W1 = torch::randn({num_inputs, num_hiddens}, torch::TensorOptions().requires_grad(true));
-	torch::Tensor b1 = torch::zeros(num_hiddens, torch::TensorOptions().requires_grad(true));
-	torch::Tensor W2 = torch::randn({num_hiddens, num_outputs}, torch::TensorOptions().requires_grad(true));
-	torch::Tensor b2 = torch::zeros(num_outputs, torch::TensorOptions().requires_grad(true));
+	torch::Tensor W1 = torch::randn({num_inputs, num_hiddens}, options);
+	torch::Tensor b1 = torch::zeros(num_hiddens, options);
+	torch::Tensor W2 = torch::randn({num_hiddens, num_outputs}, options);
+	torch::Tensor b2 = torch::zeros(num_outputs, options);
+
 	std::cout << "W1:\n" << W1.data().index({Slice(None, 2), Slice(None, 10)}) << std::endl;
 
 	// create optimizer parameters
@@ -141,11 +145,11 @@ int main() {
 	/*
 	 * Training
 	 */
-	std::vector<float> train_loss;
-	std::vector<float> train_acc;
-	std::vector<float> test_loss;
-	std::vector<float> test_acc;
-	std::vector<float> xx;
+	std::vector<double> train_loss;
+	std::vector<double> train_acc;
+	std::vector<double> test_loss;
+	std::vector<double> test_acc;
+	std::vector<double> xx;
 
 	for( size_t epoch = 0; epoch < num_epochs; epoch++ ) {
 
@@ -166,7 +170,8 @@ int main() {
 			// ------------------------------------------------------
 			//auto y_hat = torch::relu(torch::add(torch::mm(x, W1), b1));  // Here '@' stands for matrix multiplication
 			//y_hat = torch::add(torch::mm(y_hat, W2), b2);
-			auto y_hat = net(x, W1, b1, W2, b2);
+
+			auto y_hat = net(x.to(torch::kDouble), W1, b1, W2, b2);
 
 			auto loss = criterion(y_hat, y); // cross_entropy(y_hat, y);
 
@@ -213,7 +218,7 @@ int main() {
 			// ------------------------------------------------------
 			//auto output = torch::relu(torch::add(torch::mm(data, W1), b1));  // Here '@' stands for matrix multiplication
 			//output = torch::add(torch::mm(output, W2), b2);
-			auto output = net(data, W1, b1, W2, b2);
+			auto output = net(data.to(torch::kDouble), W1, b1, W2, b2);
 
 			auto loss = criterion(output, target);
 
@@ -236,16 +241,25 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.2, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::title(ax1, "Concise implementation");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -17,8 +17,8 @@
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -75,6 +75,7 @@ TORCH_MODULE(D_block);
 
 torch::Tensor update_D(torch::Tensor X, torch::Tensor Z, torch::nn::Sequential& net_D, torch::nn::Sequential& net_G,
 									torch::nn::BCEWithLogitsLoss& loss, torch::optim::Adam& trainer_D) {
+
     //"""Update discriminator."""
     int batch_size = X.size(0);
     auto ones = torch::ones({batch_size,}).to(X.device());
@@ -82,6 +83,7 @@ torch::Tensor update_D(torch::Tensor X, torch::Tensor Z, torch::nn::Sequential& 
     trainer_D.zero_grad();
     auto real_Y = net_D->forward(X);
     auto fake_X = net_G->forward(Z);
+
     // Do not need to compute gradient for `net_G`, detach it from
     // computing gradients.
     auto fake_Y = net_D->forward(fake_X.detach());
@@ -118,6 +120,7 @@ int main() {
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
+
 	torch::manual_seed(123);
 
 	// -----------------------------------
@@ -153,36 +156,42 @@ int main() {
 	std::cout << "total training images : " << dataset.size() << std::endl;
 
 	dataloader(mini_batch);
-	torch::Tensor images = std::get<0>(mini_batch).to(device);
-	auto label = std::get<1>(mini_batch).to(device);
+	torch::Tensor images = std::get<0>(mini_batch);
+	auto label = std::get<1>(mini_batch);
 	torch::Tensor imgT = images[0].clone().squeeze();
 
 	std::cout << imgT.max() << " " << label[0] << '\n';
 	std::cout << "imgT sizes: " << imgT.sizes() << '\n';
 
-	plt::figure_size(900, 800);
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
 	int img_c = 10;
+	int k = 0;
 	for(int r = 0; r < 4; r++) {
-		for(int c = 0; c < 4; c++) {
-			plt::subplot2grid(4, 4, r, c, 1, 1);
+		for(int c = 0; c < 5; c++) {
+			matplot::subplot(4, 5, k);
 
 			torch::Tensor imgT = images[img_c].clone().squeeze();
 			imgT = deNormalizeTensor(imgT, mean_, std_);
 
-			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgT.clone());
-			const uchar* zptr = &(z[0]);
-			plt::imshow(zptr, imgT.size(1), imgT.size(2), imgT.size(0));
-			img_c += 5;
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgT.clone());
+			matplot::imshow(z);
+			img_c += 6;
+			k++;
 		}
 	}
-	plt::show();
-	plt::close();
+	f->draw();
+	matplot::show();
 
 	// -------------------------------------------
 	auto x = torch::zeros({2, 3, 16, 16});
 	auto g_blk = G_block(20);
 	g_blk->to(device);
-	std::cout << g_blk->forward(x).sizes() << '\n';
+	std::cout << g_blk->forward(x.to(device)).sizes() << '\n';
 
 	// If changing the transposed convolution layer to a 4×4 kernel, 1×1 strides and zero padding.
 	// With a input size of 1×1, the output will have its width and height increased by 3 respectively.
@@ -190,7 +199,7 @@ int main() {
 	x = torch::zeros({2, 3, 1, 1});
 	g_blk = G_block(20, 3, 4, 1, 0);
 	g_blk->to(device);
-	std::cout << g_blk->forward(x).sizes() << '\n';
+	std::cout << g_blk->forward(x.to(device)).sizes() << '\n';
 
 	/*
 	 * The generator consists of four basic blocks that increase input's both width and height from 1 to 32.
@@ -213,7 +222,7 @@ int main() {
 
 	x = torch::zeros({1, 100, 1, 1});
 	net_G->to(device);
-	std::cout << net_G->forward(x).sizes() << '\n';
+	std::cout << net_G->forward(x.to(device)).sizes() << '\n';
 
 	// --------------------------------------------
 	// Discriminator
@@ -225,22 +234,34 @@ int main() {
 	std::vector<float> xx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
 	std::vector<std::string> formats = {"b-", "m--", "g-.", "r:", "c--", "y-."};
 
-	plt::figure_size(700, 550);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+
 	for( int a = 0; a < alphas.size(); a++ ) {
 		auto y = torch::nn::LeakyReLU(torch::nn::LeakyReLUOptions().negative_slope(alphas[a]))->forward(x);
 		std::vector<float> z(y.data_ptr<float>(), y.data_ptr<float>() + y.numel());
-		plt::named_plot(to_string_with_precision(alphas[a], 2).c_str(), xx, z, formats[a].c_str());
+
+		matplot::plot(ax1, xx, z, formats[a].c_str())->line_width(2)
+				.display_name(to_string_with_precision(alphas[a], 2).c_str());
 	}
-	plt::xlabel("x");
-	plt::ylabel("y");
-	plt::legend();
-	plt::show();
-	plt::close();
+
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "y");
+    matplot::hold(ax1, false);
+    matplot::show();
 
 	x = torch::zeros({2, 3, 16, 16});
 	auto d_blk = D_block(20);
 	d_blk->to(device);
-	std::cout << d_blk->forward(x).sizes() << '\n';
+	std::cout << "d_blk: " << d_blk->forward(x.to(device)).sizes() << '\n';
 
 	// The discriminator is a mirror of the generator.
 	int n_D = 64;
@@ -255,7 +276,7 @@ int main() {
 	// It uses a convolution layer with output channel 1 as the last layer to obtain a single prediction value.
 	x = torch::zeros({1, 3, 64, 64});
 	net_D->to(device);
-	std::cout << net_D->forward(x).sizes() << '\n';
+	std::cout << "net_D: " << net_D->forward(x.to(device)).sizes() << '\n';
 
 	// -----------------------------------------
 	// Training
@@ -280,7 +301,7 @@ int main() {
 			torch::nn::init::normal_(M->weight, 0.0, 0.02);
 		}
 	}
-
+	std::cout << "after initiating weights\n";
 
 	net_D->to(device);
 	net_G->to(device);
@@ -289,11 +310,13 @@ int main() {
 	auto trainer_G = torch::optim::Adam(net_G->parameters(), torch::optim::AdamOptions(0.005).betas({0.5, 0.999}));
 
 	std::vector<torch::Tensor> fake_X;
-	std::vector<float> d_loss, g_loss, ept;
-	std::vector<torch::Tensor> imgs;
+	std::vector<double> d_loss, g_loss, ept;
+	std::vector<std::vector<torch::Tensor>> imgs;
 
 	net_D->train(true);
 	net_G->train(true);
+
+	std::cout << "Start training...\n";
 	int epoch = 0;
 	for( epoch = 0; epoch < num_epochs; epoch++ ) {
 
@@ -303,8 +326,7 @@ int main() {
 		while (dataloader(mini_batch)) {
 			auto X = std::get<0>(mini_batch).to(device);
 			auto b_size = X.size(0);
-			auto Z = torch::normal(0, 1, {b_size, latent_dim, 1, 1});
-			Z.to(device);
+			auto Z = torch::normal(0, 1, {b_size, latent_dim, 1, 1}).to(device);
 
 			auto loss_D = update_D(X, Z, net_D, net_G, loss, trainer_D);
 			auto loss_G = update_G(Z, net_D, net_G, loss, trainer_G);
@@ -315,55 +337,69 @@ int main() {
 	        tot_size  += batch_size;
 		}
 
-		if( (epoch + 1) == num_epochs ) {
-			// Show generated examples
-	        auto Z = torch::normal(0, 1, {21, latent_dim, 1, 1}).to(device);
-	        // Normalize the synthetic data to N(0, 1)
-	        //torch::Tensor fake_x = net_G->forward(Z).permute({0, 2, 3, 1}) / 2 + 0.5;
-	        torch::Tensor fake_x = net_G->forward(Z) / 2 + 0.5;
+		// Show generated examples
+	    auto Z = torch::normal(0, 1, {21, latent_dim, 1, 1}).to(device);
+	    // Normalize the synthetic data to N(0, 1)
+	    //torch::Tensor fake_x = net_G->forward(Z).permute({0, 2, 3, 1}) / 2 + 0.5;
+	    torch::Tensor fake_x = net_G->forward(Z) / 2 + 0.5;
 
-	        int L = static_cast<int>(fake_x.size(0) / 7.0);
+	    int L = static_cast<int>(fake_x.size(0) / 7.0);
 
-	        for(int i = 0; i < L; i++) {
-	        	for(int j = 0; j < 7; j++) {
-	        		imgs.push_back( fake_x[i * 7 + j].cpu().detach().clone() );
-	        	}
+	    std::vector<torch::Tensor> Tmg;
+	    for(int i = 0; i < L; i++) {
+	        for(int j = 0; j < 7; j++) {
+	        	Tmg.push_back( fake_x[i * 7 + j].cpu().detach().clone() );
 	        }
-		}
+	    }
+	    imgs.push_back(Tmg);
 
         std::cout << "epoch: " << (epoch + 1) << ", loss_D: " << (loss_d_tot/tot_size)
         				  << ", loss_G: " << (loss_g_tot/tot_size) <<'\n';
-        d_loss.push_back(loss_d_tot/tot_size);
-        g_loss.push_back(loss_g_tot/tot_size);
+        d_loss.push_back(1.0*loss_d_tot/tot_size);
+        g_loss.push_back(1.0*loss_g_tot/tot_size);
         ept.push_back(epoch*1.0);
 	}
 
-	plt::figure_size(500, 450);
-	//plt::subplot2grid(2, 1, 0, 0, 1, 1);
-	plt::named_plot("discriminator", ept, d_loss, "b-");
-	plt::named_plot("generated", ept, g_loss, "m-.");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
-	plt::figure_size(1000, 700);
-	for(auto& img : imgs) {
-		for( int r = 0; r < 3; r++) {
-			for( int c = 0; c < 7; c++ ) {
-				plt::subplot2grid(3, 7, r, c, 1, 1);
-				torch::Tensor imgT = img.squeeze();
-				imgT = deNormalizeTensor(imgT, mean_, std_);
+	ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, ept, d_loss, "b-")->line_width(2)
+			.display_name("discriminator");
+	matplot::plot(ax1, ept, g_loss, "m-.")->line_width(2)
+			.display_name("generated");
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+	matplot::show();
 
-				std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgT.clone());
-				const uchar* zptr = &(z[0]);
-				plt::imshow(zptr, imgT.size(1), imgT.size(2), imgT.size(0));
+	// Show generated examples
+
+	for( int j = 0; j < imgs.size(); j++ ) {
+		if( j == 0 || j == (imgs.size() - 1) ) {
+			std::vector<torch::Tensor> img = imgs[j];
+
+			f = figure(true);
+			f->width(f->width() * 2);
+			f->height(f->height() * 2);
+			f->x_position(0);
+			f->y_position(0);
+			for(int i = 0; i < img.size(); i++) {
+				matplot::subplot(3, 7, i);
+				torch::Tensor imgT = deNormalizeTensor(img[i].squeeze(), mean_, std_);
+
+				std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgT);
+				matplot::imshow(z);
+				f->draw();
 			}
+			matplot::show();
 		}
 	}
-	plt::show();
-	plt::close();
 
 	std::cout << "Done!\n";
 }

@@ -44,33 +44,6 @@ std::pair<std::vector<double>, std::vector<double>> train_2d(int steps, double e
     return std::make_pair(x, xx);
 }
 
-void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
-
-//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
-//	printf("\n");
-	plt::figure_size(700, 500);
-	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
-
-	std::vector<std::vector<double>> x, y, z;
-	for (double i = -5.5; i <= 1.0;  i += 0.1) {
-	    std::vector<double> x_row, y_row, z_row;
-	    for (double j = -3.0; j <= 1.0; j += 0.1) {
-	            x_row.push_back(i);
-	            y_row.push_back(j);
-	            z_row.push_back(f_2d(i, j));
-	    }
-	    x.push_back(x_row);
-	    y.push_back(y_row);
-	    z.push_back(z_row);
-	}
-
-	plt::contour(x, y, z);
-	plt::xlabel("x1");
-	plt::ylabel("x2");
-	plt::show();
-	plt::close();
-}
-
 // Implementation from Scratch
 std::vector<torch::Tensor> init_rmsprop_states(int64_t feature_dim) {
 	auto s_w = torch::zeros({feature_dim, 1});
@@ -105,7 +78,17 @@ int main() {
 	std::vector<std::string> strs = {"b-", "y-", "g-", "r-"};
 
 	// RMSProp
-	plt::figure_size(700, 500);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	std::vector<std::string> lgd;
+	matplot::hold(ax1, true);
+
 	int i = 0;
 	for( auto& b : gmmas ) {
 		std::vector<double> x, y;
@@ -113,14 +96,15 @@ int main() {
 			x.push_back(t);
 			y.push_back((1-b) * std::pow(b, t));
 		}
-		plt::named_plot(("gamma = " + std::to_string(b)).c_str(), x, y, strs[i].c_str() );
+		matplot::plot(ax1, x, y, strs[i].c_str() )->line_width(2);
+		lgd.push_back(("gamma = " + std::to_string(b)).c_str());
 		i++;
 	}
-	plt::xlabel("time");
-	plt::ylim(0.0, 0.3);
-	plt::legend();
-	plt::show();
-	plt::close();
+	matplot::hold(ax1, false);
+	matplot::ylim(ax1, {0.0, 0.3});
+	matplot::xlabel(ax1, "time");
+	matplot::legend(ax1, lgd);
+	matplot::show();
 
 	// ----------------------------------------------------
 	// Implementation from Scratch
@@ -177,7 +161,7 @@ int main() {
     torch::Tensor loss, t;
 
     auto start = high_resolution_clock::now();
-    std::vector<float> epochs, losses;
+    std::vector<double> epochs, losses;
 
 	for( int64_t  epoch = 0; epoch < num_epochs; epoch++ ) {
 		std::list<std::pair<torch::Tensor, torch::Tensor>> data_iter = get_data_ch11(t_data, t_label, batch_size);
@@ -206,17 +190,22 @@ int main() {
 		auto duration = duration_cast<microseconds>(stop - start);
 		std::cout << "Epoch: " << (epoch + 1) << ", loss: " << (t_loss/b_cnt)  << ", duration: " << (duration.count() / 1e6) << " sec.\n";
 		epochs.push_back(epoch*1.0);
-		losses.push_back((t_loss/b_cnt));
+		losses.push_back((t_loss/b_cnt)*1.0);
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, losses, "b");
-	plt::title("RMSProp scratch");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+	matplot::title("RMSProp scratch");
+	matplot::show();
 
 	// ------------------------------------------
 	// Concise Implementation
@@ -266,16 +255,22 @@ int main() {
 		auto duration = duration_cast<microseconds>(stop - start);
 		std::cout << "Epoch: " << (epoch + 1) << ", loss: " << (t_loss/b_cnt)  << ", duration: " << (duration.count() / 1e6) << " sec.\n";
 		epochs.push_back(epoch*1.0);
-		losses.push_back((t_loss/b_cnt));
+		losses.push_back((t_loss/b_cnt)*1.0);
 	}
 
-	plt::figure_size(800, 600);
-	plt::plot(epochs, losses, "b");
-	plt::title("RMSprop concise");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+	matplot::title(ax1, "RMSprop concise");
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -5,8 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -23,33 +23,48 @@ int main() {
 	// Geometric Interpretation
 	// --------------------------------------------------
 
-	auto xT = torch::arange(-2, 2, 0.01);
-	auto fT = torch::exp(-1*torch::pow(xT, 2));
+	auto xT = torch::arange(-2, 2, 0.01).to(torch::kDouble);
+	auto fT = torch::exp(-1*torch::pow(xT, 2)).to(torch::kDouble);
 
-	std::vector<float> x(xT.data_ptr<float>(), xT.data_ptr<float>() + xT.numel());
-	std::vector<float> f(fT.data_ptr<float>(), fT.data_ptr<float>() + fT.numel());
+	std::vector<double> x(xT.data_ptr<double>(), xT.data_ptr<double>() + xT.numel());
+	std::vector<double> f(fT.data_ptr<double>(), fT.data_ptr<double>() + fT.numel());
 
-	std::vector<float> y0;
-	for( size_t i = 0; i < x.size(); i++ )
+	std::vector<double> y0;
+	for( size_t i = 0; i < x.size(); i++ ) {
 		y0.push_back(0.0);
+	}
 
-	std::map<std::string, std::string> fill_parameters;
-	fill_parameters["color"] = "blue";
-	fill_parameters["alpha"] = "0.5";
+    auto F = figure(true);
+    F->size(800, 600);
+    F->add_axes(false);
+    F->reactive_mode(false);
+    F->tiledlayout(1, 1);
+    F->position(0, 0);
 
-	plt::figure_size(500, 400);
-	plt::plot(x, f, "b-");
-	plt::fill_between(x, y0, f, fill_parameters);
-	plt::show();
-	plt::close();
+    auto ax1 = F->nexttile();
+    matplot::plot(ax1, x, f, "b-")->line_width(2);
+    matplot::hold(ax1, true);
+    matplot::area(ax1, x, f);
+    matplot::hold(ax1, false);
+    matplot::show();
 
-	// In most cases, this area will be infinite or undefined (consider the area under f(x)=x2),
-	// so people will often talk about the area between a pair of ends, say a and b.
-	plt::figure_size(500, 400);
-	plt::plot(x, f, "k-");
-	plt::fill_between(vector_slice(x, 50, 250), vector_slice(y0, 50, 250), vector_slice(f, 50, 250), fill_parameters);
-	plt::show();
-	plt::close();
+
+    for( int i = 50; i < 250; i++ )
+    	y0[i] = f[i];
+
+    F = figure(true);
+    F->size(800, 600);
+    F->add_axes(false);
+    F->reactive_mode(false);
+    F->tiledlayout(1, 1);
+    F->position(0, 0);
+
+    ax1 = F->nexttile();
+    matplot::plot( x, f, "b-")->line_width(2);
+    matplot::hold( true);
+    matplot::area(ax1, x, y0);
+    matplot::hold( false);
+    matplot::show();
 
 	//  Let us take a look at an example doing this in code. We will see how to get the true value in a later section.
 	float epsilon = 0.05;
@@ -65,16 +80,21 @@ int main() {
 	auto approx = torch::sum(epsilon*fT);
 	auto tru = torch::log(torch::tensor({5.})) / 2;
 
-	std::map<std::string, std::string> bar_parameters;
-	bar_parameters["width"] = "0.05";
-	bar_parameters["align"] = "edge";
 
-	plt::figure_size(500, 400);
-	plt::plot(xx, ff, "k-");
-	plt::bar(xx, ff, "b", "-", 1.0, bar_parameters);
-	plt::ylim(0.0, 1.0);
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::ylim(ax1, {0.0, 1.0});
+	matplot::plot(ax1, xx, ff, "k-")->line_width(2);
+	matplot::hold(ax1, true);
+	matplot::bar(ax1, xx, ff);
+	matplot::hold(ax1, false);
+	matplot::show();
 
 	std::cout << "approximation: " << approx << "\ntruth: " << tru << '\n';
 
@@ -83,11 +103,11 @@ int main() {
 	// ----------------------------------------------
 	// Construct grid and compute function
 
-	std::vector<std::vector<float>> x_, y_, z_;
+	std::vector<std::vector<double>> x_, y_, z_;
 
-	for( float i = -2.0; i < 2.0; i += 0.04 ) {
-		std::vector<float> x_row, y_row, z_row;
-		for( float j = -2.0; j < 2.0; j += 0.04 ) {
+	for( double i = -2.0; i < 2.0; i += 0.04 ) {
+		std::vector<double> x_row, y_row, z_row;
+		for( double j = -2.0; j < 2.0; j += 0.04 ) {
 	            x_row.push_back(i);
 	            y_row.push_back(j);
 	            z_row.push_back(std::exp(-1 * std::pow(i, 2) - std::pow(j, 2)));
@@ -97,14 +117,20 @@ int main() {
 		z_.push_back(z_row);
 	}
 
-	// Plot function
-	plt::plot_surface(x_, y_, z_);
-	plt::xlabel("x");
-	plt::ylabel("y");
-	plt::xlim(-2, 2);
-	plt::ylim(-2, 2);
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::xlim(ax1, {-2, 2});
+	matplot::ylim(ax1, {-2, 2});
+	matplot::surf(ax1, x_, y_, z_);
+	matplot::xlabel(ax1, "x");
+	matplot::ylabel(ax1, "y");
+	matplot::show();
 
 	std::cout << "Done!\n";
 }

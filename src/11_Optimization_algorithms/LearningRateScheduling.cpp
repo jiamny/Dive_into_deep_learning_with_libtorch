@@ -21,8 +21,8 @@
 #include "../fashion.h"
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using Options = torch::nn::Conv2dOptions;
 
@@ -225,26 +225,47 @@ void train(float lr, int64_t num_epochs, torch::Device device, bool lr_sh, Sched
 	double xL = 1.0;
 	if( num_epochs > 10 ) xL = 5.0;
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.0, 1.5);
-	plt::xlim(xL, num_epochs*1.0);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::ylim({0.0, 1.5});
+	matplot::xlim({xL, num_epochs*1.0});
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2)
+		.display_name("Train loss");
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2)
+			.display_name("Train acc");
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2)
+			.display_name("Test acc");
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss and acc");
+    matplot::show();
+
 }
 
-void plot_scheduler(std::vector<float> x, std::vector<float> y) {
-	plt::figure_size(700, 550);
-	plt::plot(x, y, "b");
-	plt::ylabel("lr");
-	plt::xlabel("epoch");
-	plt::show();
-	plt::close();
+void plot_scheduler(std::vector<double> x, std::vector<double> y) {
+
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::plot(ax1, x, y, "b")->line_width(2)
+		.display_name("scheduler");
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "lr");
+    matplot::show();
 }
 
 
@@ -269,10 +290,10 @@ int main() {
 	// SquareRootScheduler
 	SquareRootScheduler SL = SquareRootScheduler( lr );
 
-	std::vector<float> x, y;
+	std::vector<double> x, y;
 	for(auto& i : range(num_epochs)) {
 		x.push_back(i*1.0);
-		y.push_back(SL.get_lr(i));
+		y.push_back(SL.get_lr(i)*1.0);
 	}
 
 	plot_scheduler(x, y);

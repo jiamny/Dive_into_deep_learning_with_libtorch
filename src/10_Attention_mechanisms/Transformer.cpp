@@ -388,9 +388,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -493,7 +494,7 @@ int main() {
 	auto loss_fn = MaskedSoftmaxCELoss();
 	net->train(true);
 
-	std::vector<float> epochs, plsum;
+	std::vector<double> epochs, plsum;
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat;
 	std::tuple<torch::Tensor, torch::Tensor, std::vector<torch::Tensor>> stat;
@@ -551,12 +552,12 @@ int main() {
 
 	    if(epoch % 10 == 0) {
 	    	std::cout << "loss: " << (t_loss/cnt) << std::endl;
-	    	plsum.push_back((t_loss/cnt));
+	    	plsum.push_back((t_loss/cnt)*1.0);
 	    	wtks.push_back(static_cast<int64_t>(n_wtks/cnt));
 	    	epochs.push_back(1.0*epoch);
 	    }
 	}
-
+/*
 	plt::figure_size(800, 600);
 	plt::named_plot("train", epochs, plsum, "b");
 	plt::legend();
@@ -564,6 +565,19 @@ int main() {
 	plt::ylabel("loss");
 	plt::show();
 	plt::close();
+*/
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, plsum, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 
 	printf("\n\n");
 	// Prediction
@@ -589,16 +603,46 @@ int main() {
 	auto enc_attention_weights = torch::cat(net->encoder->attention_weights, 0).reshape({num_layers, num_heads,-1, num_steps});
 	std::cout << "enc_attention_weights.sizes(): " << enc_attention_weights.sizes() << "\n";
 
-	plt::figure_size(1200, 750);
-	int rid = 0, cid = 0;
+//	plt::figure_size(1200, 750);
+//	int rid = 0, cid = 0;
 
-	PyObject* mat;
+//	PyObject* mat;
+	auto h = figure(true);
+	h->size(1500, 900);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(num_layers, num_heads);
+	h->position(0, 0);
+
 	for(int i = 0; i < enc_attention_weights.size(0); i++) {
 		torch::Tensor layerH = enc_attention_weights.index({i, Slice(), Slice(), Slice()});
 		layerH = layerH.squeeze();
 
 		for( int c = 0; c < layerH.size(0); c++ ) {
 			torch::Tensor tsr = layerH.index({c, Slice(), Slice()});
+
+			tsr = tsr.cpu().to(torch::kDouble);
+			int nrows = tsr.size(0), ncols = tsr.size(1);
+			auto ax = h->nexttile();
+			//ax->axis(false);
+
+			std::vector<std::vector<double>> C;
+			for( int i = 0; i < nrows; i++ ) {
+				std::vector<double> c;
+				for( int j = 0; j < ncols; j++ )
+					c.push_back(tsr[i][j].item<double>());
+				C.push_back(c);
+			}
+
+			matplot::heatmap(ax, C);
+
+			if( c == 0 )
+				matplot::ylabel(ax, "Query positions");
+			if( i == 1 )
+				matplot::xlabel(ax, "Key positions");
+
+			matplot::title(ax, ("Head " + std::to_string(c)).c_str());
+/*
 			tsr = tsr.squeeze();
 
 			std::vector<float> z = tensor2vector( tsr );
@@ -621,12 +665,14 @@ int main() {
 				plt::xlabel("Key positions");
 
 			plt::colorbar(mat);
+			*/
 		}
 	}
+	matplot::colorbar();
+	matplot::show();
 
-	plt::show();
-    plt::close();
-    Py_DECREF(mat);
+//    plt::close();
+//    Py_DECREF(mat);
 
 	std::cout << "Done!\n";
 	return 0;

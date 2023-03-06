@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
@@ -14,11 +8,9 @@ list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
 add_executable(11_Optimization_intro)
 
 target_sources(11_Optimization_intro PRIVATE Optimization_intro.cpp )
-													
-target_include_directories(11_Optimization_intro PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Optimization_intro ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
 
-set_target_properties(11_Optimization_intro PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(11_Optimization_intro ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(11_Optimization_intro PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(11_MinibatchStochasticGradientDescent)
@@ -31,9 +23,7 @@ MinibatchStochasticGradientDescent.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_MinibatchStochasticGradientDescent PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_MinibatchStochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_MinibatchStochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_MinibatchStochasticGradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -46,9 +36,7 @@ target_sources(11_Adagrad PRIVATE  Adagrad.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_Adagrad PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Adagrad ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_Adagrad ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_Adagrad PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -61,9 +49,7 @@ target_sources(11_Adadelta PRIVATE  Adadelta.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_Adadelta PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Adadelta ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_Adadelta ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_Adadelta PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -76,9 +62,7 @@ target_sources(11_Adam PRIVATE  Adam.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_Adam PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Adam ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_Adam ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_Adam PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -86,9 +70,7 @@ add_executable(11_Convexity)
 target_sources(11_Convexity PRIVATE  Convexity.cpp
 )
 
-target_include_directories(11_Convexity PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Convexity ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_Convexity ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_Convexity PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -96,9 +78,7 @@ add_executable(11_GradientDescent)
 target_sources(11_GradientDescent PRIVATE  GradientDescent.cpp
 )
 
-target_include_directories(11_GradientDescent PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_GradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_GradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_GradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -111,9 +91,7 @@ target_sources(11_Momentum PRIVATE  Momentum.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_Momentum PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_Momentum ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_Momentum ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_Momentum PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -123,9 +101,7 @@ target_sources(11_StochasticGradientDescent PRIVATE  StochasticGradientDescent.c
 ../utils/ch_11_util.cpp
 )
 
-target_include_directories(11_StochasticGradientDescent PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_StochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_StochasticGradientDescent ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_StochasticGradientDescent PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -138,9 +114,7 @@ target_sources(11_RMSProp PRIVATE  RMSProp.cpp
 ../utils.cpp
 )
 
-target_include_directories(11_RMSProp PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_RMSProp ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_RMSProp ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_RMSProp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
@@ -152,9 +126,7 @@ target_sources(11_LearningRateScheduling PRIVATE  LearningRateScheduling.cpp
 ../fashion.cpp
 )
 
-target_include_directories(11_LearningRateScheduling PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(11_LearningRateScheduling ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
+target_link_libraries(11_LearningRateScheduling ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(11_LearningRateScheduling PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 

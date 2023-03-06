@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -31,16 +25,10 @@ target_sources(07_AlexNet PRIVATE AlexNet.cpp
 									../utils/transforms.cpp
 									)
 													
-target_include_directories(07_AlexNet PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_AlexNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_AlexNet PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_AlexNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_AlexNet PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_batch_norm)
 
 target_sources(07_batch_norm PRIVATE batch_norm.cpp 
@@ -50,16 +38,10 @@ target_sources(07_batch_norm PRIVATE batch_norm.cpp
 									../fashion.cpp
 									)
 													
-target_include_directories(07_batch_norm PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_batch_norm ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_batch_norm PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_batch_norm ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_batch_norm PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_DensNet)
 
 target_sources(07_DensNet PRIVATE DensNet.cpp 
@@ -73,16 +55,10 @@ target_sources(07_DensNet PRIVATE DensNet.cpp
 									../utils/transforms.cpp
 									)
 													
-target_include_directories(07_DensNet PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_DensNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_DensNet PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_DensNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_DensNet PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_GoogLeNet)
 
 target_sources(07_GoogLeNet PRIVATE GoogLeNet.cpp 
@@ -96,16 +72,10 @@ target_sources(07_GoogLeNet PRIVATE GoogLeNet.cpp
 									../utils/transforms.cpp
 									)
 													
-target_include_directories(07_GoogLeNet PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_GoogLeNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_GoogLeNet PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_GoogLeNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_GoogLeNet PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_NiN)
 
 target_sources(07_NiN PRIVATE NiN.cpp 
@@ -119,16 +89,10 @@ target_sources(07_NiN PRIVATE NiN.cpp
 									../utils/transforms.cpp
 									)
 													
-target_include_directories(07_NiN PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_NiN ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_NiN PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_NiN ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_NiN PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
-
 add_executable(07_ResNet)
 
 target_sources(07_ResNet PRIVATE ResNet.cpp 
@@ -142,13 +106,8 @@ target_sources(07_ResNet PRIVATE ResNet.cpp
 										../utils/transforms.cpp
 										)
 														
-target_include_directories(07_ResNet PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_ResNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_ResNet PROPERTIES
-	  CXX_STANDARD 14
-	  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_ResNet ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_ResNet PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(07_VGG)
@@ -164,12 +123,7 @@ target_sources(07_VGG PRIVATE VGG.cpp
 										../utils/transforms.cpp
 										)
 														
-target_include_directories(07_VGG PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(07_VGG ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(07_VGG PROPERTIES
-	  CXX_STANDARD 14
-	  CXX_STANDARD_REQUIRED YES
-)
+target_link_libraries(07_VGG ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(07_VGG PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 

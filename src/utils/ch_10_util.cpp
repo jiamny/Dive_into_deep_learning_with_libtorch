@@ -1,27 +1,33 @@
 #include "ch_10_util.h"
 
 void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab) {
+	tsr = tsr.cpu().squeeze().to(torch::kDouble);
 	int nrows = tsr.size(0), ncols = tsr.size(1);
 
-	std::vector<float> z(ncols * nrows);
-	for( int j=0; j<nrows; ++j ) {
-	    for( int i=0; i<ncols; ++i ) {
-	            z.at(ncols * j + i) = (tsr.index({j, i})).item<float>();
-	     }
+	std::vector<std::vector<double>> C;
+	for( int i = 0; i < nrows; i++ ) {
+		std::vector<double> c;
+		for( int j = 0; j < ncols; j++ ) {
+			c.push_back(tsr[i][j].item<double>());
+		}
+		C.push_back(c);
 	}
 
-	const float* zptr = &(z[0]);
-	const int colors = 1;
-	PyObject* mat;
+	auto h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
 
-	plt::title("heatmap");
-	plt::imshow(zptr, nrows, ncols, colors, {}, &mat);
-	plt::xlabel(xlab);
-	plt::ylabel(ylab);
-	plt::colorbar(mat);
-	plt::show();
-    plt::close();
-    Py_DECREF(mat);
+	auto ax = h->nexttile();
+	//ax->axis(false);
+	matplot::heatmap(ax, C);
+	matplot::colorbar(ax);
+    matplot::xlabel(ax, xlab);
+    matplot::ylabel(ax, ylab);
+    matplot::title(ax, "heatmap");
+    matplot::show();
 }
 
 

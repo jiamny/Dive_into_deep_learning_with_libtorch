@@ -72,33 +72,6 @@ std::pair<std::vector<double>, std::vector<double>> train_2d(int steps, double e
 }
 
 
-void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt ) {
-
-//	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
-//	printf("\n");
-	plt::figure_size(700, 500);
-	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
-
-	std::vector<std::vector<double>> x, y, z;
-	for (double i = -5.5; i <= 1.0;  i += 0.1) {
-	    std::vector<double> x_row, y_row, z_row;
-	    for (double j = -3.0; j <= 1.0; j += 0.1) {
-	            x_row.push_back(i);
-	            y_row.push_back(j);
-	            z_row.push_back(f_2d(i, j));
-	    }
-	    x.push_back(x_row);
-	    y.push_back(y_row);
-	    z.push_back(z_row);
-	}
-
-	plt::contour(x, y, z);
-	plt::xlabel("x1");
-	plt::ylabel("x2");
-	plt::show();
-	plt::close();
-}
-
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
@@ -115,15 +88,15 @@ int main() {
 	// ------------------------------------------
 	// Stochastic Gradient Updates
 	// ------------------------------------------
-	show_trace_2d( train_2d(50, 0.1, "constant") );
+	show_trace_2d( train_2d(50, 0.1, "constant"), "constant" );
 
 	// ------------------------------------------
 	// Dynamic Learning Rate
 	// ------------------------------------------
 
-	show_trace_2d( train_2d(50, 0.1, "exponential") );
+	show_trace_2d( train_2d(50, 0.1, "exponential"), "exponential" );
 
-	show_trace_2d( train_2d(50, 0.1, "polynomial") );
+	show_trace_2d( train_2d(50, 0.1, "polynomial"), "polynomial" );
 
 	std::cout << "Done!\n";
 	return 0;

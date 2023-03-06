@@ -16,8 +16,8 @@
 #include <functional>
 #include <utility> 		// make_pair etc.
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 #ifndef SRC_UTILS_CH_11_UTIL_H_
 #define SRC_UTILS_CH_11_UTIL_H_
@@ -25,5 +25,7 @@ namespace plt = matplotlibcpp;
 std::list<std::pair<torch::Tensor, torch::Tensor>> get_data_ch11(torch::Tensor X, torch::Tensor Y, int64_t batch_size=8);
 
 double f_2d(double x1, double x2);
+
+void show_trace_2d( std::pair<std::vector<double>, std::vector<double>> rlt, std::string tlt="" );
 
 #endif /* SRC_UTILS_CH_11_UTIL_H_ */

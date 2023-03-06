@@ -14,8 +14,8 @@
 #include <functional>
 #include <utility> 		// make_pair etc.
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 double f( double x ) { return x*x; }		// Objective function
 
@@ -53,13 +53,22 @@ void show_trace(std::vector<double> results, std::function<double(double)> fc) {
 //	std::for_each( f_line.begin(), f_line.end(), [](const auto & elem ) {std::cout << elem << " "; });
 //	printf("\n");
 
-    plt::figure_size(700, 500);
-    plt::plot(f_line, fx, "b-");
-    plt::plot(results, fresults, "y-o");
-    plt::xlabel("x");
-    plt::ylabel("f(x)");
-    plt::show();
-    plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, f_line, fx, "b-")->line_width(2);
+	matplot::plot(ax1, results, fresults, "m-o")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "x");
+	matplot::ylabel(ax1, "f(x)");
+	matplot::legend(ax1, {"fx", "fresults"});
+	matplot::show();
 }
 
 double ftri(double x) {  			// Objective function
@@ -109,8 +118,16 @@ void show_trace_2d(std::function<double(double, double)> func, std::pair<std::ve
 //	std::for_each( rlt.first.begin(), rlt.first.end(), [](const auto & elem ) {std::cout << elem << " "; });
 //	printf("\n");
 
-	plt::figure_size(700, 500);
-	plt::plot(rlt.first, rlt.second, "oy-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, rlt.first, rlt.second, "om-"); // {{"marker": "o"}, {"color": "yellow"}, {"linestyle": "-"}}
 
 	std::vector<std::vector<double>> x, y, z;
 	for (double i = -5.5; i <= 1.0;  i += 0.1) {
@@ -125,11 +142,11 @@ void show_trace_2d(std::function<double(double, double)> func, std::pair<std::ve
 	    z.push_back(z_row);
 	}
 
-	plt::contour(x, y, z);
-	plt::xlabel("x1");
-	plt::ylabel("x2");
-	plt::show();
-	plt::close();
+	matplot::contour(ax1, x, y, z)->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "x1");
+	matplot::ylabel(ax1, "x2");
+	matplot::show();
 }
 
 // ----------------------------------------------

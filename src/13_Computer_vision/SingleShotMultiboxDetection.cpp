@@ -7,8 +7,8 @@
 
 #include "../TempHelpFunctions.hpp"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 // ----------------------------------------------------
 // Class Prediction Layer
@@ -195,9 +195,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 	auto x = torch::tensor({{1, 0}, {1, 1}});
@@ -360,23 +361,32 @@ int main() {
 	}
 
 	torch::Tensor gimg = CvMatToTensor2(img, {}, true);
-	std::vector<uint8_t> zz = tensorToMatrix4Matplotlib(gimg);
-	const unsigned char* zptr = &(zz[0]);
+	std::vector<std::vector<std::vector<unsigned char>>> M = tensorToMatrix4MatplotPP(gimg.clone());
 
-	plt::figure_size(1000, 400);
-	plt::ylim(0., 0.01);
-	plt::subplot2grid(1, 2, 0, 0, 1, 1);
-	plt::named_plot("class error", epoch_num, cls_errs, "b");
-	plt::named_plot("bbox mae", epoch_num, bbox_maes, "m--");
-	plt::xlabel("epoch");
-	plt::legend();
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
 
-	plt::subplot2grid(1, 2, 0, 1, 1, 1);
-	plt::title("SSD image");
-	plt::imshow(zptr, static_cast<int>(gimg.size(1)),
-									static_cast<int>(gimg.size(2)), static_cast<int>(gimg.size(0)));
-	plt::show();
-	plt::close();
+	matplot::subplot(1, 2, 0);
+	matplot::legend();
+	matplot::hold(true);
+	matplot::ylim({0., 0.01});
+	matplot::plot(epoch_num, cls_errs, "b")->line_width(2)
+				.display_name("class error");
+	matplot::plot(epoch_num, bbox_maes, "m--")->line_width(2)
+					.display_name("bbox mae");
+	matplot::hold( false);
+	matplot::xlabel("epoch");
+	f->draw();
+
+	matplot::subplot(1, 2, 1);
+	matplot::imshow(M);
+	matplot::title("SSD image");
+	f->draw();
+	matplot::show();
+
 
 	std::cout << "Done!\n";
 }

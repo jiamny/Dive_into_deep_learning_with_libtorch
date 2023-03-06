@@ -7,9 +7,8 @@
 #include <iomanip>
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -40,15 +39,26 @@ int main() {
 	 * By generating a scatter plot using the second feature features[:, 1] and labels, we can clearly observe the linear correlation between the two.
 	 */
 
-	plt::figure_size(800, 600);
 	auto x = features.data().index({Slice(), 1});
+	auto xd = x.to(torch::kDouble);
+	auto yd = labels.to(torch::kDouble);
 
-	std::vector<float> xx(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
-	std::vector<float> yy(labels.data_ptr<float>(), labels.data_ptr<float>() + labels.numel());
-	plt::scatter(xx, yy);
-	plt::xlabel("x2");
-	plt::ylabel("y");
-	plt::show();
+	std::vector<double> xx(xd.data_ptr<double>(), xd.data_ptr<double>() + xd.numel());
+	std::vector<double> yy(yd.data_ptr<double>(), yd.data_ptr<double>() + yd.numel());
+
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::scatter(ax1, xx, yy);
+	matplot::xlabel(ax1, "x2");
+	matplot::ylabel(ax1, "y");
+	matplot::title(ax1, "Scatter plot using the second feature");
+	matplot::show();
 
 	/*
 	 * Initializing Model Parameters
@@ -79,7 +89,7 @@ int main() {
 	 */
 
 	float lr = 0.05;
-	size_t num_epochs = 5;
+	size_t num_epochs = 50;
 
 	// ---- params - hyperparameters
 	//std::vector<torch::Tensor> params = {w, b};
@@ -106,12 +116,13 @@ int main() {
 //			std::cout << y.sizes() << std::endl;
 
 	    	auto t = linreg(X, w, b);
-	        auto loss = squared_loss(t, y);
+
+	        auto loss = squared_loss(t, y).sum();
 
 	        // Compute gradient on `l` with respect to [`w`, `b`]
 	        //std::cout << loss << std::endl;
 
-	        loss.sum(0).backward();
+	        loss.backward();
 
 	        sgd(w, b, lr, X.size(0));  // Update parameters using their gradient
 	    }

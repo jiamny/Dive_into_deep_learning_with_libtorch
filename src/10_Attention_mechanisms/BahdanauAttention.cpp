@@ -196,12 +196,12 @@ int main() {
 	decoder->eval();
 
 	auto X = torch::zeros({4, 7}).to(torch::kLong); 	// (`batch_size`, `num_steps`)
-	std::tuple<torch::Tensor, torch::Tensor> enc_outputs = encoder->forward(X);
+	std::tuple<torch::Tensor, torch::Tensor> enc_outputs = encoder->forward(X.to(device));
 	std::cout << std::get<0>(enc_outputs).sizes() << std::endl;
 	std::cout << std::get<1>(enc_outputs).sizes() << std::endl;
 
 	torch::Tensor val_lens; // ! defined()
-	torch::Tensor val_lens2 = torch::empty({0});
+	torch::Tensor val_lens2 = torch::empty({0}).to(device);
 	std::cout << "defined: " << val_lens.defined() << ", numel(): " << val_lens2.numel() << "\n";
 
 	std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> state = decoder->init_state(enc_outputs, val_lens);
@@ -213,8 +213,8 @@ int main() {
 
 
 	torch::Tensor output;
-	std::tie(output, state) = decoder->forward(X, state);
-	std::cout << output.sizes() << std::endl;
+	std::tie(output, state) = decoder->forward(X.to(device), state);
+	std::cout << "output.sizes: " << output.sizes() << std::endl;
 
 	// ------------------------------------------
 	// Training
@@ -247,7 +247,7 @@ int main() {
 	auto loss_fn = MaskedSoftmaxCELoss();
 	net->train(true);
 
-	std::vector<float> epochs, plsum;
+	std::vector<double> epochs, plsum;
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat;
 	std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> stat;
@@ -305,19 +305,24 @@ int main() {
 
 	    if(epoch % 10 == 0) {
 	    	std::cout << "loss: " << (t_loss/cnt) << std::endl;
-	    	plsum.push_back((t_loss/cnt));
+	    	plsum.push_back((t_loss/cnt)*1.0);
 	    	wtks.push_back(static_cast<int64_t>(n_wtks/cnt));
 	    	epochs.push_back(1.0*epoch);
 	    }
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, plsum, "b");
-	plt::legend();
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, plsum, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 
 	printf("\n\n");
 	// Prediction

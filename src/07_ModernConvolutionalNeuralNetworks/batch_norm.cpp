@@ -10,8 +10,8 @@
 #include "../utils.h"
 #include "../fashion.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using Options = torch::nn::Conv2dOptions;
 
@@ -99,10 +99,10 @@ int main() {
 	auto optimizer = torch::optim::SGD(net->parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss();
 
-	std::vector<float> train_loss;
-	std::vector<float> train_acc;
-	std::vector<float> test_acc;
-	std::vector<float> xx;
+	std::vector<double> train_loss;
+	std::vector<double> train_acc;
+	std::vector<double> test_acc;
+	std::vector<double> xx;
 
 	//timer, num_batches = d2l.Timer(), len(train_iter)
 	for( int64_t epoch = 0; epoch < num_epochs; epoch++ ) {
@@ -137,7 +137,7 @@ int main() {
 	    std::cout << "Epoch [" << (epoch + 1) << "/" << num_epochs << "], Trainset - Loss: "
 	    					            << sample_mean_loss << ", Accuracy: " << tr_acc << '\n';
 
-	    train_loss.push_back((sample_mean_loss));
+	    train_loss.push_back((sample_mean_loss*1.0));
 	    train_acc.push_back(tr_acc);
 
 		std::cout << "Training finished!\n\n";
@@ -165,18 +165,29 @@ int main() {
 		test_acc.push_back(test_accuracy);
 
 		std::cout << "Testset - Accuracy: " << test_accuracy << '\n';
-		xx.push_back((epoch + 1));
+		xx.push_back((epoch + 1)*1.0);
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.2, 0.9});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::title(ax1, "Batch norm");
+    matplot::legend(ax1, {"Train loss", "Train acc", "Test acc"});
+    matplot::show();
+
 
 	std::cout << "Done!\n";
 	return 0;

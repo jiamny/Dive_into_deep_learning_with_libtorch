@@ -19,23 +19,35 @@ torch::Tensor f(torch::Tensor x) {
 
 void plot_kernel_reg(torch::Tensor y_hat, torch::Tensor y_train,
 		torch::Tensor y_truth, torch::Tensor x_test, std::string tlt) {
-	std::vector<float> yhat(y_hat.data_ptr<float>(), y_hat.data_ptr<float>() + y_hat.numel());
-	std::vector<float> ytrain(y_train.data_ptr<float>(), y_train.data_ptr<float>() + y_train.numel());
-	std::vector<float> ytruth(y_truth.data_ptr<float>(), y_truth.data_ptr<float>() + y_truth.numel());
-	std::vector<float> xtest(x_test.data_ptr<float>(), x_test.data_ptr<float>() + x_test.numel());
+	auto hat = y_hat.to(torch::kDouble);
+	auto train = y_train.to(torch::kDouble);
+	auto truth = y_truth.to(torch::kDouble);
+	auto test  = x_test.to(torch::kDouble);
+	std::vector<double> yhat(hat.data_ptr<double>(), hat.data_ptr<double>() + hat.numel());
+	std::vector<double> ytrain(train.data_ptr<double>(), train.data_ptr<double>() + train.numel());
+	std::vector<double> ytruth(truth.data_ptr<double>(), truth.data_ptr<double>() + truth.numel());
+	std::vector<double> xtest(test.data_ptr<double>(), test.data_ptr<double>() + test.numel());
 
-	plt::figure_size(800, 600);
-	plt::named_plot("Truth", xtest, ytruth, "b");
-	plt::named_plot("Pred", xtest, yhat, "m--");
-	plt::plot(xtest, ytrain, "yo");
-	plt::xlim(0, 5);
-	plt::ylim(-1, 5);
-	plt::xlabel("x");
-	plt::ylabel("y");
-	plt::title(tlt.c_str());
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::xlim(ax1, {0., 5.0});
+	matplot::ylim(ax1, {-1., 5.0});
+	matplot::plot(ax1, xtest, ytruth, "b")->line_width(2);
+	matplot::plot(ax1, xtest, yhat, "m--")->line_width(2);
+	matplot::plot(ax1, xtest, ytrain, "yo")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "y");
+    matplot::title(ax1, tlt.c_str());
+    matplot::legend(ax1, {"Truth", "Pred", "Train"});
+    matplot::show();
 }
 
 // ------------------------------------------------
@@ -68,11 +80,6 @@ TORCH_MODULE(NWKernelRegression);
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
-
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -120,31 +127,8 @@ int main() {
 	float maxV = attention_weights.max().item<float>();
 	std::cout << "maxV: " <<  maxV << "\n";
 
-	int nrows = attention_weights.size(0), ncols = attention_weights.size(1);
 
-	std::vector<float> z(ncols * nrows);
-	for( int j=0; j<nrows; ++j ) {
-		for( int i=0; i<ncols; ++i ) {
-		    z.at(ncols * j + i) = (attention_weights.index({j, i})).item<float>();
-		}
-	}
-    std::cout << "max: " << *std::max_element(z.begin(), z.end()) << "\n";
-    std::cout << "min: " << *std::min_element(z.begin(), z.end()) << "\n";
-
-    const float* zptr = &(z[0]);
-    const int colors = 1;
-    PyObject* mat;
-
-    plt::title("heatmap");
-    plt::imshow(zptr, nrows, ncols, colors, {}, &mat);
-    plt::xlabel("Sorted training inputs");
-    plt::ylabel("Sorted testing inputs");
-    plt::colorbar(mat);
-    plt::show();
-    plt::close();
-    Py_DECREF(mat);
-
-    //plot_heatmap(attention_weights, "Sorted training inputs", "Sorted testing inputs");
+    plot_heatmap(attention_weights, "Sorted training inputs", "Sorted testing inputs");
 
 	// Parametric Attention Pooling
     auto X = torch::ones({2, 1, 4});
@@ -177,7 +161,7 @@ int main() {
     auto loss = torch::nn::MSELoss(torch::nn::MSELossOptions(torch::kNone));
     auto trainer = torch::optim::SGD(net->parameters(), 0.5);
 
-    std::vector<float> v_epoch, v_loss;
+    std::vector<double> v_epoch, v_loss;
 
     for( int epoch = 0; epoch < 5; epoch++ ) {
         trainer.zero_grad();
@@ -186,17 +170,22 @@ int main() {
         trainer.step();
         std::cout << "epoch: " << (epoch + 1) << ", loss: " << l.sum().item<float>() << std::endl;
         v_epoch.push_back((epoch + 1)*1.0);
-        v_loss.push_back(l.sum().item<float>());
+        v_loss.push_back(1.0*l.sum().item<float>());
     }
 
-    plt::figure_size(700, 500);
-    plt::named_plot("train", v_epoch, v_loss, "b");
-    plt::xlabel("epoch");
-    plt::ylabel("loss");
-    plt::title("Train the parametric attention model");
-    plt::legend();
-    plt::show();
-    plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, v_epoch, v_loss, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::title(ax1, "Train the parametric attention model");
+    matplot::show();
 
     // Shape of `keys`: (`n_test`, `n_train`), where each column contains the same training inputs (i.e., same keys)
     keys = x_train.repeat({n_test, 1});

@@ -29,8 +29,8 @@
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -133,8 +133,9 @@ torch::Tensor load_image(std::string path) {
 
 void displayImage(std::string f1, std::string f2) {
 	torch::manual_seed(0);
-	plt::figure_size(800, 500);
-	plt::subplot2grid(1, 2, 0, 0, 1, 1);
+
+//	plt::figure_size(800, 500);
+//	plt::subplot2grid(1, 2, 0, 0, 1, 1);
 
 	torch::Tensor a = load_image(f1);
 	torch::Tensor b = load_image(f2);
@@ -156,7 +157,7 @@ void displayImage(std::string f1, std::string f2) {
 	 a = a.permute({1,2,0}).mul(255).to(torch::kByte);
 //	 a = a.to(torch::kByte);
 	 std::cout << a.sizes() << std::endl;
-
+/*
 	 std::vector<uchar> z(a.size(0) * a.size(1) * a.size(2));
 	 std::memcpy(&(z[0]), a.data_ptr<uchar>(),sizeof(uchar)*a.numel());
 
@@ -176,7 +177,7 @@ void displayImage(std::string f1, std::string f2) {
 	 plt::title("image aa");
 	 plt::imshow(zptra, aa.size(0), aa.size(1), aa.size(2));
 	 plt::show();
-
+*/
 
 	 auto t4mat = c[0].clone().permute({1,2,0}).mul(255).to(torch::kByte);
 
@@ -323,7 +324,7 @@ int main() {
 	} else {
 		std::string ty =  cvMatType2Str( img2.type() );
 		std::cout << "img2_isContinuous: " << img2.isContinuous() << ", Type: " << ty << '\n';
-
+/*
 		plt::figure_size(800, 400);
 
 		std::vector<uint8_t> z1 = tensorToMatrix4Matplotlib(imgT.clone());
@@ -338,6 +339,7 @@ int main() {
 		plt::imshow(zptr, imgT2.size(1), imgT2.size(2), imgT2.size(0));
 		plt::show();
 		plt::close();
+*/
 	}
 
     std::cout << "Done!\n";

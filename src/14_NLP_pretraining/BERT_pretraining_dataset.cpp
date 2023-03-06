@@ -4,9 +4,6 @@
 #include "../utils/ch_14_util.h"
 #include "../TempHelpFunctions.hpp"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
 class _WikiTextDataset {
 public:
 	_WikiTextDataset(std::vector<std::vector<std::vector<std::string>>> paragraphs, int64_t max_len) {

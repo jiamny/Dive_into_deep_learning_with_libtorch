@@ -9,9 +9,8 @@
 #include "../utils/ch_8_9_util.h"
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 struct RNNModeldeeprnn : public torch::nn::Module {
     //"""The deep rnn model."""
@@ -151,14 +150,19 @@ int main() {
 	std::pair<std::vector<double>, std::vector<double>> ctrlt = train_ch9( cnet, ctrain_iter, vocab, device, lr,
 			num_epochs, use_random_iter);
 
-	plt::figure_size(700, 500);
-	plt::named_plot("train", ctrlt.first, ctrlt.second, "b");
-	plt::xlabel("epoch");
-	plt::ylabel("perplexity");
-	plt::title("RNNModeldeeprnn");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, ctrlt.first, ctrlt.second, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "perplexity");
+    matplot::title(ax1, "RNNModeldeeprnn");
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

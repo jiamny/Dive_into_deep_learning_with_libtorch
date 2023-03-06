@@ -14,6 +14,9 @@
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
 
+#include <matplot/matplot.h>
+using namespace matplot;
+
 using namespace std::chrono;
 
 std::vector<std::pair<torch::Tensor, torch::Tensor>>  init_adam_states( int64_t feature_dim) {
@@ -141,15 +144,21 @@ int main() {
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, losses, "b");
-	plt::title("Adam scratch");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
+		.display_name("Train loss");
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::title(ax1, "Adam scratch");
+    matplot::show();
 	// ------------------------------------
 	// A more concise implementation
 	// ------------------------------------
@@ -200,14 +209,21 @@ int main() {
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	plt::figure_size(800, 600);
-	plt::plot(epochs, losses, "b");
-	plt::title("Adam concise");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	ax1 = F->nexttile();
+	matplot::legend();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
+			.display_name("Train loss");
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "loss");
+    matplot::title(ax1, "Adam concise");
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -538,7 +538,51 @@ torch::Tensor  CvMatToTensor2(cv::Mat img, std::vector<int> img_size, bool toRGB
 	return imgT;
 }
 
-std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img, bool is_float, bool need_permute) {
+std::vector<std::vector<std::vector<unsigned char>>>  CvMatToMatPlotVec(cv::Mat img,
+												std::vector<int> img_size, bool toRGB, bool is_float) {
+	if( toRGB )
+		cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+
+	if( img_size.size() > 0 )
+		cv::resize(img, img, cv::Size(img_size[0], img_size[1]));
+
+	if( is_float ) {
+		img *= 255;
+		switch( img.channels() ) {
+		case 1:
+			img.convertTo(img, CV_8UC1);
+			break;
+		case 2:
+			img.convertTo(img, CV_8UC2);
+			break;
+		case 3:
+			img.convertTo(img, CV_8UC3);
+			break;
+		case 4:
+			img.convertTo(img, CV_8UC4);
+			break;
+		}
+	}
+
+    std::vector<cv::Mat> channels(img.channels());
+    cv::split(img, channels);
+
+    std::vector<std::vector<std::vector<unsigned char>>> image;
+
+    for(size_t i = 0; i < img.channels(); i++) {
+    	std::vector<std::vector<unsigned char>> ch;
+    	for(size_t j = 0; j < channels[i].rows; j++) {
+    		std::vector<unsigned char>  r = channels[i].row(j).reshape(1, 1);
+    		ch.push_back(r);
+    	}
+    	image.push_back(ch);
+    }
+    return image;
+}
+
+
+std::vector<std::vector<std::vector<unsigned char>>> tensorToMatrix4MatplotPP(torch::Tensor img,
+																				bool is_float, bool need_permute ) {
 	// OpenCV is BGR, Pillow is RGB
 	torch::Tensor data_out = img.contiguous().detach().clone();
 	torch::Tensor rev_tensor;
@@ -560,24 +604,56 @@ std::vector<uint8_t> tensorToMatrix4Matplotlib(torch::Tensor img, bool is_float,
 	int64_t height = rev_tensor.size(0);
 	int64_t width = rev_tensor.size(1);
 
+
 	// Mat takes data form like {0,0,255,0,0,255,...} ({B,G,R,B,G,R,...})
 	// so we must reshape tensor, otherwise we get a 3x3 grid
 	auto tensor = rev_tensor.reshape({width * height * rev_tensor.size(2)});
 
-	// CV_8UC3 is an 8-bit unsigned integer matrix/image with 3 channels
-	cv::Mat rev_rgb_mat(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
+	cv::Mat Y;
 
-	std::vector<uint8_t> z;
-	if(rev_rgb_mat.isContinuous()) {
-	  // z.assign(mat.datastart, mat.dataend); // <- has problems for sub-matrix like mat = big_mat.row(i)
-	  z.assign(rev_rgb_mat.data, rev_rgb_mat.data + rev_rgb_mat.total()*rev_rgb_mat.channels());
-	} else {
-	  for (int i = 0; i < rev_rgb_mat.rows; ++i) {
-	    z.insert(z.end(), rev_rgb_mat.ptr<uchar>(i), rev_rgb_mat.ptr<uchar>(i)+rev_rgb_mat.cols*rev_rgb_mat.channels());
-	  }
+	switch(static_cast<int>(rev_tensor.size(2))) {
+		case 1: {
+			cv::Mat rev_rgb_mat1(cv::Size(width, height), CV_8UC1, tensor.data_ptr());
+			Y = rev_rgb_mat1.clone();
+			break;
+		}
+		case 2: {
+			cv::Mat rev_rgb_mat2(cv::Size(width, height), CV_8UC2, tensor.data_ptr());
+			Y = rev_rgb_mat2.clone();
+			break;
+		}
+		case 3: {
+		// CV_8UC3 is an 8-bit unsigned integer matrix/image with 3 channels
+			cv::Mat rev_rgb_mat3(cv::Size(width, height), CV_8UC3, tensor.data_ptr());
+			Y = rev_rgb_mat3.clone();
+			break;
+		}
+		case 4: {
+			cv::Mat rev_rgb_mat4(cv::Size(width, height), CV_8UC4, tensor.data_ptr());
+			Y = rev_rgb_mat4.clone();
+			break;
+		}
 	}
 
-	return z;
+	std::vector<std::vector<std::vector<unsigned char>>> image;
+
+	std::vector<cv::Mat> channels(Y.channels());
+	cv::split(Y, channels);
+
+    for(size_t i = 0; i < Y.channels(); i++) {
+    	std::vector<std::vector<unsigned char>> ch;
+    	//std::cout   << channels[i].rows << '\n';
+    	//std::cout   << channels[i].cols << '\n';
+    	//std::cout   << channels[i].row(0).size() << '\n';
+    	for(size_t j = 0; j < channels[i].rows; j++) {
+    		std::vector<unsigned char>  r = channels[i].row(j).reshape(1, 1);
+    		//std::cout   << r.size() << '\n';
+    		ch.push_back(r);
+    	}
+    	image.push_back(ch);
+    }
+
+	return image;
 }
 
 torch::Tensor deNormalizeTensor(torch::Tensor imgT, std::vector<float> mean_, std::vector<float> std_) {

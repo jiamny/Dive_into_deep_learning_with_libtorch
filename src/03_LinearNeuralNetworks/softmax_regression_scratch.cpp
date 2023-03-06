@@ -8,10 +8,8 @@
 
 #include "../fashion.h"
 #include "../utils.h"
-
-#include "../matplotlibcpp.h"
-
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -116,24 +114,24 @@ int main() {
 	int64_t num_inputs = 784;
 	int64_t num_outputs = 10;
 
-	torch::Tensor w = torch::empty({num_inputs, num_outputs}, torch::requires_grad(true));
+	torch::Tensor w = torch::empty({num_inputs, num_outputs}, torch::requires_grad(true)).to(device);
 	torch::nn::init::normal_(w, 0, 0.01);
 
-	torch::Tensor b = torch::zeros(num_outputs, torch::requires_grad(true));
+	torch::Tensor b = torch::zeros(num_outputs, torch::requires_grad(true)).to(device);
 	std::cout << "w = " << w.index({0, Slice()}) << std::endl;
 	std::cout << "b = " << b[0] << std::endl;
 
 	/*
 	 * Defining the Softmax Operation
 	 */
-	auto X = torch::tensor({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, dtype(torch::kDouble));
+	auto X = torch::tensor({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}, dtype(torch::kDouble)).to(device);
 	std::cout << "X.sum(0) = " << X.sum(0, true) << std::endl;
 	std::cout << "X.sum(1) = " << X.sum(1, true) << std::endl;
 
 	/*
 	 * As you can see, for any random input, [we turn each element into a non-negative number. Moreover, each row sums up to 1,] as is required for a probability.
 	 */
-	X = torch::normal(0, 1, {2, 5});
+	X = torch::normal(0, 1, {2, 5}).to(device);
 	auto X_prob = softmax(X);
 	std::cout << "X_prob = " <<	X_prob << std::endl;
 	std::cout << "X_prob.sum(1) = \n" <<	X_prob.sum(1) << std::endl;
@@ -143,9 +141,10 @@ int main() {
 	 */
 
 	// Defining the Loss Function
-	auto y = torch::tensor({0, 2}).to(torch::kLong);
+	auto y = torch::tensor({0, 2}).to(torch::kLong).to(device);
 	std::cout << y.data() << std::endl;
-	auto y_hat = torch::tensor({{0.1, 0.3, 0.6}, {0.3, 0.2, 0.5}}, torch::requires_grad(true)).to(torch::kDouble);
+	auto y_hat = torch::tensor({{0.1, 0.3, 0.6}, {0.3, 0.2, 0.5}},
+						torch::requires_grad(true)).to(torch::kDouble).to(device);
 	int64_t array1[2] = {0,1};
 	int64_t array2[2] = {y.index({0}).item<int64_t>(), y.index({1}).item<int64_t>()};
 	//torch::Tensor idx = torch::tensor({{array1[0], array2[0]}, {array1[1], array2[1]}});
@@ -157,15 +156,14 @@ int main() {
 	 * Now we can (implement the cross-entropy loss function) efficiently with just one line of code.
 	 */
 	printf("-----------------------------1\n");
-	auto out = cross_entropy(y_hat, y);
+
+	auto out = cross_entropy(y_hat, y).to(device);
 	std::cout << out << std::endl;
 	std::cout << out.sum(0).item<double>() << std::endl;
+	out.retain_grad();
 	out.sum().backward();
 	std::cout << y_hat.grad_fn() << std::endl;
 	printf("-----------------------------2\n");
-
-	torch::nn::CrossEntropyLoss criterion;
-
 	/*
 	 * Classification Accuracy
 	 */
@@ -173,10 +171,12 @@ int main() {
 
 	std::cout << static_cast<float>((cmp * 1.0) / y.size(0)) << std::endl;
 
+	torch::nn::CrossEntropyLoss criterion;
+
 	/*
 	 * Training
 	 */
-	size_t num_epochs = 10;
+	size_t num_epochs = 30;
 	std::vector<double> train_loss;
 	std::vector<double> train_acc;
 	std::vector<double> test_loss;
@@ -217,6 +217,9 @@ int main() {
 			auto y = batch.target.to(device);
 
 			auto y_hat = net(x, w, b).to(device);
+			w.retain_grad();
+			b.retain_grad();
+
 			//std::cout << y_hat << std::endl;
 			//std::cout << y << std::endl;
 			auto loss = criterion(y_hat, y); // cross_entropy(y_hat, y);
@@ -225,14 +228,15 @@ int main() {
 			// Update running loss
 			epoch_loss += loss.item<double>() * x.size(0);
 
+			loss.backward();
+
 			// Update number of correctly classified samples
 			epoch_correct += accuracy( y_hat, y);
-
-			loss.backward();
 
 			sgd(w, b, lr, x.size(0));  // Update parameters using their gradient
 
 			num_train_samples += x.size(0);
+
 		}
 
 		auto sample_mean_loss = epoch_loss / num_train_samples;
@@ -282,15 +286,25 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.2, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
+
 
 	std::cout << "Done!\n";
 	return 0;

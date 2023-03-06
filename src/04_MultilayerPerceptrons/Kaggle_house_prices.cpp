@@ -12,8 +12,8 @@
 #include "../utils.h"
 #include "../csvloader.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -258,14 +258,23 @@ int main( void ) {
     train_l_sum /= num_epochs;
     valid_l_sum /= num_epochs;
 
-	plt::figure_size(800, 600);
-	plt::semilogy(xx, train_ls_epoch);
-	plt::named_plot("Train loss", xx, train_ls_epoch, "b");
-	plt::named_plot("Test loss", xx, test_ls_epoch, "c:");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::semilogy(ax1, xx, train_ls_epoch, "b")->line_width(2);
+	matplot::semilogy(ax1, xx, test_ls_epoch, "c:")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "epoch");
+	matplot::ylabel(ax1, "log(loss)");
+	matplot::legend(ax1, {"Train loss", "Test loss"});
+	matplot::show();
+
     std::cout << "5-fold validation: avg train log rmse:" << train_l_sum << ", avg valid log rmse: " << valid_l_sum << std::endl;
 
 	std::cout << "Done!\n";

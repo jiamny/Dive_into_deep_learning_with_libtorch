@@ -11,6 +11,9 @@
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
 
+#include <matplot/matplot.h>
+using namespace matplot;
+
 using namespace std::chrono;
 
 using torch::indexing::Slice;
@@ -57,13 +60,20 @@ std::pair<std::vector<float>, std::vector<float>> train_sgd(float lr, int64_t nu
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, losses, "b");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
+		.display_name("Train loss");
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 
 	return {epochs, losses};
 }
@@ -192,17 +202,28 @@ int main() {
 	batch_size = 10;
 	mini2_res = train_sgd(lr, num_epochs, t_data, t_label, batch_size);
 
-	plt::figure_size(800, 600);
-	plt::named_plot("gd", gd.first, gd.second, "b");
-	plt::named_plot("sgd", sgd_res.first, sgd_res.second, "m--");
-	plt::named_plot("batch size=100", mini1_res.first, mini1_res.second, "g-.");
-	plt::named_plot("batch size=10", mini2_res.first, mini2_res.second, "r:");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::legend();
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, gd.first, gd.second, "b")->line_width(2)
+		.display_name("gd");
+	matplot::plot(ax1, sgd_res.first, sgd_res.second, "m--")->line_width(2)
+			.display_name("sgd");
+	matplot::plot(ax1, mini1_res.first, mini1_res.second, "g-.")->line_width(2)
+			.display_name("batch size=100");
+	matplot::plot(ax1, mini2_res.first, mini2_res.second, "r:")->line_width(2)
+				.display_name("batch size=10");
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 	// ---------------------------------------------
 	// Concise Implementation
 	// ---------------------------------------------
@@ -252,14 +273,28 @@ int main() {
 		epochs.push_back(epoch*1.0);
 		losses.push_back((t_loss/b_cnt));
 	}
-
+/*
 	plt::figure_size(800, 600);
 	plt::plot(epochs, losses, "b");
 	plt::xlabel("epoch");
 	plt::ylabel("loss");
 	plt::show();
 	plt::close();
+*/
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	ax1 = F->nexttile();
+	matplot::legend();
+	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
+		.display_name("Train loss");
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 	std::cout << "Done!\n";
 	return 0;
 }

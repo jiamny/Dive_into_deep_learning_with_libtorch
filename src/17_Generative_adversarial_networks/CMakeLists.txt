@@ -1,10 +1,5 @@
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -31,10 +26,8 @@ DeepConvolutional_GAN.cpp
 ../utils/transforms.cpp
 )
 
-target_include_directories(17_DeepConvolutional_GAN PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(17_DeepConvolutional_GAN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(17_DeepConvolutional_GAN PROPERTIES CXX_STANDARD 14  CXX_STANDARD_REQUIRED YES)
+target_link_libraries(17_DeepConvolutional_GAN ${OpenCV_LIBS}  ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(17_DeepConvolutional_GAN PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
 add_executable(17_GenerativeAdversarialNetwork)
@@ -45,7 +38,5 @@ GenerativeAdversarialNetwork.cpp
 ../utils.cpp
 )
 
-target_include_directories(17_GenerativeAdversarialNetwork PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(17_GenerativeAdversarialNetwork ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(17_GenerativeAdversarialNetwork PROPERTIES CXX_STANDARD 14  CXX_STANDARD_REQUIRED YES)
+target_link_libraries(17_GenerativeAdversarialNetwork ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(17_GenerativeAdversarialNetwork PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)

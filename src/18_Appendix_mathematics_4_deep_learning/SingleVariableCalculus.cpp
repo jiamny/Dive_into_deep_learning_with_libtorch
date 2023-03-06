@@ -5,8 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 // Define our function
 double L(double x) {
@@ -49,26 +49,30 @@ int main() {
 	std::vector<float> xx3(x_small.data_ptr<float>(), x_small.data_ptr<float>() + x_small.numel());
 	std::vector<float> yy3(ys.data_ptr<float>(), ys.data_ptr<float>() + ys.numel());
 
-	plt::figure_size(1400, 300);
-	plt::subplot2grid(1,3,0,0,1,1);
-	plt::plot(xx, yy, "b-");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::title("x_big");
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
 
-	plt::subplot2grid(1,3,0,1,1,1);
-	plt::plot(xx2, yy2, "b-");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::title("x_med");
+	matplot::subplot(3, 1, 0);
+	matplot::plot(xx, yy, "b-")->line_width(2);
+	matplot::xlabel("x");
+	matplot::ylabel("f(x)");
+	matplot::title("x_big");
 
-	plt::subplot2grid(1,3,0,2,1,1);
-	plt::plot(xx3, yy3, "b-");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::title("x_small");
-	plt::show();
-	plt::close();
+	matplot::subplot(3, 1, 1);
+	matplot::plot(xx2, yy2, "b-")->line_width(2);
+	matplot::xlabel("x");
+	matplot::ylabel("f(x)");
+	matplot::title("x_med");
+
+	matplot::subplot(3, 1, 2);
+	matplot::plot(xx3, yy3, "b-")->line_width(2);
+	matplot::xlabel("x");
+	matplot::ylabel("f(x)");
+	matplot::title("x_small");
+	matplot::show();
 
 	// Print the difference divided by epsilon for several epsilon
 	std::vector<double> rr = {0.1, 0.001, 0.0001, 0.00001};
@@ -93,17 +97,25 @@ int main() {
 		yys.push_back(ytt0);
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(xst, yys[0], "b-");
-	plt::plot(xst, yys[1], "m--");
-	plt::plot(xst, yys[2], "g-.");
-	plt::plot(xst, yys[3], "r:");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::ylim(-1.5, 1.5);
-	plt::title("Linear Approximation");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xst, yys[0], "b-")->line_width(2);
+	matplot::plot(ax1, xst, yys[1], "m--")->line_width(2);
+	matplot::plot(ax1, xst, yys[2], "g-.")->line_width(2);
+	matplot::plot(ax1, xst, yys[3], "r:")->line_width(2);
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::ylim(ax1, {-1.5, 1.5});
+    matplot::title("Linear Approximation");
+    matplot::show();
 
 	// ---------------------------------------
 	// Higher Order Derivatives
@@ -125,18 +137,25 @@ int main() {
 		yys.push_back(yth0);
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(xst, yys[0], "b-");
-	plt::plot(xst, yys[1], "m--");
-	plt::plot(xst, yys[2], "g-.");
-	plt::plot(xst, yys[3], "r:");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::ylim(-1.5, 1.5);
-	plt::title("Higher Order Derivatives");
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xst, yys[0], "b-")->line_width(2);
+	matplot::plot(ax1, xst, yys[1], "m--")->line_width(2);
+	matplot::plot(ax1, xst, yys[2], "g-.")->line_width(2);
+	matplot::plot(ax1, xst, yys[3], "r:")->line_width(2);
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::ylim(ax1, {-1.5, 1.5});
+    matplot::title("Higher Order Derivatives");
+    matplot::show();
 	// ---------------------------------------
 	// Taylor Series
 	// ---------------------------------------
@@ -155,17 +174,25 @@ int main() {
 	std::vector<float> yxp2(P2.data_ptr<float>(), P2.data_ptr<float>() + P2.numel());
 	std::vector<float> yxp5(P5.data_ptr<float>(), P5.data_ptr<float>() + P5.numel());
 
-	plt::figure_size(700, 500);
-	plt::named_plot("Exponential", xss, yxp, "b-");
-	plt::named_plot("Degree 1 Taylor Series", xss, yxp1, "m--");
-	plt::named_plot("Degree 2 Taylor Series", xss, yxp2, "g-.");
-	plt::named_plot("Degree 5 Taylor Series", xss, yxp5, "r:");
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::title("Taylor Series");
-	plt::legend();
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, xss, yxp, "b-")->line_width(2);
+	matplot::plot(ax1, xss, yxp1, "m--")->line_width(2);
+	matplot::plot(ax1, xss, yxp2, "g-.")->line_width(2);
+	matplot::plot(ax1, xss, yxp5, "r:")->line_width(2);
+	matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "f(x)");
+    matplot::title(ax1, "Taylor Series");
+    matplot::legend(ax1, {"Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series", "Degree 5 Taylor Series"});
+    matplot::show();
 
 	std::cout << "Done!\n";
 }

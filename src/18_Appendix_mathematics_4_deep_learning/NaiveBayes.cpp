@@ -9,33 +9,46 @@
 #include <string>
 
 #include "../fashion.h"
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
 
-void showImages(torch::Tensor data, int nr, int nc, int start, std::map<int, std::string> fmap, std::vector<int> label) {
+void showImages(torch::Tensor data, int nr, int nc, int start, std::map<int, std::string> fmap, std::vector<long> labels) {
 
-	plt::figure_size(1600, 400);
+//	plt::figure_size(1600, 400);
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
 	int i = start;
-	const int colors = 1;
-	PyObject* mat;
+	int ncols = 28, nrows = 28;
 
 	for( int r = 0; r < nr; r ++ ) {
 		for( int c = 0; c < nc; c++ ) {
-			plt::subplot2grid(nr,nc,r,c,1,1);
 			auto img = data[i];
-			img.squeeze_();
-			std::vector<float> z(img.data_ptr<float>(), img.data_ptr<float>() + img.numel());
-			if( label.size() > 0 )
-				plt::title(fmap[label[i]]);
-			plt::imshow(&(z[0]), 28, 28, colors, {}, &mat);
+
+        	std::vector<std::vector<double>> C;
+        	for( int i = 0; i < nrows; i++ ) {
+        		std::vector<double> c;
+        		for( int j = 0; j < ncols; j++ )
+        			c.push_back(img[i][j].item<double>());
+        		C.push_back(c);
+        	}
+
+        	matplot::subplot(nr, nc, r*nc + c);
+        	if( ! labels.empty() )
+        		matplot::title(fmap[labels[i]].c_str());
+        	matplot::image(C);
+        	matplot::axis(false);
+        	f->draw();
 			i++;
 		}
 	}
-	plt::show();
-	plt::close();
+	matplot::show();
 }
 
 torch::Tensor bayes_pred(torch::Tensor x, torch::Tensor P_xy, torch::Tensor P_y) {
@@ -112,7 +125,11 @@ int main() {
 	std::cout << "t-dt: " << train_dt.sizes() << std::endl;
 	std::cout << "t-lb: " << train_lb.sizes() << std::endl;
 
-	showImages(train_dt, 2, 9, 10, fmap, {});
+	std::cout << train_lb.sizes() << '\n';
+
+	std::vector<long> labels(train_lb.data_ptr<long>(), train_lb.data_ptr<long>() + train_lb.numel());
+	showImages(train_dt, 2, 9, 10, fmap, labels);
+
 
 	auto n_y = torch::zeros(10);
 	for(int y = 0; y < 10; y++ ) {
@@ -174,13 +191,13 @@ int main() {
 
 	// Finally, let us compute the overall accuracy of the classifier.
 	int correct = 0;
-	std::vector<int> preds;
+	std::vector<long> preds;
 	for( int i = 0; i < test_dt.size(0); i++ ) {
 		py = bayes_pred_stable(test_dt[i], log_P_xy, log_P_xy_neg, log_P_y);
 
 		if( py.argmax(0).data().item<int>() == test_lb[i].data().item<int>() )
 			correct++;
-		preds.push_back(py.argmax(0).data().item<int>());
+		preds.push_back(py.argmax(0).data().item<long>());
 	}
 
 	std::cout << "Validation accuracy: " <<  (correct*1.0/test_dt.size(0)) << '\n';

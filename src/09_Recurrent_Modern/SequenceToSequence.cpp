@@ -12,8 +12,8 @@
 //#include "../utils.h"
 #include "../TempHelpFunctions.hpp"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -214,7 +214,7 @@ int main() {
 	loss_fn = MaskedSoftmaxCELoss();
 	net->train(true);
 
-	std::vector<float> epochs, plsum;
+	std::vector<double> epochs, plsum;
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat, stat;
 
@@ -268,19 +268,24 @@ int main() {
 
 	    if( epoch % 210 == 0) {
 	    	std::cout << "loss: " << (t_loss/cnt) << std::endl;
-	    	plsum.push_back((t_loss/cnt));
+	    	plsum.push_back((t_loss/cnt)*1.0);
 	    	wtks.push_back(static_cast<int64_t>(n_wtks/cnt));
 	    	epochs.push_back(1.0*epoch);
 	    }
 	}
 
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, plsum, "b");
-	plt::legend();
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, epochs, plsum, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 
 	printf("\n\n");
 	// Prediction

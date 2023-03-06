@@ -14,7 +14,7 @@
 #include <vector>
 #include <cstring>
 #include <sstream>
-
+#include <unistd.h>
 #include <dirent.h>           //get files in directory
 #include <sys/stat.h>
 #include <cmath>
@@ -26,9 +26,8 @@
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using Options = torch::nn::Conv2dOptions;
 
@@ -291,8 +290,8 @@ int main() {
 	total_iter = dataloader.get_count_max();
 	total_epoch = 40;
 	bool first = true;
-	std::vector<float> train_loss_ave;
-	std::vector<float> train_epochs;
+	std::vector<double> train_loss_ave;
+	std::vector<double> train_epochs;
 
 	for (epoch = start_epoch; epoch <= total_epoch; epoch++) {
 		net->train();
@@ -324,7 +323,7 @@ int main() {
 			loss_sum += loss.item<float>();
 		}
 
-		train_loss_ave.push_back(loss_sum/total_iter);
+		train_loss_ave.push_back(1.0*loss_sum/total_iter);
 		train_epochs.push_back(epoch*1.0);
 		std::cout << "epoch: " << epoch << "/"  << total_epoch << ", avg_loss: " << (loss_sum/total_iter) << std::endl;
 
@@ -426,12 +425,18 @@ int main() {
 		std::cout << "\nTest accuracy: " << accuracy << std::endl;
 	}
 
-	plt::figure_size(600, 500);
-	plt::named_plot("Train loss", train_epochs, train_loss_ave, "b");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, train_epochs, train_loss_ave, "b")->line_width(2);
+    matplot::xlabel(ax1, "epoch");
+    matplot::ylabel(ax1, "loss");
+    matplot::show();
 
     std::cout << "Done!\n";
 }

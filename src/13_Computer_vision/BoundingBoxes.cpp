@@ -5,17 +5,12 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
-
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -26,18 +21,17 @@ int main() {
 
 	std::cout << imgT.squeeze_().sizes() << '\n';
 
-	imgT = imgT.permute({1,2,0}).mul(255).to(torch::kByte);
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+	auto ax1 = F->nexttile();
+	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgT.squeeze().clone());
+	matplot::imshow(ax1, z);
+	matplot::show();
 
-	std::cout << imgT.sizes() << std::endl;
-
-	std::vector<uchar> z(imgT.size(0) * imgT.size(1) * imgT.size(2));
-	std::memcpy(&(z[0]), imgT.data_ptr<uchar>(),sizeof(uchar)*imgT.numel());
-
-	const uchar* zptr = &(z[0]);
-	plt::title("cat and dog");
-	plt::imshow(zptr, imgT.size(0), imgT.size(1), imgT.size(2));
-	plt::show();
-	plt::close();
 
 	// -------------------------------------------------------------
 	// define the bounding boxes of the dog and the cat in the image
@@ -53,16 +47,26 @@ int main() {
 	// ---------------------------------------------
 	// draw the bounding boxes in the image
 	// ---------------------------------------------
-	plt::title("cat & dog with bbox");
-	plt::imshow(zptr, imgT.size(0), imgT.size(1), imgT.size(2));
+
 	auto dog_x = {60.0, 60.0,  378.0, 378.0, 60.0};
 	auto dog_y = {45.0, 516.0, 516.0, 45.0, 45.0};
-	plt::plot(dog_x, dog_y, "b-");
 	auto cat_x = {400.0, 400.0,  655.0, 655.0, 400.0};
 	auto cat_y = {112.0, 493.0, 493.0, 112.0, 112.0};
-	plt::plot(cat_x, cat_y, "r-");
-	plt::show();
-	plt::close();
+
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::imshow(ax1, z);
+	matplot::plot(ax1, dog_x, dog_y, "b-")->line_width(2);
+	matplot::plot(ax1, cat_x, cat_y, "r-")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::title("cat & dog with bbox");
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

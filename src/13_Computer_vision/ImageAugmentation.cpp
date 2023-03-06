@@ -5,8 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
@@ -23,16 +23,17 @@ int main() {
 
 	torch::Tensor imgT = CvMatToTensor("data/cat1.jpg", {});
 	std::cout << imgT.sizes() << '\n';
-	auto mimg = imgT.permute({1,2,0}).mul(255).to(torch::kByte).clone();
 
-	std::vector<uchar> z(mimg.numel());
-	std::memcpy(&(z[0]), mimg.data_ptr<unsigned char>(),sizeof(uchar)*mimg.numel());
-	const uchar* zptr = &(z[0]);
-
-	plt::figure_size(700, 500);
-	plt::imshow(zptr, imgT.size(1), imgT.size(2), imgT.size(0));
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+	auto ax1 = F->nexttile();
+	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgT.squeeze().clone());
+	matplot::imshow(ax1, z);
+	matplot::show();
 
 	// -------------------------------------
 	// Flipping and Cropping
@@ -43,33 +44,45 @@ int main() {
 
 	// flips an image left and right with a 50%
 	std::cout << "Flips an image left and right with a 50%\n";
-	plt::figure_size(1200, 600);
+
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
 	for( int r = 0; r < num_rows; r++ ) {
 		for( int c = 0; c < num_cols; c++ ) {
-			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 0);
-			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
-			uint8_t* zptr = &(z[0]);
-			plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
-			plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
+			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 0).squeeze();
+
+			matplot::subplot(num_rows, num_cols, r*num_cols + c);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgt.clone());
+			matplot::imshow(z);
 		}
+		f->draw();
 	}
-	plt::show();
-	plt::close();
+	matplot::show();
 
 	// flip an image up and down with a 50% chance
 	std::cout << "Flips an image up and down with a 50% chance\n";
-	plt::figure_size(1200, 600);
+
+	f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
 	for( int r = 0; r < num_rows; r++ ) {
 		for( int c = 0; c < num_cols; c++ ) {
-			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 1);
-			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
-			uint8_t* zptr = &(z[0]);
-			plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
-			plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
+			torch::Tensor imgt = CvMatToTensorAfterFlip("data/cat1.jpg", {}, 0.5, 1).squeeze();
+
+			matplot::subplot(num_rows, num_cols, r*num_cols + c);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgt.clone());
+			matplot::imshow(z);
 		}
+		f->draw();
 	}
-	plt::show();
-	plt::close();
+	matplot::show();
 
 	// ----------------------------------------
 	// Changing Colors
@@ -79,35 +92,49 @@ int main() {
     double alpha = 1.0;   	// Simple contrast control
     double beta = 0.5;      // Simple brightness control
     std::cout << "Randomly change the brightness\n";
-    plt::figure_size(1200, 600);
+
+	f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
     for( int r = 0; r < num_rows; r++ ) {
     	for( int c = 0; c < num_cols; c++ ) {
-    		torch::Tensor imgt = CvMatToTensorChangeBrightness("data/cat1.jpg", {}, alpha, beta);
-    		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
-    		uint8_t* zptr = &(z[0]);
-    		plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
-    		plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
+    		torch::Tensor imgt = CvMatToTensorChangeBrightness("data/cat1.jpg", {}, alpha, beta).squeeze();
+
+			matplot::subplot(num_rows, num_cols, r*num_cols + c);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgt.clone());
+			matplot::imshow(z);
     	}
+    	f->draw();
     }
-    plt::show();
-    plt::close();
+    matplot::show();
+
 
     // randomly change the hue
     int hue = 90;	// H is between 0-180 in OpenCV
 
     std::cout << "Randomly change the hue\n";
-    plt::figure_size(1200, 600);
+
+	f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
     for( int r = 0; r < num_rows; r++ ) {
     	for( int c = 0; c < num_cols; c++ ) {
-    		torch::Tensor imgt = CvMatToTensorChangeHue("data/cat1.jpg", {}, hue);
-    		std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgt.squeeze());
-    		uint8_t* zptr = &(z[0]);
-    		plt::subplot2grid(num_rows, num_cols, r, c, 1, 1);
-    		plt::imshow(zptr, imgt.size(1), imgt.size(2), imgt.size(0));
+    		torch::Tensor imgt = CvMatToTensorChangeHue("data/cat1.jpg", {}, hue).squeeze();
+
+			matplot::subplot(num_rows, num_cols, r*num_cols + c);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(imgt.clone());
+			matplot::imshow(z);
     	}
+    	f->draw();
     }
-    plt::show();
-    plt::close();
+
+    matplot::show();
 
 	std::cout << "Done!\n";
 }

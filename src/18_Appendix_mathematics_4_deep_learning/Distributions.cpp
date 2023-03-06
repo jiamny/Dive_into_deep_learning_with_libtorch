@@ -6,8 +6,8 @@
 
 #include "../utils/ch_18_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 double F(double x, double p) {
      if( x < 0.0 )
@@ -51,19 +51,19 @@ int64_t binom(int n, int k) {
 	int64_t comb = 1;
     int x = std::min(k, n - k);
     for(int i = 0; i < x; i++ )
-        comb = comb * static_cast<int>((n - i) / (i + 1));
+        comb = comb * static_cast<int64_t>((n - i) / (i + 1));
     return comb;
 }
 
 // to avoid overflow
 // std::pow(p, i) * std::pow((1-p), (ns[j]-i)) * binom(ns[j], i);
-double binom2(int n, int i, double p) {
+double binom2(int n, int k, double p) {
 
-	long double comb = 1.0*std::pow(p, i) * std::pow((1-p), (n-i));
+	long double comb = 1.0*std::pow(p, k) * std::pow((1-p), (n-k));
 
-    int x = std::min(i, n - i);
+    int x = std::min(k, n - k);
     for(int j = 0; j < x; j++ ) {
-    	comb = comb * (static_cast<int>((n - j) / (j + 1)));
+    	comb = comb * (static_cast<double>((n - j) / (j + 1)));
     }
 
     return (double) comb;
@@ -92,11 +92,6 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
-
 	torch::manual_seed(1000);
 
 	// --------------------------------
@@ -107,12 +102,19 @@ int main() {
 	std::vector<double> x = {0.0, 1.0};
 	std::vector<double> y = {1.0 - p, p};
 
-	plt::figure_size(700, 500);
-	plt::stem(x, y);
-	plt::title("Bernoulli");
-	plt::xlabel("x");
-	plt::ylabel("p.m.f.");
-	plt::show();
+	auto h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	auto ax1 = h->nexttile();
+	matplot::stem(ax1, x, y, "filled")->line_width(3);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p.m.f.");
+    matplot::title("Bernoulli");
+    matplot::show();
 
 	// Now, let us plot the cumulative distribution function :eqref:eq_bernoulli_cdf
 	x.clear();// = torch::arange(-1, 2, 0.01)
@@ -124,12 +126,19 @@ int main() {
 		y.push_back(F(j, p));
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Bernoulli");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Bernoulli");
+    matplot::show();
 
 	// We can sample an array of arbitrary shape from a Bernoulli random variable as follows
 	std::cout << 1*(torch::rand({10, 10}) < p) << "\n";
@@ -144,12 +153,19 @@ int main() {
 		y.push_back(1/n);
 	}
 
-	plt::figure_size(700, 500);
-	plt::stem(x, y);
-	plt::title("Discrete Uniform");
-	plt::xlabel("x");
-	plt::ylabel("p.m.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::stem(ax1, x, y, "filled")->line_width(3);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p.m.f.");
+    matplot::title("Discrete Uniform");
+    matplot::show();
 
 	// Now, let us plot the cumulative distribution function
 	x.clear();
@@ -161,12 +177,19 @@ int main() {
 		y.push_back(DF(j, n));
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Discrete Uniform");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Discrete Uniform");
+    matplot::show();
 
 	// We can sample an array of arbitrary shape from a discrete uniform random variable as follows.
 	std::cout << torch::randint(1, n, {10, 10}) << "\n";
@@ -184,12 +207,19 @@ int main() {
 			y.push_back(0.0);
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Continuous Uniform");
-	plt::xlabel("x");
-	plt::ylabel("p.m.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p.m.f.");
+    matplot::title("Continuous Uniform");
+    matplot::show();
 
 	// Now, let us plot the cumulative distribution function
 	y.clear();
@@ -197,12 +227,19 @@ int main() {
 		y.push_back(CF(j, a, b));
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Continuous Uniform");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Continuous Uniform");
+    matplot::show();
 
 	// We can sample an array of arbitrary shape from a uniform random variable as follows.
 	std::cout << (b - a) * torch::rand({10, 10}) + a << "\n";
@@ -214,19 +251,28 @@ int main() {
 	p = 0.2;
 	x.clear();
 	y.clear();
-	for( int i = 0; i < (N + 1); i++ ) {
-		x.push_back(i*1.0);
-		double t = std::pow(p, i) * std::pow((1-p), (N-i)) * binom(N, i);
+
+	for( int k = 0; k < (N + 1); k++ ) {
+		x.push_back(k*1.0);
+		double t = std::pow(p, k) * std::pow((1-p), (N-k)) * binom(N, k);
 		y.push_back(t);
 	}
 
 	//pmf = torch.tensor([p**i * (1-p)**(n - i) * binom(n, i) for i in range(n + 1)])
-	plt::figure_size(700, 500);
-	plt::stem(x, y);
-	plt::title("Binomial");
-	plt::xlabel("x");
-	plt::ylabel("p.m.f.");
-	plt::show();
+
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::stem(ax1, x, y, "filled")->line_width(3);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p.m.f.");
+    matplot::title("Binomial");
+    matplot::show();
 
 	// Now, let us plot the cumulative distribution function
 	auto pmf = torch::from_blob(y.data(), {(int64_t)y.size()}, at::TensorOptions(torch::kDouble)).clone();
@@ -247,12 +293,19 @@ int main() {
 		y.push_back(BF(i, N*1.0, ya));
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(xa, y);
-	plt::title("Binomial");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, xa, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Binomial");
+    matplot::show();
 
 	// This follows from the linearity of expected value over the sum of n Bernoulli random variables
 	//auto m = torch::distributions::binomial::Binomial(n, p);
@@ -287,12 +340,19 @@ int main() {
 		y.push_back(std::exp(-1.0*lam)*std::pow(lam, i)/std::tgamma(i + 1));
 	}
 
-	plt::figure_size(700, 500);
-	plt::stem(xs, y);
-	plt::title("Poisson");
-	plt::xlabel("x");
-	plt::ylabel("p.m.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::stem(ax1, xs, y, "filled")->line_width(3);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "p.m.f.");
+    matplot::title("Poisson");
+    matplot::show();
 
 	//x = torch.arange(-1, 21, 0.01)
 	auto pm = torch::from_blob(y.data(), {(int64_t)y.size()}, at::TensorOptions(torch::kDouble)).clone();
@@ -307,12 +367,19 @@ int main() {
 		y.push_back(BF(i, N, ym));
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Poisson");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Poisson");
+    matplot::show();
 
 	// the means and variances are particularly concise. This can be sampled as follows.
 	std::poisson_distribution<> pd(lam);
@@ -326,7 +393,17 @@ int main() {
 	// --------------------------------
 	// Gaussian
 	// --------------------------------
-	plt::figure_size(1400, 400);
+
+    auto f = figure(true);
+//    std::cout << "W = " << f->width() << " H = " << f->height() << '\n';
+    f->size(400, 340);
+    f->width(f->width() * 2);
+    f->height(f->height() * 2);
+    f->x_position(0);
+    f->y_position(0);
+
+    matplot::hold(true);
+
 	p = 0.2;
 	std::vector<int> ns = {1, 10, 90, 300};
 
@@ -343,15 +420,16 @@ int main() {
 	    	y.push_back(binom2(ns[j], i, p));
 	    }
 
-	    plt::subplot2grid(1, 4, 0, j, 1, 1);
-	    plt::xlim(-4.0, 4.0);
-	    plt::stem(x, y);
-	    plt::title("n = " + std::to_string(ns[j]));
-	    plt::xlabel("x");
+	    matplot::subplot(1, 4, j);
+	    matplot::xlim({-4.0, 4.0});
+	    matplot::stem(x, y, "filled")->line_width(3);
+	    matplot::title("n = " + std::to_string(ns[j]));
+	    matplot::xlabel("x");
 
-	    if( j == 0 ) plt::ylabel("p.m.f.");
+	    if( j == 0 ) matplot::ylabel("p.m.f.");
+	    f->draw();
 	}
-	plt::show();
+	matplot::show();
 
 	// Let us first plot the probability density function
 	double mu = 0.0, sigma = 1.0;
@@ -367,12 +445,19 @@ int main() {
 		y.push_back(p);
 	}
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Gaussian");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Gaussian");
+    matplot::show();
 
 	// ----------------------------------
 	// Phi - function for a standard normal distribution
@@ -382,12 +467,19 @@ int main() {
 	for(auto& i : x )
 		y.push_back(phi(i, mu, sigma));
 
-	plt::figure_size(700, 500);
-	plt::plot(x, y);
-	plt::title("Phi");
-	plt::xlabel("x");
-	plt::ylabel("c.d.f.");
-	plt::show();
+	h = figure(true);
+	h->size(800, 600);
+	h->add_axes(false);
+	h->reactive_mode(false);
+	h->tiledlayout(1, 1);
+	h->position(0, 0);
+
+	ax1 = h->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "x");
+    matplot::ylabel(ax1, "c.d.f.");
+    matplot::title("Phi");
+    matplot::show();
 
 	// We can sample from the Gaussian (or standard normal) distribution as shown below.
 	std::cout << torch::normal(mu, sigma, {10, 10}) << "\n";

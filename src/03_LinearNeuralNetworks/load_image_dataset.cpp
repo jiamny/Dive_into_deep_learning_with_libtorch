@@ -8,43 +8,48 @@
 
 #include "../fashion.h"
 #include "../utils.h"
-#include "../matplotlibcpp.h"
+
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using namespace torch::autograd;
-namespace plt = matplotlibcpp;
+
 
 
 void show_images(torch::Tensor batch_data, torch::Tensor target,
 		size_t num_cols, size_t num_rows, double scale, int img_size, int batch_size,
 		torch::TensorOptions dtype_option, std::unordered_map<int, std::string> fmap) {
 
-	plt::figure_size( static_cast<size_t>(num_cols * scale * img_size), static_cast<size_t>(num_rows * scale * img_size));
+	auto F = figure(true);
+	F->size(static_cast<size_t>(num_cols * scale * img_size), static_cast<size_t>(num_rows * scale * img_size));
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(num_rows, num_cols);
+	F->position(0, 0);
 
-	int rid = 0, cid=0;
 	for( int i = 0; i < batch_size; i++ ) {
-
-//		plt::subplot(num_rows, num_cols, (i+1)); // cause runtime error point
-		cid = i % num_cols;
-		rid = static_cast<int>(std::ceil(i / num_cols));
-
-		plt::subplot2grid(num_rows, num_cols, rid, cid, 1, 1);
-
-		auto image = batch_data.data()[i].view({-1,1}).to(dtype_option);
-		//std::cout << image.data().sizes() << "\n";
+		auto image = batch_data.data()[i].squeeze().to(dtype_option);
+		std::cout << image.data().sizes() << "\n";
 
 		int type_id = target.data()[i].item<int>();
 		//std::cout << "type_id = " << type_id << " name = " << fmap.at(type_id) << "\n";
 
 		int ncols = img_size, nrows = img_size;
-		std::vector<float> z(image.data_ptr<float>(), image.data_ptr<float>() + image.numel());;
-		const float* zptr = &(z[0]);
-		const int colors = 1;
-		plt::imshow(zptr, nrows, ncols, colors);
-		plt::title(fmap.at(type_id));
+
+    	std::vector<std::vector<double>> C;
+    	for( int i = 0; i < nrows; i++ ) {
+    		std::vector<double> c;
+    		for( int j = 0; j < ncols; j++ )
+    			c.push_back(image[i][j].item<double>());
+    		C.push_back(c);
+    	}
+    	auto ax = F->nexttile();
+    	ax->axis(false);
+    	matplot::image(ax, C);
+    	matplot::title(ax, fmap.at(type_id));
 	}
 
-	plt::show();
-	plt::close();
+	matplot::show();
 }
 
 
@@ -61,7 +66,7 @@ int main() {
 	// Reading the Dataset
 	// -------------------------------------------
 	std::string data_path = "./data/fashion/";
-	auto dtype_option = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
+	auto dtype_option = torch::TensorOptions().dtype(torch::kDouble).device(torch::kCPU);
 
 	const std::string FASHION_data_path = data_path;
 
@@ -87,7 +92,7 @@ int main() {
 	 */
 	std::unordered_map<int, std::string> fmap = get_fashion_mnist_labels();
 
-	const int64_t batch_size = 18;
+	const int64_t batch_size = 16;
 
 	/*
 	 * Reading a Minibatch
@@ -106,9 +111,9 @@ int main() {
 
 	std::cout << batch_data.data().sizes() << "\n";
 
-	size_t num_cols = 6;
-	size_t num_rows = 3;
-	double scale  = 10.2;
+	size_t num_cols = 4;
+	size_t num_rows = 4;
+	double scale  = 12.5;
 	size_t img_size = 28;
 	/*
 	 * We can now create a function to visualize these examples.

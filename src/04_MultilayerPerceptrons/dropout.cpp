@@ -9,28 +9,31 @@
 #include "../fashion.h"
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
-torch::Tensor dropout_layer(torch::Tensor X, float dropout) {
+torch::Tensor dropout_layer(torch::Tensor X, double dropout) {
     assert( 0 <= dropout <= 1);
 
     //In this case, all elements are dropped out
     if( dropout == 1 )
-        return torch::zeros_like(X);
+        return torch::zeros_like(X).to(X.device());
 
     // In this case, all elements are kept
     if( dropout == 0 )
         return X;
-    auto mask = (torch::rand(X.sizes(), dtype(torch::kFloat32)) > dropout);
-    return mask * X / (1.0 - dropout);
+
+    auto mask = (torch::rand(X.sizes(), dtype(torch::kDouble)) > dropout);
+
+    return mask.to(X.device()) * X / (1.0 - dropout);
 }
 
 struct NetCh04Impl : public torch::nn::Module {
 
 public:
 	int64_t num_inputs;
-	NetCh04Impl(int64_t num_inputs, int64_t num_outputs, int64_t num_hiddens1, int64_t num_hiddens2, bool is_training);
+	NetCh04Impl(int64_t num_inputs, int64_t num_outputs, int64_t num_hiddens1,
+				int64_t num_hiddens2, bool is_training);
 
     torch::Tensor forward(torch::Tensor X);
 private:
@@ -40,12 +43,13 @@ private:
 
 TORCH_MODULE(NetCh04);
 
-NetCh04Impl::NetCh04Impl(int64_t num_inputs, int64_t num_outputs, int64_t num_hiddens1, int64_t num_hiddens2, bool is_training) {
-	this->training = is_training;
-	this->num_inputs = num_inputs;
-	this->lin1 = torch::nn::Linear(num_inputs, num_hiddens1);
-	this->lin2 = torch::nn::Linear(num_hiddens1, num_hiddens2);
-	this->lin3 = torch::nn::Linear(num_hiddens2, num_outputs);
+NetCh04Impl::NetCh04Impl(int64_t inputs, int64_t num_outputs, int64_t num_hiddens1,
+							int64_t num_hiddens2, bool is_training) {
+	training = is_training;
+	num_inputs = inputs;
+	lin1 = torch::nn::Linear(torch::nn::LinearOptions(num_inputs, num_hiddens1));
+	lin2 = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens1, num_hiddens2));
+	lin3 = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens2, num_outputs));
 	register_module("fc1", lin1);
 	register_module("fc2", lin2);
 	register_module("fc3", lin3);
@@ -88,7 +92,8 @@ struct NeuralNetImpl : public torch::nn::Module {
 TORCH_MODULE(NeuralNet);
 
 
-NeuralNetImpl::NeuralNetImpl(int64_t num_inputs, int64_t num_outputs, int64_t num_hiddens1, int64_t num_hiddens2) :
+NeuralNetImpl::NeuralNetImpl(int64_t num_inputs, int64_t num_outputs,
+								int64_t num_hiddens1, int64_t num_hiddens2) :
 	fc1(num_inputs, num_hiddens1), fc2(num_hiddens1, num_hiddens2), fc3(num_hiddens2, num_outputs) {
     register_module("fc1", fc1);
     register_module("fc2", fc2);
@@ -124,7 +129,7 @@ int main() {
 	 * In the following code, we (implement a dropout_layer function that drops out the elements in the tensor input X with probability dropout), rescaling
 	 * the remainder as described above: dividing the survivors by 1.0-dropout.
 	 */
-	auto X = torch::arange(16, dtype(torch::kFloat32)).reshape({2, 8});
+	auto X = torch::arange(16, dtype(torch::kDouble)).reshape({2, 8});
 
 	std::cout << "X:\n" << X << std::endl;
 	std::cout << "dropout_layer(X, 0.):\n" << dropout_layer(X, 0.) << std::endl;
@@ -147,11 +152,12 @@ int main() {
 	//auto net = NetCh04Impl(num_inputs, num_outputs, num_hiddens1, num_hiddens2, true);
 	//NetCh04Impl net = NetCh04Impl(num_inputs, num_outputs, num_hiddens1, num_hiddens2, true); // using member .
 	NetCh04 net = NetCh04(num_inputs, num_outputs, num_hiddens1, num_hiddens2, true);           // using ptr ->
+	net->to(device);
 
 	/*
 	 * This is similar to the training and testing of MLPs described previously.
 	 */
-	int64_t num_epochs = 10;
+	int64_t num_epochs = 20;
 	float lr = 0.5;
 	int64_t batch_size = 256;
 
@@ -248,6 +254,7 @@ int main() {
 			trainer.zero_grad();
 			loss.backward();
 			trainer.step();
+
 			num_train_samples += x.size(0);
 		}
 //		std::cout << epoch_loss << std::endl;
@@ -302,16 +309,26 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::xlabel("epoch");
-	plt::title("Define an MLP with two hidden layers");
-	plt::legend();
-	plt::show();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.3, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2)
+			;
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::title(ax1, "Define an MLP with two hidden layers");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
 
 	// Concise Implementation
 	/*
@@ -328,6 +345,8 @@ int main() {
 		    torch::nn::Dropout(dropout1), torch::nn::Linear(256, 256), torch::nn::ReLU(),
 		    // Add a dropout layer after the second fully connected layer
 		    torch::nn::Dropout(dropout2), torch::nn::Linear(256, 10));
+
+	net_concise->to(device);
 
 	// initialize the weights at random with zero mean and standard deviation 0.01
 	if (auto M = dynamic_cast<torch::nn::LinearImpl*>(net_concise.get())) {
@@ -419,16 +438,25 @@ int main() {
 		xx.push_back((epoch + 1));
 	}
 
-	plt::figure_size(800, 600);
-	plt::ylim(0.2, 0.9);
-	plt::named_plot("Train loss", xx, train_loss, "b");
-	plt::named_plot("Test loss", xx, test_loss, "c:");
-	plt::named_plot("Train acc", xx, train_acc, "g--");
-	plt::named_plot("Test acc", xx, test_acc, "r-.");
-	plt::title("Concise implementation");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::ylim(ax1, {0.3, 0.99});
+	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "m-:")->line_width(2);
+	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
+	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
+    matplot::hold(ax1, false);
+    matplot::xlabel(ax1, "epoch");
+    matplot::title(ax1, "Concise implementation");
+    matplot::legend(ax1, {"Train loss", "Test loss", "Train acc", "Test acc"});
+    matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

@@ -10,17 +10,12 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
-
-	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -28,18 +23,24 @@ int main() {
 	// The Maximum Likelihood Principle
 	// ---------------------------------------
 
-	auto theta = torch::arange(0, 1, 0.001);
-	auto p = torch::pow(theta, 9) * torch::pow((1 - theta), 4.);
+	auto theta = torch::arange(0, 1, 0.001).to(torch::kDouble);
+	auto p = torch::pow(theta, 9) * torch::pow((1 - theta), 4.).to(torch::kDouble);
 
-	std::vector<float> x(theta.data_ptr<float>(), theta.data_ptr<float>() + theta.numel());
-	std::vector<float> y(p.data_ptr<float>(), p.data_ptr<float>() + p.numel());
+	std::vector<double> x(theta.data_ptr<double>(), theta.data_ptr<double>() + theta.numel());
+	std::vector<double> y(p.data_ptr<double>(), p.data_ptr<double>() + p.numel());
 
-	plt::figure_size(500, 400);
-	plt::plot(x, y, "b-");
-	plt::xlabel("theta");
-	plt::ylabel("likelihood");
-	plt::show();
-	plt::close();
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, x, y, "b")->line_width(2);
+    matplot::xlabel(ax1, "theta");
+    matplot::ylabel(ax1, "likelihood");
+    matplot::show();
 
 	// ---------------------------------------
 	// Numerical Optimization and the Negative Log-Likelihood

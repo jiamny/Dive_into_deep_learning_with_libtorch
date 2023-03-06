@@ -8,8 +8,8 @@
 
 #include "../utils.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -53,11 +53,19 @@ int main() {
 
 	std::vector<float> yy(x.data_ptr<float>(), x.data_ptr<float>() + x.numel());
 	std::vector<float> xx(time.data_ptr<float>(), time.data_ptr<float>() + time.numel());
-	plt::figure_size(800, 600);
-	plt::plot(xx, yy);
-	plt::xlabel("time");
-	plt::ylabel("x");
-	plt::show();
+
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	auto ax1 = F->nexttile();
+	matplot::plot(ax1, xx, yy, "b")->line_width(2);
+    matplot::xlabel(ax1, "time");
+    matplot::ylabel(ax1, "x");
+    matplot::show();
 
 	//Next, we need to turn such a sequence into features and labels that our model can train on.
 	int tau = 4;
@@ -128,15 +136,22 @@ int main() {
 	std::vector<float> y1(yx.data_ptr<float>(), yx.data_ptr<float>() + yx.numel());
 	std::vector<float> y2(onestep_preds.data_ptr<float>(), onestep_preds.data_ptr<float>() + onestep_preds.numel());
 
-	plt::figure_size(800, 600);
-	plt::named_plot("data", x1, y1, "b");
-	plt::named_plot("1-step preds", x1, y2, "r--");
-	plt::xlabel("time");
-	plt::ylabel("data");
-	plt::legend();
-	plt::show();
-	plt::close();
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
 
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, x1, y1, "b")->line_width(2);
+	matplot::plot(ax1, x1, y2, "r--")->line_width(2);
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "time");
+	matplot::ylabel(ax1, "data");
+	matplot::legend(ax1, {"data", "1-step preds"});
+	matplot::show();
 
 	// Let us [take a closer look at the difficulties in 𝑘-step-ahead predictions] by computing predictions on
 	// the entire sequence for 𝑘=1,4,16,64.
@@ -173,8 +188,18 @@ int main() {
 
 	std::vector<std::string> colors = {"b", "m", "g", "r."};
 
-	plt::figure_size(800, 600);
-	plt::xlim(0, 1000);
+	F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+
+	ax1 = F->nexttile();
+	matplot::hold(ax1, true);
+	matplot::xlim(ax1, {0, 1000});
+
+	std::vector<std::string> lgd;
 
 	for( int i = 0; i < steps.size(); i++ ) {
 		auto tt2 = time.index({Slice(tau + steps[i] - 1, T - max_steps + steps[i])});
@@ -191,14 +216,13 @@ int main() {
 
 		std::vector<float> y3(yp.data_ptr<float>(), yp.data_ptr<float>() + yp.numel());
 
-		plt::named_plot(tlt.c_str(), x2, y3, colors[i].c_str());
+		matplot::plot(ax1, x2, y3, colors[i].c_str());
+		lgd.push_back(tlt.c_str());
 	}
-
-	plt::xlabel("time");
-	plt::ylabel("data");
-	plt::legend();
-	plt::show();
-	plt::close();
+	matplot::xlabel("time");
+	matplot::ylabel("data");
+	matplot::legend(lgd);
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

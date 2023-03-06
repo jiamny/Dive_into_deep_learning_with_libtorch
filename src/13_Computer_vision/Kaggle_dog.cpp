@@ -17,9 +17,8 @@
 #include "../utils/datasets.hpp"                // datasets::ImageFolderClassesWithPaths
 #include "../utils/dataloader.hpp"              // DataLoader::ImageFolderClassesWithPaths
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
+#include <matplot/matplot.h>
+using namespace matplot;
 
 struct DogNetImpl : public torch::nn::Module {
 	torch::nn::Sequential classifier{nullptr};
@@ -49,9 +48,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -152,7 +152,7 @@ int main() {
     model->to(device);
 
     size_t epoch;
-    size_t total_iter = dataloader.get_count_max();
+    size_t total_iter;
     size_t start_epoch, total_epoch;
     start_epoch = 1;
     total_iter = dataloader.get_count_max();
@@ -207,9 +207,10 @@ int main() {
        	// ---------------------------------
        	if( valid ) {
        		std::cout << "--------------- validation --------------------\n";
-       		torch::NoGradGuard nograd;
 
        		model->eval();
+       		torch::NoGradGuard nograd;
+
        		size_t iteration = 0;
        		float total_loss = 0.0;
        		total_match = 0;
@@ -242,19 +243,28 @@ int main() {
        		scheduler.step();
 
        		// Calculate Average Loss
-       		float ave_loss = total_loss / (float)iteration;
+       		float ave_loss = total_loss / iteration;
        		valid_loss_ave.push_back(ave_loss);
        		std::cout << "Valid loss: " << ave_loss << "\n\n";
        	}
     }
 
-   	plt::figure_size(600, 500);
-   	plt::named_plot("Train loss", train_epochs, train_loss_ave, "b");
-   	plt::named_plot("Valid loss", train_epochs, valid_loss_ave, "m-.");
-   	plt::xlabel("epoch");
-   	plt::legend();
-   	plt::show();
-
+	auto F = figure(true);
+	F->size(800, 600);
+	F->add_axes(false);
+	F->reactive_mode(false);
+	F->tiledlayout(1, 1);
+	F->position(0, 0);
+	auto ax1 = F->nexttile();
+	matplot::legend();
+	matplot::hold(ax1, true);
+	matplot::plot(ax1, train_epochs, train_loss_ave, "b")->line_width(2)
+			.display_name("Train loss");
+	matplot::plot(ax1, train_epochs, valid_loss_ave, "m-.")->line_width(2)
+				.display_name("Valid loss");
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "epoch");
+	matplot::show();
 
 	std::cout << "Done!\n";
 }

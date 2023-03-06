@@ -16,8 +16,8 @@
 
 #include "../utils/ch_13_util.h"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 
 torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size) {
@@ -78,9 +78,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -161,11 +162,11 @@ int main() {
 	std::cout << "imgT: " << imgT.sizes() << "\n";
 	auto Z = imgT.index({0, Slice(), Slice()});
 	std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
+	std::cout << "X.min " << torch::min(Z) << "\nX.max " << torch::max(Z) << "\n";
 	Z = imgT.index({1, Slice(), Slice()});
-	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
+	std::cout << "X.min " << torch::min(Z) << "\nX.max " << torch::max(Z) << "\n";
 	Z = imgT.index({2, Slice(), Slice()});
-	std::cout << "X.min " << torch::min(Z) << "X.max " << torch::max(Z) << "\n";
+	std::cout << "X.min " << torch::min(Z) << "\nX.max " << torch::max(Z) << "\n";
 
 	auto Y = conv_trans(imgT.unsqueeze(0));
 	std::cout << "\n\n";
@@ -333,7 +334,7 @@ int main() {
 
 			total_imgs += img_data.size(0);
 			num_batch++;
-			std::cout << "num_batch: " << num_batch << '\n';
+			//std::cout << "num_batch: " << num_batch << '\n';
 
 		}
 		std::cout << "loss: " << (loss_sum*1.0/num_batch) << '\n';
@@ -341,7 +342,8 @@ int main() {
 
 	model->eval();
 
-	plt::figure_size(300 * batch_size, 900);
+	std::vector<std::vector<std::vector<std::vector<unsigned char>>>> Jimgs, Pimgs, Limgs;
+
 	for(auto& batch : *test_loader) {
 		auto img_data  = batch.data.to(device);
 		auto lab_data  = batch.target.to(device);
@@ -356,38 +358,43 @@ int main() {
 		for( int j = 0; j < pred.size(0); j++ ) {
 			imgT = img_data[j].squeeze();
 			auto jimg = deNormalizeTensor(imgT, mean_, std_);
-			jimg = jimg.mul(255).permute({1, 2, 0}).to(torch::kByte).clone();
-			std::vector<uint8_t> iz = tensorToMatrix4Matplotlib(jimg, false, false);
-			const unsigned char* izptr = &(iz[0]);
-			plt::subplot2grid(3, batch_size, 0, j, 1, 1);
-			plt::title("Image");
-			plt::imshow(izptr, static_cast<int>(jimg.size(0)),
-								static_cast<int>(jimg.size(1)), static_cast<int>(jimg.size(2)));
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(jimg.clone(), false, false);
+			Jimgs.push_back(z);
 
 			auto ppred = torch::argmax(pred[j].squeeze(), 0).detach().to(device);
 			auto img = decode_segmap(ppred.squeeze(), num_classes);
-
-			std::vector<uint8_t> z = tensorToMatrix4Matplotlib(img.clone(), false, false);
-			const unsigned char* zptr = &(z[0]);
-
-			plt::subplot2grid(3, batch_size, 1, j, 1, 1);
-			plt::title("pred");
-			plt::imshow(zptr, static_cast<int>(img.size(0)),
-									  static_cast<int>(img.size(1)), static_cast<int>(img.size(2)));
+			z = tensorToMatrix4MatplotPP(img.clone(), false, false);
+			Pimgs.push_back(z);
 
 			auto limg = decode_segmap(lab_data[j].squeeze(), num_classes);
-			std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(limg.clone(), false, false);
-			const unsigned char* lzptr = &(lz[0]);
-			plt::subplot2grid(3, batch_size, 2, j, 1, 1);
-			plt::title("label");
-			plt::imshow(lzptr, static_cast<int>(limg.size(0)),
-							   static_cast<int>(limg.size(1)), static_cast<int>(limg.size(2)));
+			z = tensorToMatrix4MatplotPP(limg.clone(), false, false);
+			Limgs.push_back(z);
 		}
 
 		break;
 	}
-	plt::show();
-	plt::close();
+
+	auto f = figure(true);
+	f->width(f->width() * 2);
+	f->height(f->height() * 2);
+	f->x_position(0);
+	f->y_position(0);
+
+	int C = Jimgs.size();
+	for( int i = 0; i < Jimgs.size(); i++) {
+		matplot::subplot(3, C, i);
+		matplot::imshow(Jimgs[i]);
+	}
+	for( int i = 0; i < Pimgs.size(); i++) {
+		matplot::subplot(3, C, C + i);
+		matplot::imshow(Pimgs[i]);
+	}
+	for( int i = 0; i < Limgs.size(); i++) {
+		matplot::subplot(3, C, 2*C + i);
+		matplot::imshow(Limgs[i]);
+	}
+	f->draw();
+	matplot::show();
 
 	std::cout << "Done!\n";
 	return 0;

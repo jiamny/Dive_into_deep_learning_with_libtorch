@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-find_package(Python3 COMPONENTS Development NumPy)
-
-add_definitions(-DMATPLOTLIBCPP_PYTHON_HEADER=Python.h)
-
-set(requiredlibs "python3.10")
-list(APPEND requiredlibs "pthread")
+set(requiredlibs "pthread")
 list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "png")
@@ -27,10 +21,8 @@ AnchorBoxes.cpp
 ../utils/ch_13_util.cpp						
 )
 													
-target_include_directories(13_AnchorBoxes  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(13_AnchorBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(13_AnchorBoxes  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(13_AnchorBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )
+set_target_properties(13_AnchorBoxes  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(13_BoundingBoxes)
@@ -42,10 +34,8 @@ BoundingBoxes.cpp
 ../utils/ch_13_util.cpp						
 )
 													
-target_include_directories(13_BoundingBoxes  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(13_BoundingBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(13_BoundingBoxes  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(13_BoundingBoxes  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(13_BoundingBoxes  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(13_MultiscaleObjectDetection)
@@ -57,10 +47,8 @@ MultiscaleObjectDetection.cpp
 ../utils/ch_13_util.cpp						
 )
 													
-target_include_directories(13_MultiscaleObjectDetection  PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-target_link_libraries(13_MultiscaleObjectDetection  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(13_MultiscaleObjectDetection  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(13_MultiscaleObjectDetection  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )
+set_target_properties(13_MultiscaleObjectDetection  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 #----------------------------------------------------------------------------------
 add_executable(13_ObjectDetectionDataset)
@@ -72,18 +60,8 @@ ObjectDetectionDataset.cpp
 ../utils/ch_13_util.cpp						
 )
 													
-target_include_directories(13_ObjectDetectionDataset  PRIVATE 
-#${TORCHVISION_INCLUDE_DIRS}
-${Python3_INCLUDE_DIRS} 
-${Python3_NumPy_INCLUDE_DIRS})
-
-target_link_libraries(13_ObjectDetectionDataset  
-${OpenCV_LIBS} 
-${TORCH_LIBRARIES} 
-#${TORCHVISION_LIBRARIES}
-${requiredlibs} Python3::Python Python3::NumPy)
-
-set_target_properties(13_ObjectDetectionDataset  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(13_ObjectDetectionDataset  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )
+set_target_properties(13_ObjectDetectionDataset  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 # -------------------------------------------------------------
 add_executable(13_Fine_Tuning)
@@ -103,11 +81,8 @@ resnet.cpp
 ../utils/transforms.cpp
 )
 
-target_include_directories(13_Fine_Tuning PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_Fine_Tuning ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_Fine_Tuning PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_Fine_Tuning ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties( 13_Fine_Tuning PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_FullyConvolutionalNetworks)
@@ -119,11 +94,8 @@ FullyConvolutionalNetworks.cpp
 ../utils/ch_13_util.cpp	
 )
 
-target_include_directories(13_ObjectDetectionDataset PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_FullyConvolutionalNetworks ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_FullyConvolutionalNetworks PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_FullyConvolutionalNetworks ${OpenCV_LIBS} ${TORCH_LIBRARIES}  ${requiredlibs} matplot)					   
+set_target_properties( 13_FullyConvolutionalNetworks PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_TransposedConvolution)
@@ -135,11 +107,8 @@ TransposedConvolution.cpp
 ../utils/ch_13_util.cpp	
 )
 
-target_include_directories(13_TransposedConvolution PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_TransposedConvolution ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_TransposedConvolution PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_TransposedConvolution ${OpenCV_LIBS} ${TORCH_LIBRARIES}  ${requiredlibs} )					   
+set_target_properties( 13_TransposedConvolution PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_ImageAugmentation)
@@ -151,11 +120,8 @@ ImageAugmentation.cpp
 ../utils/ch_13_util.cpp	
 )
 
-target_include_directories(13_ImageAugmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_ImageAugmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_ImageAugmentation PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_ImageAugmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES}  ${requiredlibs} matplot)			   
+set_target_properties( 13_ImageAugmentation PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_Kaggle_cifar10)
@@ -171,11 +137,8 @@ Kaggle_cifar10.cpp
 ../utils/transforms.cpp
 )
 
-target_include_directories(13_Kaggle_cifar10 PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_Kaggle_cifar10 ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_Kaggle_cifar10 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_Kaggle_cifar10 ${OpenCV_LIBS} ${TORCH_LIBRARIES}  ${requiredlibs} matplot)					   
+set_target_properties( 13_Kaggle_cifar10 PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_Kaggle_dog)
@@ -191,11 +154,8 @@ Kaggle_dog.cpp
 ../utils/transforms.cpp
 )
 
-target_include_directories(13_Kaggle_dog PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_Kaggle_dog ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_Kaggle_dog PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_Kaggle_dog ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)					   
+set_target_properties( 13_Kaggle_dog PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_SemanticSegmentation)
@@ -207,11 +167,8 @@ SemanticSegmentation.cpp
 ../utils/ch_13_util.cpp	
 )
 
-target_include_directories(13_SemanticSegmentation PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_SemanticSegmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_SemanticSegmentation PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_SemanticSegmentation ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)					   
+set_target_properties( 13_SemanticSegmentation PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_NeuralStyleTransfer)
@@ -223,11 +180,8 @@ NeuralStyleTransfer.cpp
 ../utils/ch_13_util.cpp	
 )
 
-target_include_directories(13_NeuralStyleTransfer PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_NeuralStyleTransfer ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
-set_target_properties( 13_NeuralStyleTransfer PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+target_link_libraries( 13_NeuralStyleTransfer ${OpenCV_LIBS} ${TORCH_LIBRARIES}  ${requiredlibs} matplot)					   
+set_target_properties( 13_NeuralStyleTransfer PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 # -------------------------------------------------------------
 add_executable(13_Yolo4)
@@ -242,10 +196,7 @@ target_sources(13_Yolo4 PRIVATE
 #../utils.cpp
 )
 
-target_include_directories(13_Yolo4 PRIVATE ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} )
-target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES} 
-					   ${requiredlibs} Python3::Python Python3::NumPy)
-					   
+target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )					   
 set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
 get_filename_component(_fullpath "/home/stree/git/Dive_into_deep_learning_with_libtorch/torchvision" REALPATH)
@@ -270,18 +221,15 @@ if(EXISTS "${_fullpath}")
 													
 	target_include_directories(13_TestTorchVision  PRIVATE 
 		${TORCHVISION_INCLUDE_DIRS}
-		${Python3_INCLUDE_DIRS}  
-		${Python3_NumPy_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(13_TestTorchVision  
 		${OpenCV_LIBS} 
 		${TORCH_LIBRARIES} 
 		${TORCHVISION_LIBRARIES}
-		${requiredlibs} Python3::Python Python3::NumPy
 	)
 
-	set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+	set_target_properties(13_TestTorchVision  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 	# -------------------------------------------------------------
 	add_executable(13_Region_based_CNNs )
@@ -289,18 +237,16 @@ if(EXISTS "${_fullpath}")
 
 	target_include_directories(13_Region_based_CNNs  PRIVATE 
 		${TORCHVISION_INCLUDE_DIRS}
-		${Python3_INCLUDE_DIRS}  
-		${Python3_NumPy_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(13_Region_based_CNNs  
 		${OpenCV_LIBS} 
 		${TORCH_LIBRARIES} 
 		${TORCHVISION_LIBRARIES}
-		${requiredlibs} Python3::Python Python3::NumPy
+		${requiredlibs}
 	)
 
-	set_target_properties(13_Region_based_CNNs  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+	set_target_properties(13_Region_based_CNNs  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 	
 	#-------------------------------------------------------------------------------------
 	add_executable(13_SingleShotMultiboxDetection )
@@ -312,17 +258,14 @@ if(EXISTS "${_fullpath}")
 
 	target_include_directories(13_SingleShotMultiboxDetection  PRIVATE 
 		${TORCHVISION_INCLUDE_DIRS}
-		${Python3_INCLUDE_DIRS}  
-		${Python3_NumPy_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(13_SingleShotMultiboxDetection  
 		${OpenCV_LIBS} 
 		${TORCH_LIBRARIES} 
 		${TORCHVISION_LIBRARIES}
-		${requiredlibs} Python3::Python Python3::NumPy
-	)
+		${requiredlibs} matplot)
 
-	set_target_properties(13_SingleShotMultiboxDetection  PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES)
+	set_target_properties(13_SingleShotMultiboxDetection  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 endif()

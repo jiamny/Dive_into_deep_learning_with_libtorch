@@ -19,8 +19,8 @@
 //#include "../utils.h"
 #include "../TempHelpFunctions.hpp"
 
-#include "../matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+#include <matplot/matplot.h>
+using namespace matplot;
 
 using torch::indexing::Slice;
 using torch::indexing::None;
@@ -28,31 +28,27 @@ using torch::indexing::Ellipsis;
 
 void show_list_len_pair_hist(std::vector<std::vector<std::string>> source,
 							 std::vector<std::vector<std::string>> target) {
-	// show_list_len_pair_hist
-	std::vector<float> xs(60);
-	std::vector<float> xt(60);
-	std::vector<float> ys(60);
-	std::vector<float> yt(60);
-	for( int i = 0; i < 60; i++ ) {
-		xs[i] = i*1.0 - 0.5;
-		xt[i] = i*1.0 + 0.5;
-		ys[i] = 0;
-		yt[i] = 0;
-	}
+	std::vector<double> ys;
+	std::vector<double> yt;
 
-	for( size_t i = 0; i < source.size(); i++ ) {
-		ys[source[i].size()] += 1;
-		yt[target[i].size()] += 1;
-	}
+	for( size_t i = 0; i < source.size(); i++ )
+		ys.push_back(source[i].size());
 
-	plt::figure_size(600, 450);
-	plt::bar(xs, ys, "blue", "-", 0.25, {{"label", "source"}});
-	plt::bar(xt, yt, "orange", "-", 0.25, {{"label", "target"}});
-	plt::xlabel("# tokens per sequence");
-	plt::ylabel("Count");
-	plt::legend();
-	plt::show();
-	plt::close();
+
+	for( size_t i = 0; i < target.size(); i++ )
+		yt.push_back(target[i].size());
+
+
+	 auto h1 = matplot::hist(ys);
+	 h1->num_bins(5);
+	 matplot::hold(on);
+	 auto h2 =matplot:: hist(yt);
+	 h2->num_bins(5);
+	 h1->bin_width(0.5);
+	 h2->bin_width(0.5);
+	 matplot::legend({"source", "target"});
+
+	 matplot::show();
 }
 
 std::vector<std::pair<std::string, int64_t>> count_corpus2( std::vector<std::string> tokens ) {
@@ -127,13 +123,14 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
+	torch::Device device(torch::kCPU);
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(7);
-	int num_examples = 600;
+	int num_examples = 40000;
 
 	std::string filename = "./data/fra-eng/fra.txt";
 
@@ -153,7 +150,9 @@ int main() {
 	std::cout << source.size() << std::endl;
 	std::cout << target.size() << std::endl;
 
-//	show_list_len_pair_hist(source, target);
+	//the number of tokens per text sequence.
+	show_list_len_pair_hist(source, target);
+
 	std::vector<std::string> tokens;
 	for(std::vector<std::string>& tk : source ) {
 		for(std::string& t : tk) {
@@ -197,6 +196,7 @@ int main() {
 			tgt_tokens.push_back(t);
 		}
 	}
+
 	std::vector<std::pair<std::string, int64_t>> tgt_counter = count_corpus( tgt_tokens );
 	auto tgt_vocab = Vocab(tgt_counter, 2.0, rv);
 
