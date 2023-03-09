@@ -30,12 +30,7 @@ int main(int argc, char* argv[]) {
   std::string weight_path = "./src/13_Computer_vision/yolov4/yolov4.weights";
   std::string image_path  = "./data/dogbike.jpg";
 
-  torch::DeviceType device_type;
-  if(torch::cuda::is_available()){
-      device_type = torch::kCUDA;
-  }else{
-     device_type = torch::kCPU;
-  }
+  torch::DeviceType device_type = torch::kCPU;
 
   torch::Device device(device_type);
   std::string cfg_file = cfg_path;

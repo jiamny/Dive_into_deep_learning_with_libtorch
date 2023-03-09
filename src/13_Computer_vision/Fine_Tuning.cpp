@@ -73,7 +73,7 @@ int main() {
 
 	auto f = figure(true);
 	f->width(f->width() * 2);
-	f->height(f->height() * 2.5);
+	f->height(f->height() * 1.5);
 	f->x_position(0);
 	f->y_position(0);
 

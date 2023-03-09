@@ -27,7 +27,7 @@ int main() {
 	int imgSize = 256;
 	int batch_size = 32;
 
-	auto data_targets = load_bananas_img_data(data_dir, is_train, imgSize);
+	auto data_targets = load_bananas_img_data(data_dir.c_str(), is_train, imgSize);
 
 	auto train_set = BananasDataset(data_targets, imgSize).map(torch::data::transforms::Stack<>());
 

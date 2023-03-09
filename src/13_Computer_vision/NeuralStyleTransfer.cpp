@@ -263,9 +263,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	torch::Device device(torch::kCPU);
+//	auto cuda_available = torch::cuda::is_available();
+//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -305,8 +306,8 @@ int main() {
 	// Model
 	VGGNet vgg19(config, content_layers, style_layers, false, vgg19_layers_scriptmodule_path);
 
-	auto content_img = preprocess(cimg, rgb_mean, rgb_std).to(device);
-	auto style_img   = preprocess(simg, rgb_mean, rgb_std).to(device);
+	auto content_img = preprocess(cimg, rgb_mean, rgb_std);
+	auto style_img   = preprocess(simg, rgb_mean, rgb_std);
 
 	// auto t = torch::randn({3, 450, 300}).to(torch::kFloat32);
 	// std::cout << torch::sum(t) << '\n';
@@ -318,7 +319,6 @@ int main() {
 
 	// get_inits
 	SynthesizedImage gen_img(contents_X.sizes());
-	gen_img.to(device);
 
 	gen_img.weight.data().copy_(contents_X.data());
 
@@ -367,36 +367,8 @@ int main() {
 	//auto X = preprocess(cimg, rgb_mean, rgb_std).to(device);
 
 	auto gimg = postprocess(X, device, rgb_mean, rgb_std);
-	//std::cout << "gimg: " << gimg.sizes() << '\n';
-/*
-	std::vector<uint8_t> z3 = tensorToMatrix4Matplotlib(gimg);
-	const unsigned char* zptr3 = &(z3[0]);
+	std::cout << "gimg: " << gimg.sizes() << '\n';
 
-	plt::figure_size(1000, 780);
-	plt::subplot2grid(2, 2, 0, 0, 1, 1);
-	plt::title("Content image");
-	plt::imshow(zptr1, static_cast<int>(cimg.size(1)),
-							static_cast<int>(cimg.size(2)), static_cast<int>(cimg.size(0)));
-
-	plt::subplot2grid(2, 2, 0, 1, 1, 1);
-	plt::title("Style image");
-	plt::imshow(zptr2, static_cast<int>(simg.size(1)),
-								static_cast<int>(simg.size(2)), static_cast<int>(simg.size(0)));
-
-	plt::subplot2grid(2, 2, 1, 0, 1, 1);
-	plt::title("NeuralStyle image");
-	plt::imshow(zptr3, static_cast<int>(gimg.size(1)),
-									static_cast<int>(gimg.size(2)), static_cast<int>(gimg.size(0)));
-	plt::subplot2grid(2, 2, 1, 1, 1, 1);
-	plt::named_plot("", );
-	plt::named_plot("", );
-	plt::named_plot("TV", );
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
-	plt::close();
-*/
 	auto f = figure(true);
 	f->width(f->width() * 3);
 	f->height(f->height() * 2);
@@ -407,16 +379,19 @@ int main() {
 	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(cimg.clone());
 	matplot::imshow(z);
 	matplot::title("Content image");
+	f->draw();
 
 	matplot::subplot(2, 2, 1);
 	z = tensorToMatrix4MatplotPP(simg.clone());
 	matplot::imshow(z);
 	matplot::title("Style image");
+	f->draw();
 
 	matplot::subplot(2, 2, 2);
 	z = tensorToMatrix4MatplotPP(gimg.clone());
 	matplot::imshow(z);
 	matplot::title("Style image");
+	f->draw();
 
 	matplot::subplot(2, 2, 3);
 	matplot::legend();

@@ -156,7 +156,7 @@ int main() {
     size_t start_epoch, total_epoch;
     start_epoch = 1;
     total_iter = dataloader.get_count_max();
-    total_epoch = 50;
+    total_epoch = 30;
     bool first = true;
     std::vector<float> train_loss_ave;
     std::vector<float> train_epochs;
@@ -164,6 +164,8 @@ int main() {
 
     for (epoch = start_epoch; epoch <= total_epoch; epoch++) {
        	model->train();
+       	torch::AutoGradMode enable_grad(true);
+
        	std::cout << "--------------- Training --------------------\n";
        	first = true;
        	float loss_sum = 0.0;

@@ -284,6 +284,7 @@ int main() {
 	    // Sum of absolute error, no. of examples in sum of absolute error
 	    //metric = d2l.Accumulator(4)
 	    net->train();
+	    torch::AutoGradMode enable_grad(true);
 
 	    float tlt_cls_error = 0.0, tlt_bbox_mae = 0.0;
 	    int64_t tlt_cls_num = 0, tlt_bbox_num = 0;
@@ -333,6 +334,8 @@ int main() {
 	torch::Tensor imgT = rlt.second;
 
 	net->eval();
+	torch::NoGradGuard no_grad;
+
 	std::tie(anchors, cls_preds, bbox_preds)= net->forward(imgT.to(device));
 
 	torch::Tensor cls_probs = torch::nn::functional::softmax(cls_preds, 2).permute({0, 2, 1});

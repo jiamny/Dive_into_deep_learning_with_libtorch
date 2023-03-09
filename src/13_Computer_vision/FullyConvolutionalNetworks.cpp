@@ -145,7 +145,7 @@ int main() {
 
 	std::string imgf = "./data/catdog.jpg";
 	int img_size = 0;
-	bool show_img = false;
+	bool show_img =true;
 
 	auto imgT = CvMatToTensor(imgf, {});
 
@@ -210,7 +210,7 @@ int main() {
 	std::vector<float> mean_ = {0.485, 0.456, 0.406};
 	std::vector<float> std_  = {0.229, 0.224, 0.225};
 
-/*
+
 	imgT = CvMatToTensor("./data/2007_001704.jpg", {});
 
 	imgT = NormalizeTensor(imgT, mean_, std_);
@@ -228,33 +228,33 @@ int main() {
 	imgT = deNormalizeTensor(imgT, mean_, std_);
 	std::cout << imgT.index({Slice(105,115), Slice(130,140)}) << '\n';
 	imgT = imgT.permute({1, 2, 0}).clone();
-	std::vector<uint8_t> z = tensorToMatrix4Matplotlib(imgT, true, false);
-	const unsigned char* zptr = &(z[0]);
-	plt::imshow(zptr, static_cast<int>(imgT.size(0)),
-										static_cast<int>(imgT.size(1)), static_cast<int>(imgT.size(2)));
-	plt::show();
+	std::vector<std::vector<std::vector<unsigned char>>> zz = tensorToMatrix4MatplotPP(imgT, true, false);
+
+	auto f = figure(true);
+	f->width(f->width() * 1);
+	f->height(f->height() * 1);
+	f->x_position(0);
+	f->y_position(0);
+
+	matplot::subplot(1, 3, 0);
+	matplot::imshow(zz);
 
 	auto colormap = dt.second.clone();
 	colormap = colormap.permute({1, 2, 0}).to(torch::kByte).clone();
 
-	std::vector<uint8_t> lz = tensorToMatrix4Matplotlib(colormap, false, false);
-	const unsigned char* lzptr = &(lz[0]);
-	plt::imshow(lzptr, static_cast<int>(colormap.size(0)),
-									static_cast<int>(colormap.size(1)), static_cast<int>(colormap.size(2)));
-	plt::show();
-
+	zz = tensorToMatrix4MatplotPP(colormap, false, false);
+	matplot::subplot(1, 3, 1);
+	matplot::imshow(zz);
 
 	auto coded = voc_label_indices(dt.second.clone(), voc_colormap2label());
 	std::cout << "coded: " << coded.index({Slice(105,115), Slice(130,140)}) << '\n';
 
 	auto decoded = decode_segmap(coded, num_classes);
 
-	lz = tensorToMatrix4Matplotlib(decoded, false, false);
-	lzptr = &(lz[0]);
-	plt::imshow(lzptr, static_cast<int>(decoded.size(0)),
-										static_cast<int>(decoded.size(1)), static_cast<int>(decoded.size(2)));
-	plt::show();
-*/
+	zz = tensorToMatrix4MatplotPP(decoded, false, false);
+	matplot::subplot(1, 3, 2);
+	matplot::imshow(zz);
+	matplot::show();
 
 	// -------------------------------------------
 	// Reading the Dataset
@@ -282,7 +282,7 @@ int main() {
 	auto model = VocNet(net, classifier);
 	model->to(device);
 
-	size_t num_epochs = 30;
+	size_t num_epochs = 20;
 	float lr = 0.001;
 	double wd = 1e-3;
 	auto trainer = torch::optim::SGD(model->parameters(), torch::optim::SGDOptions(lr).weight_decay(wd));
@@ -293,6 +293,7 @@ int main() {
 
 	for(size_t epoch = 1; epoch <= num_epochs; epoch++) {
 		model->train();
+		torch::AutoGradMode enable_grad(true);
 
 		std::cout << "--------------- Training -----------------> " << epoch << " / " << num_epochs << "\n";
 		first = true;
@@ -341,6 +342,7 @@ int main() {
 	}
 
 	model->eval();
+	torch::NoGradGuard no_grad;
 
 	std::vector<std::vector<std::vector<std::vector<unsigned char>>>> Jimgs, Pimgs, Limgs;
 
@@ -358,43 +360,43 @@ int main() {
 		for( int j = 0; j < pred.size(0); j++ ) {
 			imgT = img_data[j].squeeze();
 			auto jimg = deNormalizeTensor(imgT, mean_, std_);
-			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(jimg.clone(), false, false);
+			std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(jimg.clone());
 			Jimgs.push_back(z);
 
 			auto ppred = torch::argmax(pred[j].squeeze(), 0).detach().to(device);
 			auto img = decode_segmap(ppred.squeeze(), num_classes);
-			z = tensorToMatrix4MatplotPP(img.clone(), false, false);
-			Pimgs.push_back(z);
+			std::vector<std::vector<std::vector<unsigned char>>> pz = tensorToMatrix4MatplotPP(img.clone(), false, false);
+			Pimgs.push_back(pz);
 
 			auto limg = decode_segmap(lab_data[j].squeeze(), num_classes);
-			z = tensorToMatrix4MatplotPP(limg.clone(), false, false);
-			Limgs.push_back(z);
+			std::vector<std::vector<std::vector<unsigned char>>> lz = tensorToMatrix4MatplotPP(limg.clone(), false, false);
+			Limgs.push_back(lz);
 		}
 
 		break;
 	}
 
-	auto f = figure(true);
-	f->width(f->width() * 2);
-	f->height(f->height() * 2);
+	f = figure(true);
+	f->width(f->width() * 1.2);
+	f->height(f->height() * 1.2);
 	f->x_position(0);
 	f->y_position(0);
 
 	int C = Jimgs.size();
+
+	for( int i = 0; i < Pimgs.size(); i++)
+		Jimgs.push_back(Pimgs[i]);
+
+	for( int i = 0; i < Limgs.size(); i++)
+		Jimgs.push_back(Limgs[i]);
+
+	// draw images
 	for( int i = 0; i < Jimgs.size(); i++) {
 		matplot::subplot(3, C, i);
 		matplot::imshow(Jimgs[i]);
 	}
-	for( int i = 0; i < Pimgs.size(); i++) {
-		matplot::subplot(3, C, C + i);
-		matplot::imshow(Pimgs[i]);
-	}
-	for( int i = 0; i < Limgs.size(); i++) {
-		matplot::subplot(3, C, 2*C + i);
-		matplot::imshow(Limgs[i]);
-	}
-	f->draw();
 	matplot::show();
+
 
 	std::cout << "Done!\n";
 	return 0;
