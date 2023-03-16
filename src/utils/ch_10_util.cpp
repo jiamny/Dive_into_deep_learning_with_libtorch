@@ -1,6 +1,6 @@
 #include "ch_10_util.h"
 
-void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab) {
+void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab, std::string tlt) {
 	tsr = tsr.cpu().squeeze().to(torch::kDouble);
 	int nrows = tsr.size(0), ncols = tsr.size(1);
 
@@ -26,7 +26,11 @@ void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab) {
 	matplot::colorbar(ax);
     matplot::xlabel(ax, xlab);
     matplot::ylabel(ax, ylab);
-    matplot::title(ax, "heatmap");
+    if( tlt.length() > 2 ) {
+    	matplot::title(ax, tlt.c_str());
+    } else {
+    	matplot::title(ax, "heatmap");
+    }
     matplot::show();
 }
 

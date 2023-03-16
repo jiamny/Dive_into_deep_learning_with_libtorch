@@ -22,7 +22,7 @@ using torch::indexing::Slice;
 using torch::indexing::None;
 using torch::indexing::Ellipsis;
 
-void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab);
+void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab, std::string tlt="");
 
 // -----------------------------------------------
 // Scaled Dot-Product Attention
