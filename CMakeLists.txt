@@ -11,7 +11,7 @@ add_subdirectory(matplotplusplus)
 
 
 
-set(PYTORCH_VERSION "1.13.1")
+set(PYTORCH_VERSION "2.0.0")
 
 set(USE_CPU_ONLY NO)
 
@@ -75,8 +75,8 @@ message(STATUS "    libraries: ${TORCH_LIBRARIES}")
 message(STATUS "    include path: ${TORCH_INCLUDE_DIRS}") 
 
 # add opencv package to the project
-# find_package( OpenCV 4.6.0 REQUIRED PATHS "/usr/local/")
-FIND_PACKAGE( OpenCV 4.5.4 REQUIRED )
+FIND_PACKAGE( OpenCV 4.7.0 REQUIRED PATHS "/usr/local/")
+#FIND_PACKAGE( OpenCV 4.5.4 REQUIRED )
 INCLUDE_DIRECTORIES( ${OpenCV_INCLUDE_DIRS} ) 
 SET(OpenCV_LIBRARIES ${OpenCV_LIBS})
 

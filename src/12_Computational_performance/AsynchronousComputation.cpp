@@ -28,6 +28,7 @@ int main() {
 	    auto a = torch::randn({1000, 1000}, device);
 	    auto b = torch::mm(a, a);
 	}
+
 //	torch::cuda::synchronize(device.index());
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(stop - start);

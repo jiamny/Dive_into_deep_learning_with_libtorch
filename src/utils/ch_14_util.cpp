@@ -104,11 +104,13 @@ std::vector<std::vector<std::vector<std::string>>> _read_wiki(const std::string 
 std::pair<std::vector<std::string>, std::vector<int64_t>> get_tokens_and_segments(std::vector<std::string> tokens_a,
 																				std::vector<std::string> tokens_b) {
     // Get tokens of the BERT input sequence and their segment IDs.
-	std::vector<std::string> tokens;
-    tokens.push_back("<cls>");
-    for(auto& s :tokens_a)
-    	tokens.push_back(s);
-    tokens.push_back("<sep>");
+	//std::vector<std::string> tokens;
+    //tokens.push_back("<cls>");
+    //for(auto& s :tokens_a)
+    //	tokens.push_back(s);
+    //tokens.push_back("<sep>");
+	auto iter = tokens_a.insert(std::begin(tokens_a), "<cls>");
+	tokens_a.push_back("<sep>");
 
     // 0 and 1 are marking segment A and B, respectively
     //segments = [0] * (len(tokens_a) + 2)
@@ -119,14 +121,14 @@ std::pair<std::vector<std::string>, std::vector<int64_t>> get_tokens_and_segment
     if( ! tokens_b.empty() ) {
         //tokens += tokens_b + ['<sep>']
     	for(auto& s :tokens_b)
-    	    tokens.push_back(s);
-    	tokens.push_back("<sep>");
+    	    tokens_a.push_back(s);
+    	tokens_a.push_back("<sep>");
 
         //segments += [1] * (len(tokens_b) + 1)
     	for( int i = 0; i < (tokens_b.size() + 1); i++ )
     	    	segments.push_back(1);
     }
-    return std::make_pair(tokens, segments);
+    return std::make_pair(tokens_a, segments);
 }
 
 std::tuple<std::vector<std::string>, std::vector<std::string>, bool> _get_next_sentence(std::vector<std::string> sentence,

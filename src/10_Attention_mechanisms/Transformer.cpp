@@ -557,15 +557,7 @@ int main() {
 	    	epochs.push_back(1.0*epoch);
 	    }
 	}
-/*
-	plt::figure_size(800, 600);
-	plt::named_plot("train", epochs, plsum, "b");
-	plt::legend();
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
-*/
+
 	auto F = figure(true);
 	F->size(800, 600);
 	F->add_axes(false);
@@ -603,10 +595,6 @@ int main() {
 	auto enc_attention_weights = torch::cat(net->encoder->attention_weights, 0).reshape({num_layers, num_heads,-1, num_steps});
 	std::cout << "enc_attention_weights.sizes(): " << enc_attention_weights.sizes() << "\n";
 
-//	plt::figure_size(1200, 750);
-//	int rid = 0, cid = 0;
-
-//	PyObject* mat;
 	auto h = figure(true);
 	h->size(1500, 900);
 	h->add_axes(false);
@@ -670,9 +658,6 @@ int main() {
 	}
 	matplot::colorbar();
 	matplot::show();
-
-//    plt::close();
-//    Py_DECREF(mat);
 
 	std::cout << "Done!\n";
 	return 0;

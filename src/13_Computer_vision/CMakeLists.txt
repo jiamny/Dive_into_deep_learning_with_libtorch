@@ -199,7 +199,18 @@ target_sources(13_Yolo4 PRIVATE
 target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )					   
 set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
 
-get_filename_component(_fullpath "/home/stree/git/Dive_into_deep_learning_with_libtorch/torchvision" REALPATH)
+#-------------------------------------------------------------------------------------
+add_executable(13_SingleShotMultiboxDetection )
+target_sources(13_SingleShotMultiboxDetection PRIVATE 
+		SingleShotMultiboxDetection.cpp
+		../utils/ch_13_util.h
+		../utils/ch_13_util.cpp	
+)
+
+target_link_libraries(13_SingleShotMultiboxDetection  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(13_SingleShotMultiboxDetection  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+get_filename_component(_fullpath "/media/stree/localssd/LibtorchPrgs/Dive_into_deep_learning_with_libtorch/torchvision" REALPATH)
 if(EXISTS "${_fullpath}")
 
 	# -------------------------------------------------------------------------------------------
@@ -247,25 +258,5 @@ if(EXISTS "${_fullpath}")
 	)
 
 	set_target_properties(13_Region_based_CNNs  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
-	
-	#-------------------------------------------------------------------------------------
-	add_executable(13_SingleShotMultiboxDetection )
-	target_sources(13_SingleShotMultiboxDetection PRIVATE 
-		SingleShotMultiboxDetection.cpp
-		../utils/ch_13_util.h
-		../utils/ch_13_util.cpp	
-	)
-
-	target_include_directories(13_SingleShotMultiboxDetection  PRIVATE 
-		${TORCHVISION_INCLUDE_DIRS}
-	)
-
-	target_link_libraries(13_SingleShotMultiboxDetection  
-		${OpenCV_LIBS} 
-		${TORCH_LIBRARIES} 
-		${TORCHVISION_LIBRARIES}
-		${requiredlibs} matplot)
-
-	set_target_properties(13_SingleShotMultiboxDetection  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 endif()

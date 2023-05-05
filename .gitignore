@@ -61,7 +61,7 @@ cmake-build-*/
 
 # Other
 .DS_Store
-.idea/
+.idea
 .clangd/
 .cproject
 .project
@@ -71,7 +71,8 @@ cmake-build-*/
 *.docx
 references/
 x-file
-.pth
+*.pth
+*.cc
 
 
 # Notebooks
