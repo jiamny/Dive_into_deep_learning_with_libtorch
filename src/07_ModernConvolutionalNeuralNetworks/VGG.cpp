@@ -171,7 +171,7 @@ int main() {
 	std::cout << tnet->forward(X) << std::endl;
 
 	size_t img_size = 224;
-	size_t batch_size = 32;
+	size_t batch_size = 8;
 	const std::string path = "./data/17_flowers_name.txt";
 	const size_t class_num = 17;
 	const size_t valid_batch_size = 1;
@@ -230,7 +230,7 @@ int main() {
 	size_t start_epoch, total_epoch;
 	start_epoch = 1;
 	total_iter = dataloader.get_count_max();
-	total_epoch = 30;
+	total_epoch = 5;
 	bool first = true;
 	std::vector<double> train_loss_ave;
 	std::vector<double> train_epochs;
@@ -251,8 +251,6 @@ int main() {
 				first = false;
 			}
 
-			image = std::get<0>(mini_batch).to(device);
-			label = std::get<1>(mini_batch).to(device);
 			output = net->forward(image);
 			auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
 			//std::cout << output.sizes() << "\n" << out.sizes() << std::endl;

@@ -33,13 +33,16 @@ struct RNNModelbirnn : public torch::nn::Module {
             num_directions = 2;
             linear = torch::nn::Linear(num_hiddens * 2, vocab_size);
         }
-        register_module("rnn_layer", rnn_layer);
+        register_module("rnn", rnn);
+        register_module("linear", linear);
 	}
 
 	std::tuple<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor>> forward(torch::Tensor inputs,
 															std::tuple<torch::Tensor, torch::Tensor> state ) {
-        auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size); //(inputs.T.long(), self.vocab_size)
-        X = X.to(torch::kFloat32);
+
+        auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size).to(torch::kFloat32); //(inputs.T.long(), self.vocab_size)
+        X = X.to(inputs.device());
+
         torch::Tensor Y;
 
         std::tie(Y, state) = rnn->forward(X, state);
@@ -134,7 +137,7 @@ int main() {
 	for( size_t i = 0; i < tokens.size(); i++ )
 		tokens_ids.push_back(vocab[tokens[i]]);
 
-	int64_t num_epochs = 400;
+	int64_t num_epochs = 500;
 	float lr = 1.0;
 	bool use_random_iter = false;
 

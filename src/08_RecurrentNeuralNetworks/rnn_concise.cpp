@@ -13,7 +13,7 @@
 using namespace matplot;
 
 
-struct RNNModel : public torch::nn::Module {
+struct RNNModelImpl : public torch::nn::Module {
     //"""The RNN model."""
 	torch::nn::RNN rnn{nullptr};
 	int64_t vocab_size;
@@ -21,8 +21,8 @@ struct RNNModel : public torch::nn::Module {
 	int64_t num_directions;
 	torch::nn::Linear linear{nullptr};
 
-	RNNModel( torch::nn::RNN rnn_layer, int64_t vocab_size) {
-
+	RNNModelImpl( torch::nn::RNN rnn_layer, int64_t vocab_size) {
+		//std::cout << "rnn_layer: " << rnn_layer->parameters(false)[0].device() << "\n";
         rnn = rnn_layer;
         this->vocab_size = vocab_size;
         num_hiddens = rnn.get()->options.hidden_size();
@@ -35,33 +35,61 @@ struct RNNModel : public torch::nn::Module {
             num_directions = 2;
             linear = torch::nn::Linear(num_hiddens * 2, vocab_size);
         }
-        register_module("rnn_layer", rnn_layer);
+
+        register_module("linear", linear);
+        register_module("rnn", rnn);
+
+		// init_weights
+		for (auto& module : modules(/*include_self=*/false)) {
+		    if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
+		      torch::nn::init::normal_(M->weight); // Note: used instead of truncated normal initialization
+		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
+		    } else if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+		      torch::nn::init::normal_(M->weight); // Note: used instead of truncated normal initialization
+		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
+		    } else if (auto M = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
+		      torch::nn::init::ones_(M->weight);
+		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
+		    }
+		}
 	}
 
 	std::tuple<torch::Tensor, torch::Tensor> forward(torch::Tensor inputs, torch::Tensor state ) {
-        auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size); //(inputs.T.long(), self.vocab_size)
-        X = X.to(torch::kFloat32);
+		//std::cout << "input: " << inputs.device() << "\n";
+		//std::cout << "state: " << state.device() << "\n";
+        auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size).to(torch::kFloat32); //(inputs.T.long(), self.vocab_size)
+        X = X.to(state.device());
         torch::Tensor Y;
+        //std::cout << "X: " << X.device() << "\n";
         std::tie(Y, state) = rnn->forward(X, state);
+        //std::cout << "Y: " << Y.device() << "\n";
         // The fully connected layer will first change the shape of `Y` to
         // (`num_steps` * `batch_size`, `num_hiddens`). Its output shape is
         // (`num_steps` * `batch_size`, `vocab_size`).
         Y = linear(Y.reshape({-1, Y.size(-1)})); // Y.shape[-1]
+        //std::cout << "Y: " << Y.device() << "\n";
 		return std::make_tuple(Y, state);
 	}
 
 	torch::Tensor begin_state(int64_t batch_size, torch::Device device) {
 		// `nn.GRU` takes a tensor as hidden state
-		return torch::zeros( {num_directions * rnn.get()->options.num_layers(),
-		                                batch_size, num_hiddens}, device);
+		return torch::zeros({num_directions * rnn.get()->options.num_layers(),
+		                                batch_size, num_hiddens}).to(device);
 	}
 };
+TORCH_MODULE(RNNModel);
 
 
-
-std::string predict_ch8(std::vector<std::string> prefix, int64_t num_preds, RNNModel net, Vocab vocab, torch::Device device) {
+std::string predict_ch8(std::vector<std::string> prefix, int64_t num_preds, RNNModel& net,
+												Vocab vocab, torch::Device device) {
     //"""Generate new characters following the `prefix`."""
-    auto state = net.begin_state(1, device);
+    auto state = net->begin_state(1, device);
 
     std::vector<int64_t> outputs;
     outputs.push_back(vocab[prefix[0]]);
@@ -69,25 +97,31 @@ std::string predict_ch8(std::vector<std::string> prefix, int64_t num_preds, RNNM
     //outputs = [vocab[prefix[0]]]
     //get_input = lambda: d2l.reshape(d2l.tensor([outputs[-1]], device=device),
     //                                (1, 1))
-
+    //std::cout << "1: \n";
     for( int i = 1; i < prefix.size(); i ++ ) { //# Warm-up period
     	std::string y = prefix[i];
     	torch::Tensor xx;
     	// get_inpt
-    	torch::Tensor X = torch::tensor({{outputs[i-1]}}, device).reshape({1,1});
-    	std::tie(xx, state) = net.forward(X, state);
+    	torch::Tensor X = torch::tensor({{outputs[i-1]}}).reshape({1,1});
+    	X = X.to(device);
+    	std::tie(xx, state) = net->forward(X, state);
     	outputs.push_back(vocab[prefix[i]]);
     }
     //for y in prefix[1:]:  			//# Warm-up period
     //    _, state = net(get_input(), state)
     //    outputs.append(vocab[y])
-
+    //std::cout << "2: \n";
     for( int i = 0; i < num_preds; i ++ ) {
     	torch::Tensor y;
     	int j = outputs.size();
-    	torch::Tensor X = torch::tensor({{outputs[j-1]}}, device).reshape({1,1});
-    	std::tie(y, state) = net.forward(X, state);
-    	outputs.push_back(static_cast<int>(y.argmax(1, 0).reshape({1}).item<int>()));
+    	torch::Tensor X = torch::tensor({{outputs[j-1]}}).reshape({1,1});
+    	X = X.to(device);
+    	std::tie(y, state) = net->forward(X, state);
+
+    	// ---------------------------------------------------
+    	// transfer data to CPU
+    	// ---------------------------------------------------
+    	outputs.push_back(static_cast<int>(y.argmax(1, 0).reshape({1}).to(torch::kCPU).item<int>()));
     }
     //for _ in range(num_preds):  	//# Predict `num_preds` steps
     //    y, state = net(get_input(), state)
@@ -123,16 +157,17 @@ std::pair<double, double> train_epoch_ch8(RNNModel& net, std::vector<std::pair<t
 	    auto Y = train_iter[i].second;
 
 	    if( state.numel() == 0 || use_random_iter ) {
-	    	state = net.begin_state(X.size(0), device);
+	    	state = net->begin_state(X.size(0), device);
 	    } else {
 	    	state.detach_();
 	    }
 
 	    torch::Tensor y = Y.transpose(0, 1).reshape({-1});
-	    X.to(device),
-	    y.to(device);
+	    X = X.to(device),
+	    y = y.to(device);
+
 	    torch::Tensor y_hat;
-	    std::tie(y_hat, state) = net.forward(X, state);
+	    std::tie(y_hat, state) = net->forward(X, state);
 	    auto l = loss(y_hat, y.to(torch::kLong)).mean();				//loss(y_hat, y.long()).mean();
 
 	    updater.zero_grad();
@@ -140,11 +175,15 @@ std::pair<double, double> train_epoch_ch8(RNNModel& net, std::vector<std::pair<t
 	    //grad_clipping(net, 1);
 
 	    //"""Clip the gradient."""
-	    torch::nn::utils::clip_grad_norm_(net.parameters(), 0.5); //  clip_grad_norm_(net.parameters(), 1.0);
+	    torch::nn::utils::clip_grad_norm_(net->parameters(), 0.5); //  clip_grad_norm_(net.parameters(), 1.0);
 
 	    updater.step();
-	    ppx += (l.data().item<float>() * y.numel());
-	    tot_tk += y.numel();
+
+	    // ---------------------------------------------------
+	    // transfer data to CPU
+	    // ---------------------------------------------------
+	    ppx += (l.data().to(torch::kCPU).item<float>() * y.to(torch::kCPU).numel());
+	    tot_tk += y.to(torch::kCPU).numel();
 	}
 	unsigned int dul = timer.stop<unsigned int, std::chrono::microseconds>();
 	auto t = (dul/1000000.0);
@@ -157,8 +196,9 @@ std::pair<double, double> train_epoch_ch8(RNNModel& net, std::vector<std::pair<t
 	return { std::exp(ppx*1.0 / tot_tk), (tot_tk * 1.0 / t) };
 }
 
-std::pair<std::vector<double>, std::vector<double>> train_ch8( RNNModel& net, std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter,
-		Vocab vocab, torch::Device device, float lr, int64_t num_epochs, bool use_random_iter) {
+std::pair<std::vector<double>, std::vector<double>> train_ch8( RNNModel& net,
+		std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter, Vocab vocab, torch::Device device,
+		float lr, int64_t num_epochs, bool use_random_iter) {
 
 	std::string s = "time traveller", s2 = "traveller";
 	std::vector<char> v(s.begin(), s.end()), v2(s2.begin(), s2.end());
@@ -177,7 +217,7 @@ std::pair<std::vector<double>, std::vector<double>> train_ch8( RNNModel& net, st
 	auto loss = torch::nn::CrossEntropyLoss();
     // Initialize
     //if isinstance(net, nn.Module):
-	torch::optim::SGD updater = torch::optim::SGD(net.parameters(), lr);
+	torch::optim::SGD updater = torch::optim::SGD(net->parameters(), lr);
     //else:
     //updater = lambda batch_size: d2l.sgd(net.params, lr, batch_size)
     //predict = lambda prefix: predict_ch8(prefix, 50, net, vocab, device);
@@ -211,9 +251,17 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	bool cpu_only = false;
+
+	torch::Device device( torch::kCPU );
+
+	if( ! cpu_only ) {
+		auto cuda_available = torch::cuda::is_available();
+		device = cuda_available ? torch::Device(torch::kCUDA) : torch::Device(torch::kCPU);
+		std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	} else {
+		std::cout << "Training on CPU." << '\n';
+	}
 
 	int64_t max_tokens = 10000;
 	int64_t batch_size = 32, num_steps = 35;
@@ -235,10 +283,12 @@ int main() {
 
 	// Defining the Model
 	int num_hiddens = 512;
-	auto rnn_layer = torch::nn::RNN(vocab.length(), num_hiddens);
+	torch::nn::RNN rnn_layer = torch::nn::RNN(vocab.length(), num_hiddens);
+	rnn_layer->to(device);
 
 	// use a tensor to initialize the hidden state
 	auto state_ = torch::zeros({1, batch_size, num_hiddens});
+	state_ = state_.to(device);
 	std::cout << state_.sizes() << std::endl;
 
 	std::cout << "size_ = " << state_.numel() << std::endl;
@@ -248,6 +298,7 @@ int main() {
 	 * it refers to the hidden state at each time step, and they can be used as the input to the subsequent output layer.
 	 */
 	auto XX = torch::rand({num_steps, batch_size, vocab.length()});
+	XX = XX.to(device);
 
 	torch::Tensor output, state_new;
 	std::tie(output, state_new) = rnn_layer->forward(XX, state_);
@@ -255,7 +306,7 @@ int main() {
 	std::cout << output.sizes() << "\nHHH:\n" << state_new.sizes() << std::endl;
 
 	auto nett = RNNModel( rnn_layer, vocab.length() );
-	nett.to(device);
+	nett->to(device);
 
 	std::string ss = "time traveller";
 	std::vector<char> t(ss.begin(), ss.end());
@@ -264,6 +315,7 @@ int main() {
 		std::string tc(1, t[i]);
 		prefx.push_back(tc);
 	}
+
 	std::cout << prefx[0] << "\n" << torch::tensor({{vocab[prefx[0]]}}, device).sizes() << std::endl;
 
 	std::string ppred = predict_ch8(prefx, 10, nett, vocab, device);
@@ -275,16 +327,21 @@ int main() {
 		tokens_ids.push_back(vocab[tokens[i]]);
 
 	// Training and Predicting
-	std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter = seq_data_iter_random(tokens_ids, batch_size, num_steps);
+	std::vector<std::pair<torch::Tensor, torch::Tensor>> train_iter =
+			seq_data_iter_random(tokens_ids, batch_size, num_steps);
 
+	//rnn_layer = torch::nn::RNN(vocab.length(), num_hiddens);
+	//rnn_layer->to(device);
 	auto net = RNNModel( rnn_layer, vocab.length() );
-	net.to(device);
+	net->to(device);
 
-	int64_t num_epochs = 300;
+	int64_t num_epochs = 500;
 	float lr = 1.0;
 	bool use_random_iter = false;
 
-	std::pair<std::vector<double>, std::vector<double>> trlt = train_ch8( net, train_iter, vocab, device, lr, num_epochs, use_random_iter);
+	std::cout << "training...\n";
+	std::pair<std::vector<double>, std::vector<double>> trlt = train_ch8( net, train_iter, vocab, device,
+			lr, num_epochs, use_random_iter);
 
 	auto F = figure(true);
 	F->size(800, 600);

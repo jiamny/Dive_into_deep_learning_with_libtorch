@@ -53,7 +53,8 @@ torch::Tensor init_rnn_state(int batch_size, int num_hiddens, torch::Device devi
 }
 
 // The following rnn function defines how to compute the hidden state and output at a time step
-std::tuple<torch::Tensor, torch::Tensor> rnn(torch::Tensor inputs, torch::Tensor& state, std::vector<torch::Tensor>& params) {
+std::tuple<torch::Tensor, torch::Tensor> rnn(torch::Tensor inputs, torch::Tensor& state,
+															std::vector<torch::Tensor>& params) {
     // Here `inputs` shape: (`num_steps`, `batch_size`, `vocab_size`)
 	/*
 	torch::Tensor W_xh = params[0];
@@ -246,9 +247,17 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	auto cuda_available = torch::cuda::is_available();
-	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	bool cpu_only = true;
+
+	torch::Device device( torch::kCPU );
+
+	if( ! cpu_only ) {
+		auto cuda_available = torch::cuda::is_available();
+		device = cuda_available ? torch::Device(torch::kCUDA) : torch::Device(torch::kCPU);
+		std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	} else {
+		std::cout << "Training on CPU." << '\n';
+	}
 
 	//=========================================================================
 	// Implementation of Recurrent Neural Networks from Scratch

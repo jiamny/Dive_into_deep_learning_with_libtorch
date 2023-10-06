@@ -111,11 +111,16 @@ int main() {
 		for(auto & batch : *data_loader ) {
 			auto X = batch.data;
 			auto y = batch.target;
+			X = X.to(device);
+			y = y.to(device);
+
 			trainer.zero_grad();
 	        auto l = loss(net->forward(X), y);
-	        ls += l.item<float>();
+
 	        l.backward();
 	        trainer.step();
+
+	        ls += l.to(torch::kCPU).item<float>();
 		}
 		printf("epoch %2i, loss: %.2f\n", (epoch + 1), ls/epochs);
 	}
@@ -125,7 +130,11 @@ int main() {
 	//===============================================
 
 	// predict what happens just in the next time step
-	auto onestep_preds = net->forward(features).reshape(-1);
+	auto onestep_preds = net->forward(features.to(device)).reshape(-1);
+
+	// transfer data from device to CPU
+	onestep_preds = onestep_preds.to(torch::kCPU);
+
 	std::cout << onestep_preds << std::endl;
 	std::cout << onestep_preds.sizes() << std::endl;
 
@@ -174,7 +183,10 @@ int main() {
 	std::vector<torch::Tensor> preds; // save n - step preds !!!
 	int j = 0;
 	for( int i = tau; i < (tau + max_steps); i++ ) {
-		auto pt = net->forward(features.index({Slice(), Slice((i - tau), i)}));
+		auto pt = net->forward(features.index({Slice(), Slice((i - tau), i)}).to(device));
+
+		// transfer data from device to CPU
+		pt = pt.to(torch::kCPU);
 		if( j < 4 && i == (tau + steps[j] - 1)) {
 			preds.push_back(pt.clone());
 			j++;

@@ -138,8 +138,8 @@ int main() {
     matplot::title(ax1, "Linear regression");
     matplot::show();
 
-	std::cout << "Done!\n";
-	return 0;
+    std::cout << "Done!\n";
+    return 0;
 }
 
 

@@ -99,7 +99,7 @@ int main() {
 	}
 
 	// -------------------------------------------------------------------------------------------
-	// ompare the model parameters learned by training on finite data and the actual parameters
+	// compare the model parameters learned by training on finite data and the actual parameters
 	// ------------------------------------------------------------------------------------------
 	auto w = net->weight.data();
 	std::cout << w.sizes() << "\n";

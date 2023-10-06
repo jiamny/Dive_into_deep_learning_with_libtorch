@@ -8,9 +8,9 @@ Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 - cmake 3.18+
 
-- PyTorch 1.13.1
+- PyTorch 2.1.0
 
-- NVIDIA CUDA 11.7
+- NVIDIA CUDA 11.8
 
 - NVIDIA cudnn 8.7
 
@@ -18,7 +18,7 @@ Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 - python3.10
 
-- opencv 4.5.3/4.5.5/4.6.0
+- opencv 4.5.5/4.8.0
 
 - Matplot++
 

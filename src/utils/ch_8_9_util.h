@@ -238,7 +238,10 @@ std::string predict_ch9(std::vector<std::string> prefix, int64_t num_preds, T ne
     	torch::Tensor X = torch::tensor({{outputs[j-1]}}, device).reshape({1,1});
 
     	std::tie(y, state) = net.forward(X, state);
-    	outputs.push_back(static_cast<int>(y.argmax(1, 0).reshape({1}).item<int>()));
+    	// ---------------------------------------------------
+    	// transfer data to CPU
+    	// ---------------------------------------------------
+    	outputs.push_back(static_cast<int>(y.argmax(1, 0).reshape({1}).to(torch::kCPU).item<int>()));
     }
     //for _ in range(num_preds):  	//# Predict `num_preds` steps
     //    y, state = net(get_input(), state)
@@ -279,8 +282,8 @@ std::pair<double, double> train_epoch_ch9(T& net, std::vector<std::pair<torch::T
 	    }
 
 	    torch::Tensor y = Y.transpose(0, 1).reshape({-1});
-	    X.to(device),
-	    y.to(device);
+	    X = X.to(device),
+	    y = y.to(device);
 	    torch::Tensor y_hat;
 	    std::tie(y_hat, state) = net.forward(X, state);
 
@@ -293,9 +296,11 @@ std::pair<double, double> train_epoch_ch9(T& net, std::vector<std::pair<torch::T
 	    torch::nn::utils::clip_grad_norm_(net.parameters(), 0.5);
 
 	    updater.step();
-
-	    ppx += (l.data().item<float>() * y.numel());
-	    tot_tk += y.numel();
+    	// ---------------------------------------------------
+    	// transfer data to CPU
+    	// ---------------------------------------------------
+	    ppx += (l.data().to(torch::kCPU).item<float>() * y.to(torch::kCPU).numel());
+	    tot_tk += y.to(torch::kCPU).numel();
 	}
 	unsigned int dul = timer.stop<unsigned int, std::chrono::microseconds>();
 	auto t = (dul/1000000.0);

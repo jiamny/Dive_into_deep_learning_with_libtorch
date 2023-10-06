@@ -2,18 +2,22 @@
 #include "../utils/ch_8_9_util.h"
 #include "../utils/ch_15_util.h"
 
+
 class PositionWiseFFN : public torch::nn::Module {
     //The positionwise feed-forward network.
 
-	PositionWiseFFN(ffn_num_hiddens, ffn_num_outputs) {
-        dense1 = nn.LazyLinear(ffn_num_hiddens)
+	PositionWiseFFN(int64_t ffn_num_hiddens, int64_t ffn_num_outputs) {
+        dense1 = torch::nn::Linear(ffn_num_outputs, ffn_num_hiddens);
         relu = torch::nn::ReLU();
-        dense2 = nn.LazyLinear(ffn_num_outputs);
+        dense2 = torch::nn::Linear(ffn_num_hiddens, ffn_num_outputs);
 	}
 
 	torch::Tensor forward(torch::Tensor X) {
-        return dense2(relu(dense1(X)));
+        return dense2->forward(relu->forward(dense1->forward(X)));
 	}
+private:
+	torch::nn::Linear dense1{nullptr}, dense2{nullptr};
+	torch::nn::ReLU relu;
 };
 
 class AddNorm : torch::nn::Module {
@@ -39,17 +43,21 @@ class TransformerEncoderBlock : public torch::nn::Module {
 	TransformerEncoderBlock(int64_t num_hiddens, int64_t ffn_num_hiddens, int64_t num_heads,
 			double dropout, bool use_bias=false) {
 
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+        attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
                                                 dropout, use_bias);
-        self.addnorm1 = AddNorm(num_hiddens, dropout);
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens);
-        self.addnorm2 = AddNorm(num_hiddens, dropout);
+        addnorm1 = AddNorm(num_hiddens, dropout);
+        ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens);
+        addnorm2 = AddNorm(num_hiddens, dropout);
 	}
 
 	torch::Tensor forward(torch::Tensor X, valid_lens) {
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens));
-        return self.addnorm2(Y, self.ffn(Y));
+		torch::Tensor Y = addnorm1(X, attention(X, X, X, valid_lens));
+        return addnorm2(Y, ffn(Y));
     }
+private:
+	PositionWiseFFN ffn;
+	AddNorm addnorm1, addnorm2;
+
 };
 
 class BERTEncoder : public torch::nn::Module {
@@ -70,23 +78,25 @@ class BERTEncoder : public torch::nn::Module {
                                                       num_hiddens}));
 	}
 
-    torch::Tensor forward(tokens, segments, valid_lens) {
+    torch::Tensor forward(torch::Tensor tokens, torch::Tensor segments, valid_lens) {
         // Shape of `X` remains unchanged in the following code snippet:
         // (batch size, max sequence length, `num_hiddens`)
-        X = self.token_embedding(tokens) + self.segment_embedding(segments)
-        X = X + self.pos_embedding[:, :X.shape[1], :]
-        for blk in self.blks:
+    	torch::Tensor X = token_embedding(tokens) + segment_embedding(segments);
+        X = X + pos_embedding[:, :X.shape[1], :]
+        for blk in blks:
             X = blk(X, valid_lens)
         return X;
     }
 private:
-    torch::nn::Embedding oken_embedding{nullptr}, segment_embedding{nullptr};
+    torch::nn::Embedding token_embedding{nullptr}, segment_embedding{nullptr};
     torch::nn::Sequential blks;
+    torch::nn::Parameter pos_embedding;
 };
 
 
 class BERTModel : public torch::nn::Module {
     //The BERT model.
+	torch::nn::Sequential hidden{nullptr};
 
 	BERTModel(int64_t vocab_size, int64_t num_hiddens, int64_t  ffn_num_hiddens,
 			int64_t  num_heads, int64_t  num_blks, double dropout, int64_t  max_len=1000) {
@@ -94,8 +104,7 @@ class BERTModel : public torch::nn::Module {
         encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
                                    num_heads, num_blks, dropout,
                                    max_len);
-        hidden = torch::nn::Sequential(nn.LazyLinear(num_hiddens),
-                                    nn.Tanh())
+        hidden = torch::nn::Sequential(nn.LazyLinear(num_hiddens),torch::nn::Tanh());
         mlm = MaskLM(vocab_size, num_hiddens)
         nsp = NextSentencePred()
 	}

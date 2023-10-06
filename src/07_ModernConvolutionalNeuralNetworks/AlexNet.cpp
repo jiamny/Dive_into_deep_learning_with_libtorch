@@ -178,8 +178,6 @@ int main() {
 				first = false;
 			}
 
-			image = std::get<0>(mini_batch).to(device);
-			label = std::get<1>(mini_batch).to(device);
 			output = net->forward(image);
 			auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
 			//std::cout << output.sizes() << "\n" << out.sizes() << std::endl;

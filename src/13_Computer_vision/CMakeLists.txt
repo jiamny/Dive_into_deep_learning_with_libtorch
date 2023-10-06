@@ -197,7 +197,7 @@ target_sources(13_Yolo4 PRIVATE
 )
 
 target_link_libraries( 13_Yolo4 ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} )					   
-set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED YES )
+set_target_properties( 13_Yolo4 PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 #-------------------------------------------------------------------------------------
 add_executable(13_SingleShotMultiboxDetection )

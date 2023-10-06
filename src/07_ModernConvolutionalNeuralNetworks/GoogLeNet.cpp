@@ -26,42 +26,62 @@ using Options = torch::nn::Conv2dOptions;
  * each path are concatenated along the channel dimension and comprise the block's output. The commonly-tuned hyperparameters of
  * the Inception block are the number of output channels per layer.
  */
-struct Inception : public torch::nn::Module {
-	torch::nn::Conv2d p1_1{nullptr}, p2_1{nullptr}, p2_2{nullptr}, p3_1{nullptr}, p3_2{nullptr}, p4_2{nullptr};
-	torch::nn::MaxPool2d p4_1{nullptr};
+
+struct InceptionImpl : public torch::nn::Module {
+	torch::nn::Sequential p1{nullptr}, p2{nullptr}, p3{nullptr}, p4{nullptr};
 
     //# `c1`--`c4` are the number of output channels for each path
-	Inception(int64_t in_channels, int64_t c1, std::vector<int64_t> c2, std::vector<int64_t> c3, int64_t c4) {
+	InceptionImpl(int64_t in_channels, int64_t c1, std::vector<int64_t> c2, std::vector<int64_t> c3, int64_t c4) {
 
         //# Path 1 is a single 1 x 1 convolutional layer
-        p1_1 = torch::nn::Conv2d(Options(in_channels, c1, 1));
+        p1 = torch::nn::Sequential(torch::nn::Conv2d(Options(in_channels, c1, 1)),
+        		torch::nn::ReLU());
         //# Path 2 is a 1 x 1 convolutional layer followed by a 3 x 3
         //# convolutional layer
-        p2_1 = torch::nn::Conv2d(Options(in_channels, c2[0], 1));
-        p2_2 = torch::nn::Conv2d(Options(c2[0], c2[1], 3).padding(1));
+        p2 = torch::nn::Sequential(torch::nn::Conv2d(Options(in_channels, c2[0], 1)),
+        		torch::nn::ReLU(),
+				torch::nn::Conv2d(Options(c2[0], c2[1], 3).padding(1)),
+				torch::nn::ReLU());
+        //p2_2 = torch::nn::Sequential(torch::nn::Conv2d(Options(c2[0], c2[1], 3).padding(1)),
+        //		torch::nn::ReLU());
         //# Path 3 is a 1 x 1 convolutional layer followed by a 5 x 5
         //# convolutional layer
-        p3_1 = torch::nn::Conv2d(Options(in_channels, c3[0], 1));
-        p3_2 = torch::nn::Conv2d(Options(c3[0], c3[1], 5).padding(2));
+        p3 = torch::nn::Sequential(torch::nn::Conv2d(Options(in_channels, c3[0], 1)),
+        		torch::nn::ReLU(),
+				torch::nn::Conv2d(Options(c3[0], c3[1], 5).padding(2)),
+				torch::nn::ReLU());
+        //p3_2 = torch::nn::Sequential(torch::nn::Conv2d(Options(c3[0], c3[1], 5).padding(2)),
+        //		torch::nn::ReLU());
         //# Path 4 is a 3 x 3 maximum pooling layer followed by a 1 x 1
         //# convolutional layer
-        p4_1 = torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(1).padding(1));
-        p4_2 = torch::nn::Conv2d(Options(in_channels, c4, 1));
+        p4 = torch::nn::Sequential(torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(1).padding(1)),
+        		torch::nn::ReLU(),
+				torch::nn::Conv2d(Options(in_channels, c4, 1)),
+				torch::nn::ReLU());
+        //p4_2 = torch::nn::Sequential(torch::nn::Conv2d(Options(in_channels, c4, 1)),
+        //		torch::nn::ReLU());
+        register_module("p1", p1);
+        register_module("p2", p2);
+        register_module("p3", p3);
+        register_module("p4", p4);
 	}
 
     torch::Tensor forward(torch::Tensor x) {
-        auto p1 = torch::relu(p1_1->forward(x));
-        auto p2 = torch::relu(p2_2->forward(torch::relu(p2_1->forward(x))));
-        auto p3 = torch::relu(p3_2->forward(torch::relu(p3_1->forward(x))));
-        auto p4 = torch::relu(p4_2->forward(p4_1->forward(x)));
+
+        auto x1 = p1->forward(x);
+        auto x2 = p2->forward(x);
+        auto x3 = p3->forward(x);
+        auto x4 = p4->forward(x);
         //# Concatenate the outputs on the channel dimension
-        return torch::cat({p1, p2, p3, p4}, 1);
+        return torch::cat({x1, x2, x3, x4}, 1).to(x.device());
     }
 };
+TORCH_MODULE(Inception);
 
 //  GoogLeNet uses a stack of a total of 9 inception blocks and global average pooling to generate its estimates.
 struct  GoogLeNetImpl : public torch::nn::Module {
 	torch::nn::Sequential b1{nullptr}, b2{nullptr}, b3{nullptr}, b4{nullptr}, b5{nullptr};
+
 	torch::nn::Linear linear{nullptr};
 
 	GoogLeNetImpl(int64_t num_classes) {
@@ -124,6 +144,7 @@ struct  GoogLeNetImpl : public torch::nn::Module {
 								//torch::nn::AdaptiveAvgPool2d(torch::nn::AdaptiveAvgPool2dOptions({1, 1})),
 								//torch::nn::Flatten()
 								);
+
 		linear = torch::nn::Linear(1024, num_classes);
 
 		register_module("b1", b1);
@@ -138,17 +159,24 @@ struct  GoogLeNetImpl : public torch::nn::Module {
 		    if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
 		      torch::nn::init::normal_(M->weight); // Note: used instead of truncated normal initialization
 		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
 		    } else if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
 		      torch::nn::init::normal_(M->weight); // Note: used instead of truncated normal initialization
 		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
 		    } else if (auto M = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
 		      torch::nn::init::ones_(M->weight);
 		      torch::nn::init::zeros_(M->bias);
+		      //M->weight.to(device);
+		      //M->bias.to(device);
 		    }
 		}
 	}
 
 	torch::Tensor forward(torch::Tensor x) {
+
 		x = b1->forward(x);
 		x = b2->forward(x);
 		x = b3->forward(x);
@@ -201,18 +229,22 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
+	//torch::Device device(torch::kCPU);
 	auto cuda_available = torch::cuda::is_available();
 	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
 	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	auto tnet = GoogLeNet(17);
+	tnet->to(device);
 	auto X = torch::randn({1,3,224,224});
+	X = X.to(device);
+
 	std::cout << tnet->forward(X).sizes() << std::endl;
 
 	X = tnet->b1->forward(X);
-	std::cout << "name: " << tnet->b1->name() << "output shape: \t" << X.sizes() << std::endl;
+	std::cout << "name: " << tnet->b1->name() << " output shape: \t" << X.sizes() << std::endl;
 	X = tnet->b2->forward(X);
-	std::cout << "name: " << tnet->b2->name() << "output shape: \t" << X.sizes() << std::endl;
+	std::cout << "name: " << tnet->b2->name() << " output shape: \t" << X.sizes() << std::endl;
 	X = tnet->b3->forward(X);
 	std::cout << "name: " << tnet->b3->name() << "output shape: \t" << X.sizes() << std::endl;
 	X = tnet->b4->forward(X);
@@ -252,13 +284,16 @@ int main() {
     // (1) Get Dataset
 
     dataset = datasets::ImageFolderClassesWithPaths(dataroot, transform, class_names);
-    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size, /*shuffle_=*/train_shuffle, /*num_workers_=*/train_workers);
+    dataloader = DataLoader::ImageFolderClassesWithPaths(dataset, batch_size,
+    														train_shuffle, //shuffle=
+     	 	 	 	 	 	 	 	 	 	 	 	 	 	train_workers  // num_workers=
+     	 	 	 	 	 	 	 	 	 	 	 	 	 	);
 
 	std::cout << "total training images : " << dataset.size() << std::endl;
 
     std::string valid_dataroot = "./data/17_flowers/valid";
     valid_dataset = datasets::ImageFolderClassesWithPaths(valid_dataroot, transform, class_names);
-    valid_dataloader = DataLoader::ImageFolderClassesWithPaths(valid_dataset, valid_batch_size, /*shuffle_=*/valid_shuffle, /*num_workers_=*/valid_workers);
+    valid_dataloader = DataLoader::ImageFolderClassesWithPaths(valid_dataset, valid_batch_size, valid_shuffle, valid_workers);
 
     std::cout << "total validation images : " << valid_dataset.size() << std::endl;
     bool valid = true;
@@ -299,10 +334,8 @@ int main() {
 				first = false;
 			}
 
-			image = std::get<0>(mini_batch).to(device);
-			label = std::get<1>(mini_batch).to(device);
 			output = net->forward(image);
-			auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+			auto out = torch::nn::functional::log_softmax(output, 1); // dim=
 			//std::cout << output.sizes() << "\n" << out.sizes() << std::endl;
 			loss = criterion(out, label); //torch::mse_loss(out, label);
 
@@ -342,10 +375,10 @@ int main() {
 				}
 
 				output = net->forward(image);
-				auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+				auto out = torch::nn::functional::log_softmax(output, 1); // dim=
 				loss = criterion(out, label);
 
-				responses = output.exp().argmax(/*dim=*/1);
+				responses = output.exp().argmax(1);// dim=
 				for (size_t i = 0; i < mini_batch_size; i++){
 				    int64_t response = responses[i].item<int64_t>();
 				    int64_t answer = label[i].item<int64_t>();
@@ -368,7 +401,7 @@ int main() {
 	if( test ) {
 		std::string test_dataroot = "./data/17_flowers/test";
 		test_dataset = datasets::ImageFolderClassesWithPaths(test_dataroot, transform, class_names);
-		test_dataloader = DataLoader::ImageFolderClassesWithPaths(test_dataset, /*batch_size_=*/1, /*shuffle_=*/false, /*num_workers_=*/0);
+		test_dataloader = DataLoader::ImageFolderClassesWithPaths(test_dataset, 1, false, 0);
 		std::cout << "total test images : " << test_dataset.size() << std::endl << std::endl;
 
 		float  ave_loss = 0.0;
@@ -384,14 +417,14 @@ int main() {
 		    image = std::get<0>(data).to(device);
 		    label = std::get<1>(data).to(device);
 		    output = net->forward(image);
-		    auto out = torch::nn::functional::log_softmax(output, /*dim=*/1);
+		    auto out = torch::nn::functional::log_softmax(output, 1);
 
 		    loss = criterion(out, label);
 
 		    ave_loss += loss.item<float>();
 
 		    output = output.exp();
-		    int64_t response = output.argmax(/*dim=*/1).item<int64_t>();
+		    int64_t response = output.argmax(1).item<int64_t>();
 		    int64_t answer = label[0].item<int64_t>();
 		    counter += 1;
 		    class_counter[answer]++;

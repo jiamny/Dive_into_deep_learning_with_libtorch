@@ -17,7 +17,7 @@ int main() {
 	file.open(path, std::ios_base::in);
 
 	// Exit if file not opened successfully
-	if (!file.is_open()) {
+	if(!file.is_open()) {
 		std::cout << "File not read successfully" << std::endl;
 		std::cout << "Path given: " << path << std::endl;
 		return -1;

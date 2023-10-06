@@ -31,13 +31,13 @@ using namespace matplot;
 
 using Options = torch::nn::Conv2dOptions;
 
-struct Residual : public torch::nn::Module {
+struct ResidualImpl : public torch::nn::Module {
 
 	torch::nn::Conv2d conv1{nullptr}, conv2{nullptr}, conv3{nullptr};
 	torch::nn::BatchNorm2d bn1{nullptr}, bn2{nullptr};
 	bool use_1x1 = false;
     //"""The Residual block of ResNet."""
-    explicit Residual(int64_t input_channels, int64_t num_channels, bool use_1x1conv, int64_t strides) { // false, 1
+    explicit ResidualImpl(int64_t input_channels, int64_t num_channels, bool use_1x1conv, int64_t strides) { // false, 1
     	use_1x1 = use_1x1conv;
         conv1 = torch::nn::Conv2d(Options(input_channels, num_channels, 3).stride(strides).padding(1));
         conv2 = torch::nn::Conv2d(Options(num_channels, num_channels, 3).padding(1));
@@ -66,25 +66,32 @@ struct Residual : public torch::nn::Module {
     }
 };
 
+TORCH_MODULE(Residual);
+
 /*
  * GoogLeNet uses four modules made up of Inception blocks. However, ResNet uses four modules made up of residual blocks,
  * each of which uses several residual blocks with the same number of output channels. The number of channels in the first
  * module is the same as the number of input channels. Since a maximum pooling layer with a stride of 2 has already been used,
  * it is not necessary to reduce the height and width. In the first residual block for each of the subsequent modules,
  * the number of channels is doubled compared with that of the previous module, and the height and width are halved.
- */
+*/
+struct resnet_blockImpl : public torch::nn::SequentialImpl {
+	resnet_blockImpl(int64_t input_channels, int64_t num_channels, int num_residuals, bool first_block) {
+		for(int i= 0; i < num_residuals; i++ ){
+		    if( i == 0 && ! first_block )
+		            push_back(
+		                Residual(input_channels, num_channels, true, 2));
+		    else
+		        push_back(Residual(num_channels, num_channels, false, 1));
+		}
+	}
 
-std::vector<Residual> resnet_block(int64_t input_channels, int64_t num_channels, int num_residuals, bool first_block) {
-	std::vector<Residual> blk;
-    for(int i= 0; i < num_residuals; i++ ){
-        if( i == 0 && ! first_block )
-            blk.push_back(
-                Residual(input_channels, num_channels, true, 2));
-        else
-            blk.push_back(Residual(num_channels, num_channels, false, 1));
-    }
-    return blk;
-}
+	torch::Tensor forward(torch::Tensor x) {
+		    return torch::nn::SequentialImpl::forward(x);
+	}
+};
+TORCH_MODULE(resnet_block);
+
 
 // ResNet Model
 /*
@@ -94,7 +101,7 @@ std::vector<Residual> resnet_block(int64_t input_channels, int64_t num_channels,
 */
 
 struct  ResNetImpl : public torch::nn::Module {
-	std::vector<Residual> b2, b3, b4, b5;
+	resnet_block b2{nullptr}, b3{nullptr}, b4{nullptr}, b5{nullptr};
 	torch::nn::Sequential b1{nullptr};
 	torch::nn::Linear linear{nullptr};
 	torch::nn::Sequential classifier{nullptr};
@@ -113,7 +120,10 @@ struct  ResNetImpl : public torch::nn::Module {
 		b4 = resnet_block(128, 256, 2, false);
 		b5 = resnet_block(256, 512, 2, false);
 		classifier = torch::nn::Sequential(torch::nn::Linear(512*6*6, num_classes));
-
+		register_module("b2", b2);
+		register_module("b3", b3);
+		register_module("b4", b4);
+		register_module("b5", b5);
 		register_module("classifier", classifier);
 
 		// weights_init
@@ -157,20 +167,11 @@ struct  ResNetImpl : public torch::nn::Module {
 
 	torch::Tensor forward(torch::Tensor x) {
 		x = b1->forward(x);
-		for(int i =0; i < b2.size(); i++)
-			x = b2[i].forward(x);
+		x = b2->forward(x);
+		x = b3->forward(x);
+		x = b4->forward(x);
+		x = b5->forward(x);
 
-		for(int i =0; i < b3.size(); i++)
-			x = b3[i].forward(x);
-
-		for(int i =0; i < b4.size(); i++)
-			x = b4[i].forward(x);
-
-		for(int i =0; i < b5.size(); i++)
-			x = b5[i].forward(x);
-
-		//torch::nn::AdaptiveAvgPool2d(torch::nn::AdaptiveAvgPool2dOptions({1, 1})),
-		//torch::nn::Flatten()
 		x = torch::adaptive_avg_pool2d(x, {6, 6});
 		x = x.view({x.size(0), -1});
 
@@ -222,10 +223,10 @@ int main() {
 
 	auto blk = Residual(3, 3, false, 1);
 	auto X = torch::randn({4, 3, 6, 6});
-	std::cout <<  blk.forward(X).sizes() << std::endl;
+	std::cout <<  blk->forward(X).sizes() << std::endl;
 
 	blk = Residual(3, 6, true, 2);
-	std::cout <<  blk.forward(X).sizes() << std::endl;
+	std::cout <<  blk->forward(X).sizes() << std::endl;
 
 	ResNet tnet(17);
 
@@ -288,7 +289,7 @@ int main() {
 	size_t start_epoch, total_epoch;
 	start_epoch = 1;
 	total_iter = dataloader.get_count_max();
-	total_epoch = 40;
+	total_epoch = 5;
 	bool first = true;
 	std::vector<double> train_loss_ave;
 	std::vector<double> train_epochs;
