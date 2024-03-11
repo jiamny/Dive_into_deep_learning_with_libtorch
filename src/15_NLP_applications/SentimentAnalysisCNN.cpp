@@ -135,6 +135,7 @@ std::string predict_sentiment(TextCNN net, Vocab vocab, std::string sequence, si
 }
 
 
+
 int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
@@ -218,7 +219,7 @@ int main() {
 	// Training and Evaluating the Model
 	// ----------------------------------------------------------
 	float lr = 0.01;
-	int num_epochs = 30;
+	int num_epochs = 3;
 
 	auto trainer = torch::optim::Adam(net->parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone)); //reduction="none"
@@ -269,7 +270,7 @@ int main() {
 
 			total_samples += ftr_data.size(0);
 			num_batch++;
-			std::cout << "num_batch: " << num_batch << '\n';
+			//std::cout << "num_batch: " << num_batch << '\n';
 		}
 		train_epochs.push_back(epoch*1.0);
 		train_loss.push_back((loss_sum*1.0/num_batch));
@@ -299,15 +300,15 @@ int main() {
 	F->position(0, 0);
 
 	auto ax1 = F->nexttile();
-	matplot::legend();
 	matplot::hold(ax1, true);
 	matplot::plot(ax1, train_epochs, train_loss, "b")->line_width(2)
 			.display_name("train loss");
 	matplot::plot(ax1, train_epochs, train_acc, "g--")->line_width(2)
 			.display_name("train acc");
-	matplot::plot(ax1, train_epochs, test_acc, "r-.")->line_width(2)
-			.display_name("test acc");
+	//matplot::plot(ax1, train_epochs, test_acc, "r-.")->line_width(2)
+	//		.display_name("test acc");
 	matplot::hold(ax1, false);
+	matplot::legend(ax1);
     matplot::xlabel(ax1, "epoch");
     matplot::show();
 

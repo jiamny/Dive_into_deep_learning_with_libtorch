@@ -381,11 +381,11 @@ torch::Tensor sequence_mask(torch::Tensor X, torch::Tensor  valid_len, float val
 torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens) {
     // Perform softmax operation by masking elements on the last axis.
     // `X`: 3D tensor, `valid_lens`: 1D or 2D tensor
-    if( ! valid_lens.defined() || (valid_lens.numel() == 0) ) { 								// None
+    if( ! valid_lens.defined() || (valid_lens.numel() == 0) ) { // None
         return torch::nn::functional::softmax(X, /*dim=*/-1);
     } else {
         auto shape = X.sizes();
-
+	std::cout << "shape: " << shape << '\n' << valid_lens.sizes() << '\n';
         if( valid_lens.dim() == 1) {
             valid_lens = torch::repeat_interleave(valid_lens, shape[shape.size() - 2]);
         } else {

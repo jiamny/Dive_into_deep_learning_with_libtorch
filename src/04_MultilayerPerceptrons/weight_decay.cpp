@@ -20,6 +20,7 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 		std::vector<double>& test_loss,
 		std::vector<double>& xx,
 		bool scratch, torch::Device device) {
+
 	// -----------------------------------------------------------------------------------------
 	// init_params
 	// -----------------------------------------------------------------------------------------
@@ -33,6 +34,7 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 	float lr = 0.003;
 
 	if( scratch ) {
+
 		auto dataset = LRdataset(train_data)
 						   .map(torch::data::transforms::Stack<>());
 
@@ -123,7 +125,8 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 		auto trainer = torch::optim::SGD(net->parameters(), lr);
 
 		for( size_t  epoch = 0; epoch < num_epochs; epoch++ ) {
-			torch::AutoGradMode enable_grad(true);
+			//torch::AutoGradMode enable_grad(true);
+			net->train();
 
 			double epoch_train_loss = 0.0;
 			double epoch_test_loss = 0.0;
@@ -147,8 +150,9 @@ void train_test(std::pair<torch::Tensor, torch::Tensor> train_data,
 			    num_train_samples += X.size(0);
 			}
 
+			//torch::AutoGradMode enable_grad2(false);
 			torch::NoGradGuard no_grad;
-
+			net->eval();
 			for (auto &batch : *test_loader) {
 
 				auto X = batch.data.to(device);
@@ -192,7 +196,7 @@ int main() {
 	std::cout << true_w.sizes() << std::endl;
 
 	auto train_data = synthetic_data(true_w, true_b, n_train);
-	auto test_data = synthetic_data(true_w, true_b, n_test);
+	auto test_data  = synthetic_data(true_w, true_b, n_test);
 
 
 	// Implementation from Scratch
@@ -259,7 +263,7 @@ int main() {
 	auto ax1 = F->nexttile();
 	matplot::hold(ax1, true);
 	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
-	matplot::plot(ax1, xx, test_loss, "c:")->line_width(2);
+	matplot::plot(ax1, xx, test_loss, "r:")->line_width(2);
 	matplot::hold(ax1, false);
 	matplot::xlabel(ax1, "epoch");
 	matplot::ylabel(ax1, "loss");
@@ -269,7 +273,7 @@ int main() {
 	auto ax2 = F->nexttile();
 	matplot::hold(ax2, true);
 	matplot::plot(ax2, xx2, train_loss2, "b")->line_width(2);
-	matplot::plot(ax2, xx2, test_loss2, "c:")->line_width(2);
+	matplot::plot(ax2, xx2, test_loss2, "r:")->line_width(2);
 	matplot::hold(ax2, false);
 	matplot::xlabel(ax2, "epoch");
 	matplot::ylabel(ax2, "loss");
@@ -279,7 +283,7 @@ int main() {
 	auto ax3 = F->nexttile();
 	matplot::hold(ax3, true);
 	matplot::plot(ax3, xx3, train_loss3, "b")->line_width(2);
-	matplot::plot(ax3, xx3, test_loss3, "c:")->line_width(2);
+	matplot::plot(ax3, xx3, test_loss3, "r:")->line_width(2);
 	matplot::hold(ax3, false);
 	matplot::xlabel(ax3, "epoch");
 	matplot::ylabel(ax3, "loss");
@@ -289,12 +293,13 @@ int main() {
 	auto ax4 = F->nexttile();
 	matplot::hold(ax4, true);
 	matplot::plot(ax4, xx4, train_loss4, "b")->line_width(2);
-	matplot::plot(ax4, xx4, test_loss4, "c:")->line_width(2);
+	matplot::plot(ax4, xx4, test_loss4, "r:")->line_width(2);
 	matplot::hold(ax4, false);
 	matplot::xlabel(ax4, "epoch");
 	matplot::ylabel(ax4, "loss");
 	matplot::title(ax4, "Concise implementation: lambd=3");
 	matplot::legend(ax4, {"Train loss", "Test loss"});
+	F->draw();
 	matplot::show();
 
 	std::cout << "Done!\n";

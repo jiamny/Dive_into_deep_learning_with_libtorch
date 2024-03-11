@@ -78,7 +78,7 @@ int main() {
 
 	std::vector<float> bigram_freqs;
 	std::vector<float> bigram_x;
-	i = 0;
+	i = 1;
 	for( const auto& it : bigram_token_freqs ) {
 		bigram_freqs.push_back(it.second * 1.0);
 		bigram_x.push_back(i * 1.0);
@@ -102,30 +102,35 @@ int main() {
 
 	std::vector<float> trigram_freqs;
 	std::vector<float> trigram_x;
-	i = 0;
+	i = 1;
 	for( const auto& it : trigram_token_freqs ) {
 		trigram_freqs.push_back(it.second * 1.0);
 		trigram_x.push_back(i * 1.0);
 		i++;
 	}
 
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
+	auto F2 = figure(true);
+	F2->size(1200, 500);
+	F2->add_axes(false);
+	F2->reactive_mode(false);
 
-	ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::loglog(ax1, x, freqs, "b")->line_width(2);
-	matplot::loglog(ax1, bigram_x, bigram_freqs, "m-")->line_width(2);
-	matplot::loglog(ax1, trigram_x, trigram_freqs, "g.")->line_width(2);
-	matplot::hold(ax1, false);
-	matplot::xlabel(ax1, "token: x");
-	matplot::ylabel(ax1, "frequency: n(x)");
-	matplot::legend(ax1, {"unigram", "bigram", "trigram"});
-	matplot::show();
+    auto ax2 = subplot(1, 2, 0);
+    ax2->xlabel("token: x");
+    ax2->ylabel("frequency: n(x)");
+    loglog(ax2, x, freqs, "b")->line_width(2).display_name("unigram");
+    legend({});
+
+   	auto ax3 = subplot(1, 2, 1);
+   	loglog(ax3, bigram_x, bigram_freqs, "r-")->line_width(2).display_name("bigram");
+   	hold(on);
+   	loglog(ax3, trigram_x, trigram_freqs, "m.")->line_width(2).display_name("trigram");
+   	hold(on);
+    legend({});
+   	ax3->xlabel("token: x");
+   	ax3->ylabel("frequency: n(x)");
+   	hold(off);
+	F2->draw();
+	show();
 
 	//=============================================
 	// Reading Long Sequence Data

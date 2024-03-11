@@ -42,7 +42,7 @@ int main() {
 	auto ax1 = F->nexttile();
 	matplot::hold(ax1, true);
 	matplot::plot(ax1, xx, yy, "b")->line_width(2);
-	matplot::plot(ax1, xx, yy2, "g:")->line_width(2);
+	matplot::plot(ax1, xx, yy2, "r:")->line_width(2);
     matplot::hold(ax1, false);
     matplot::xlabel(ax1, "x");
     matplot::ylabel(ax1, "sigmoid(x)");

@@ -104,18 +104,15 @@ std::vector<std::vector<std::vector<std::string>>> _read_wiki(const std::string 
 std::pair<std::vector<std::string>, std::vector<int64_t>> get_tokens_and_segments(std::vector<std::string> tokens_a,
 																				std::vector<std::string> tokens_b) {
     // Get tokens of the BERT input sequence and their segment IDs.
-	//std::vector<std::string> tokens;
-    //tokens.push_back("<cls>");
-    //for(auto& s :tokens_a)
-    //	tokens.push_back(s);
-    //tokens.push_back("<sep>");
+	// 获取输入序列的词元及其片段索引;
+	size_t org_tk_size = tokens_a.size();
 	auto iter = tokens_a.insert(std::begin(tokens_a), "<cls>");
 	tokens_a.push_back("<sep>");
 
     // 0 and 1 are marking segment A and B, respectively
     //segments = [0] * (len(tokens_a) + 2)
     std::vector<int64_t> segments;
-    for( int i = 0; i < (tokens_a.size() + 2); i++ )
+    for( int i = 0; i < (org_tk_size + 2); i++ )
     	segments.push_back(0);
 
     if( ! tokens_b.empty() ) {
@@ -271,9 +268,8 @@ std::tuple<std::vector<int64_t>, std::vector<int64_t>, std::vector<int64_t>> _ge
     return std::make_tuple(vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]);
 }
 
-
-std::tuple<std::vector<torch::Tensor>, std::vector<torch::Tensor>, std::vector<torch::Tensor>,
-		   std::vector<torch::Tensor>, std::vector<torch::Tensor>, std::vector<torch::Tensor>, std::vector<torch::Tensor>>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor,
+		   torch::Tensor, torch::Tensor, torch::Tensor>
 _pad_bert_inputs(std::vector<std::tuple<std::vector<int64_t>, std::vector<int64_t>,
 							 std::vector<int64_t>, std::vector<int64_t>, bool>> examples,
 		size_t max_len, Vocab vocab) {
@@ -284,8 +280,9 @@ _pad_bert_inputs(std::vector<std::tuple<std::vector<int64_t>, std::vector<int64_
     std::vector<torch::Tensor> valid_lens, nsp_labels; // = []
     //for (token_ids, pred_positions, mlm_pred_label_ids, segments,
     //     is_next) in examples:
-    std::vector<int64_t> token_ids, pred_positions, mlm_pred_label_ids, segments;
+    std::vector<int64_t> token_ids, pred_positions, mlm_pred_label_ids, segments, idxs;
     bool is_next;
+    int idx = 0;
     for( auto& exp : examples ) {
         token_ids = std::get<0>(exp);
         pred_positions = std::get<1>(exp);
@@ -293,54 +290,97 @@ _pad_bert_inputs(std::vector<std::tuple<std::vector<int64_t>, std::vector<int64_
         segments = std::get<3>(exp);
         is_next = std::get<4>(exp);
 
-        for(size_t i = 0; i < (max_len - token_ids.size()); i++ )
-        token_ids.push_back(vocab["<pad"]);
+        size_t org_tk_ids = token_ids.size();
+        if( org_tk_ids < max_len ) {
+        	for(size_t i = 0; i < (max_len - org_tk_ids); i++ )
+        		token_ids.push_back(vocab["<pad"]);
+        }
+//        std::cout << "org_tk_ids.size: " << org_tk_ids << " ; token_ids.size: " << token_ids.size() << '\n';
 
         torch::Tensor t = torch::from_blob(token_ids.data(), {1, static_cast<int>(token_ids.size())}, dtype(torch::kLong)).clone();
         all_token_ids.push_back(t.clone());
 
-        for(size_t i = 0; i < (max_len - segments.size()); i++ )
-        	segments.push_back(0);
+        size_t org_segments = segments.size();
+        if(org_segments  < max_len ) {
+        	for(size_t i = 0; i < (max_len - org_segments); i++ )
+        		segments.push_back(0);
+        }
+//        std::cout << "segments.size: " << segments.size() << '\n';
 
         t = torch::from_blob(segments.data(), {1, static_cast<int>(segments.size())}, dtype(torch::kLong)).clone();
         all_segments.push_back(t.clone());
 
-        valid_lens.push_back(torch::full({1}, static_cast<int>(token_ids.size())).to(torch::kFloat32).clone());
+        valid_lens.push_back(torch::full({1}, static_cast<int>(org_tk_ids)).to(torch::kFloat32).clone());
 
-        for(size_t i = 0; i < (max_num_mlm_preds - pred_positions.size()); i++ )
-        	pred_positions.push_back(0);
+        size_t org_pred_positions = pred_positions.size();
+        if( org_pred_positions < max_num_mlm_preds) {
+        	for(size_t i = 0; i < (max_num_mlm_preds - org_pred_positions); i++ )
+        		pred_positions.push_back(0);
+        }
+//        std::cout << "pred_positions.sizet: " << pred_positions.size() << '\n';
 
         t = torch::from_blob(pred_positions.data(), {1, static_cast<int>(pred_positions.size())}, dtype(torch::kLong)).clone();
         all_pred_positions.push_back(t.clone());
 
         // Predictions of padded tokens will be filtered out in the loss via
         // multiplication of 0 weights
-
         std::vector<float> vt;
         for(int i = 0; i < mlm_pred_label_ids.size(); i++)
         	vt.push_back(1.0f);
 
-        for(int i = 0; i < (max_num_mlm_preds - pred_positions.size()); i++)
+        for(int i = 0; i < (max_num_mlm_preds - org_pred_positions); i++)
             vt.push_back(0.0f);
+//        std::cout << "all_mlm_weights.size: " << vt.size() << '\n';
 
         t = torch::from_blob(vt.data(), {1, static_cast<int>(vt.size())}, dtype(torch::kFloat32)).clone();
         all_mlm_weights.push_back(t.clone());
 
-
-        for( int i = 0; i < (max_num_mlm_preds - mlm_pred_label_ids.size()); i++ )
-        	mlm_pred_label_ids.push_back(0);
+        size_t org_mlm_pred_label_ids = mlm_pred_label_ids.size();
+        if( org_mlm_pred_label_ids < max_num_mlm_preds ) {
+        	for( int i = 0; i < (max_num_mlm_preds - org_mlm_pred_label_ids); i++ )
+        		mlm_pred_label_ids.push_back(0);
+        }
+//        std::cout << "mlm_pred_label_ids.size: " << mlm_pred_label_ids.size() << '\n';
 
         t = torch::from_blob(mlm_pred_label_ids.data(), {1, static_cast<int>(mlm_pred_label_ids.size())}, dtype(torch::kLong)).clone();
         all_mlm_labels.push_back(t.clone());
 
+//        std::cout << "is_next: " << is_next << '\n';
 		if( is_next )
 			nsp_labels.push_back(torch::full({1}, 1).to(torch::kLong).clone());
 		else
 			nsp_labels.push_back(torch::full({1}, 0).to(torch::kLong).clone());
 
+		idxs.push_back(idx);
+		idx += 1;
     }
-    return std::make_tuple(all_token_ids, all_segments, valid_lens, all_pred_positions,
-            all_mlm_weights, all_mlm_labels, nsp_labels);
+
+    torch::Tensor tidxs = torch::from_blob(idxs.data(),
+    							 {static_cast<long>(idxs.size()), 1}, torch::TensorOptions(torch::kLong)).clone();
+//    std::cout << "1. - tidxs.sizes(): " << tidxs.sizes() << '\n';
+
+    torch::Tensor d1=torch::concat(all_token_ids, 0).to(torch::kLong);
+    torch::Tensor d2=torch::concat(all_segments, 0).to(torch::kLong);
+    torch::Tensor d3=torch::concat(valid_lens, 0).to(torch::kFloat32);
+    torch::Tensor d4=torch::concat(all_pred_positions, 0).to(torch::kLong);
+    torch::Tensor d5=torch::concat(all_mlm_weights, 0).to(torch::kFloat32);
+    torch::Tensor d6=torch::concat(all_mlm_labels, 0).to(torch::kLong);
+    torch::Tensor d7=torch::concat(nsp_labels, 0).to(torch::kLong);
+//    std::cout << "concat done!\n";
+    return std::make_tuple(d1, d2, d3, d4, d5, d6, d7, tidxs);
 }
 
+torch::Tensor  transpose_output(torch::Tensor X, int64_t num_heads) {
+    //逆转 `transpose_qkv` 函数的操作。
+    X = X.reshape({-1, num_heads, X.size(1), X.size(2)});
+    X = X.permute({0, 2, 1, 3});//X.transpose(0, 2, 1, 3);
+    return X.reshape({X.size(0), X.size(1), -1});
+}
+
+torch::Tensor transpose_qkv(torch::Tensor X, int64_t num_heads) {
+    //为了多注意力头的并行计算而变换形状。
+    X = X.reshape({X.size(0), X.size(1), num_heads, -1});
+    X = X.permute({0, 2, 1, 3}); //transpose(0, 2, 1, 3)
+    return X.reshape({-1, X.size(2), X.size(3)});
+}
 

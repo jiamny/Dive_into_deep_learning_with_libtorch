@@ -169,25 +169,30 @@ int main() {
 	}
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1200, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::ylim(ax1, {0.2, 0.9});
-	matplot::plot(ax1, xx, train_loss, "b")->line_width(2);
-	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2);
-	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2);
-    matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "loss");
-    matplot::title(ax1, "Batch norm");
-    matplot::legend(ax1, {"Train loss", "Train acc", "Test acc"});
-    matplot::show();
+    auto ax1 = subplot(1, 2, 0);
+    ax1->xlabel("epoch");
+    ax1->ylabel("loss");
+    ax1->title("Batch norm train loss");
 
+    plot(xx, train_loss, "-o")->line_width(2).display_name("train loss");
+    legend({});
+
+   	auto ax2 = subplot(1, 2, 1);
+   	plot(xx, train_acc, "g--")->line_width(2).display_name("train acc");
+   	hold(on);
+   	plot(xx, test_acc, "r-.")->line_width(2).display_name("test acc");
+   	hold(on);
+    legend({});
+   	ax2->xlabel("epoch");
+   	ax2->ylabel("acc");
+   	ax2->title("Batch norm train & test acc");
+   	hold( off);
+   	F->draw();
+   	show();
 
 	std::cout << "Done!\n";
 	return 0;

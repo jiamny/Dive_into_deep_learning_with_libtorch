@@ -40,7 +40,7 @@ PretrainingBERT.cpp
 ../utils/ch_14_util.cpp
 )
 
-target_link_libraries(14_PretrainingBERT ${TORCH_LIBRARIES} ${requiredlibs} )
+target_link_libraries(14_PretrainingBERT ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(14_PretrainingBERT PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 

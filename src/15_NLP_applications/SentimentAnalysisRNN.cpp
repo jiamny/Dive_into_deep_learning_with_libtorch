@@ -248,8 +248,8 @@ int main() {
 	auto ax1 = F->nexttile();
 	matplot::legend();
 	matplot::hold(ax1, true);
-	matplot::plot(ax1, train_epochs, train_loss, "b")->line_width(2)
-			.display_name("train loss");
+//	matplot::plot(ax1, train_epochs, train_loss, "b")->line_width(2)
+//			.display_name("train loss");
 	matplot::plot(ax1, train_epochs, train_acc, "g--")->line_width(2)
 			.display_name("train acc");
 	matplot::plot(ax1, train_epochs, test_acc, "r-.")->line_width(2)

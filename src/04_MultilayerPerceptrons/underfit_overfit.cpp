@@ -115,7 +115,7 @@ int main() {
 
 	int64_t max_degree = 20;    		// Maximum degree of the polynomial
 	int64_t n_train=100, n_test = 100;  // Training and test dataset sizes
-	auto true_w = torch::zeros(max_degree);       //  Allocate lots of empty space // , torch::TensorOptions().requires_grad(true)
+	auto true_w = torch::zeros(max_degree); //  Allocate lots of empty space // , torch::TensorOptions().requires_grad(true)
 	true_w[0] = 5;
 	true_w[1] = 1.2;
 	true_w[2] = -3.4;
@@ -192,10 +192,10 @@ int main() {
 	train_ana_test(train_features, train_labels, test_features, test_labels, train_loss3, test_loss3, xx3);
 
 	auto F = figure(true);
-	F->size(500, 1500);
+	F->size(1800, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(3, 1);
+	F->tiledlayout(1, 3);
 	F->position(0, 0);
 
 	auto ax1 = F->nexttile();

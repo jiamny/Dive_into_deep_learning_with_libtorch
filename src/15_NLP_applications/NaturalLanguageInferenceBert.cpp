@@ -1,4 +1,5 @@
 #include <torch/utils.h>
+#include <torch/torch.h>
 #include "../utils/ch_8_9_util.h"
 #include "../utils/ch_15_util.h"
 
@@ -110,6 +111,7 @@ class BERTModel : public torch::nn::Module {
 	}
 
 	std::tuple<torch::Tensor> forward( tokens, segments, valid_lens=None, pred_positions=None) {
+
         encoded_X = encoder(tokens, segments, valid_lens)
         if pred_positions is not None:
             mlm_Y_hat = self.mlm(encoded_X, pred_positions)

@@ -31,7 +31,6 @@ int main() {
 	file.seekg(0, std::ios::beg);
 
 	CSVRow row;
-
 	// Read and throw away the first row.
 	// file >> row
 

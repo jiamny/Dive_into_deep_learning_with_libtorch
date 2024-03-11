@@ -8,6 +8,12 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <numeric>      // for accumulate etc
+#include <cmath>	// for sqrt
+#include <unordered_map>
+#include <unordered_set>
+
+using namespace std;
 
 bool isNumber(const std::string& str)
 {

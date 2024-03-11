@@ -40,7 +40,7 @@ int main() {
 	std::cout << "sample.shape = \n" << sample.sizes() << std::endl;
 	std::cout << sample.size(0) << std::endl;
 
-	auto counts = torch::zeros({6});
+	torch::Tensor counts = torch::zeros({6});
 	for( int i = 0; i < 100; i++ ) {
 		int die_num = sample[i].item<int>();
 		counts[die_num] += 1;
@@ -66,8 +66,8 @@ int main() {
 		}
 	}
 
-	auto cum_counts = counts.cumsum(0);
-	auto estimates = cum_counts / cum_counts.sum(1, true);
+	torch::Tensor cum_counts = counts.cumsum(0);
+	torch::Tensor estimates = cum_counts / cum_counts.sum(1, true);
 
 	std::cout << "cum_counts = \n" << cum_counts.sizes() << std::endl;
 	std::cout << "estimates = \n" << estimates.sizes() << std::endl;
@@ -75,65 +75,73 @@ int main() {
 	std::cout << "cum_counts.shape = \n" << cum_counts.sizes() << std::endl;
 	std::cout << "estimates.shape = \n" << estimates.sizes() << std::endl;
 
-	auto x_sample = torch::arange(0, rep, 1, options);
-	auto h_sample = torch::zeros({rep}, options);
+	torch::Tensor x_sample = torch::arange(0, rep, 1, options);
+	torch::Tensor h_sample = torch::zeros({rep}, options);
 	std::cout << "x_sample.options(): \n" << x_sample.options() << std::endl;
 	std::cout << "h_sample.options(): \n" << h_sample.options() << std::endl;
 
 	using torch::indexing::Slice;
 	using torch::indexing::None;
 
-	auto F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
-
-	auto ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-
 	std::vector<double> xx(x_sample.data_ptr<double>(), x_sample.data_ptr<double>() + x_sample.numel());
 	std::vector<double> w(rep, 0.167);
-	std::vector<std::string> lgd;
+	std::vector<std::string> lgd0;
 
 	estimates = estimates.to(torch::kDouble);
 
-	for(int i = 0; i < 6; i++ ) {
-		auto y = estimates.index({Slice(), i});
-		std::vector<double> yy(y.data_ptr<double>(), y.data_ptr<double>() + y.numel());
-		std::string die_label = "P(die=" + std::to_string(i+1) + ")";
+	auto F = figure(true);
+	F->size(1800, 600);
+	auto ax0 = subplot(1, 3, 0);
+	auto y0 = estimates.index({Slice(), 0});
+	std::vector<double> yy0(y0.data_ptr<double>(), y0.data_ptr<double>() + y0.numel());
+	std::string die_label = "P(die=" + std::to_string(1) + ")";
+	lgd0.push_back(die_label);
+	plot(xx, yy0, "b")->line_width(2);
+	hold(on);
+	auto y1 = estimates.index({Slice(), 1});
+	std::vector<double> yy1(y1.data_ptr<double>(), y1.data_ptr<double>() + y1.numel());
+	die_label = "P(die=" + std::to_string(2) + ")";
+	lgd0.push_back(die_label);
+	plot(xx, yy1, "g")->line_width(2);
+    ax0->ylabel("Estimated probability");
+    legend(lgd0);
+    hold(off);
 
-		switch( i ) {
-		case 0:
-			matplot::plot(ax1, xx, yy, "b")->line_width(2);
-			break;
-		case 1:
-			matplot::plot(ax1, xx, yy, "g")->line_width(2);
-			break;
-		case 2:
-			matplot::plot(ax1, xx, yy, "r")->line_width(2);
-			break;
-		case 3:
-			matplot::plot(ax1, xx, yy, "c")->line_width(2);
-			break;
-		case 4:
-			matplot::plot(ax1, xx, yy, "m")->line_width(2);
-			break;
-		case 5:
-			matplot::plot(ax1, xx, yy, "k")->line_width(2);
-			break;
-		default:
-			break;
-		}
-		lgd.push_back(die_label);
-	}
-    matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "Groups of experiments");
-    matplot::ylabel(ax1, "Estimated probability");
-    matplot::legend(ax1, lgd);
-    matplot::title(ax1, "Basic Probability Theory");
-    matplot::show();
+    auto ax1 = subplot(1, 3, 1);
+    auto y2 = estimates.index({Slice(), 2});
+    std::vector<std::string> lgd1;
+    std::vector<double> yy2(y2.data_ptr<double>(), y2.data_ptr<double>() + y2.numel());
+    die_label = "P(die=" + std::to_string(3) + ")";
+    lgd1.push_back(die_label);
+    plot(xx, yy2, "r")->line_width(2);
+    hold(on);
+    auto y3 = estimates.index({Slice(), 3});
+    std::vector<double> yy3(y3.data_ptr<double>(), y3.data_ptr<double>() + y3.numel());
+    die_label = "P(die=" + std::to_string(4) + ")";
+    lgd1.push_back(die_label);
+    plot(xx, yy3, "c")->line_width(2);
+    ax1->xlabel("Groups of experiments");
+    ax1->title("Basic Probability Theory");
+    legend(lgd1);
+    hold(off);
+
+    auto ax2 = subplot(1, 3, 2);
+    auto y4 = estimates.index({Slice(), 4});
+    std::vector<std::string> lgd2;
+    std::vector<double> yy4(y4.data_ptr<double>(), y4.data_ptr<double>() + y4.numel());
+    die_label = "P(die=" + std::to_string(5) + ")";
+    lgd2.push_back(die_label);
+    plot(xx, yy4, "m")->line_width(2);
+    hold(on);
+    auto y5 = estimates.index({Slice(), 5});
+    std::vector<double> yy5(y5.data_ptr<double>(), y5.data_ptr<double>() + y5.numel());
+    die_label = "P(die=" + std::to_string(6) + ")";
+    lgd2.push_back(die_label);
+    plot(xx, yy5, "k")->line_width(2);
+    legend(lgd2);
+    hold(off);
+    F->draw();
+    show();
 
 	std::cout << "Done!\n";
 	return 0;

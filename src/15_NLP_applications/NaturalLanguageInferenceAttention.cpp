@@ -322,24 +322,33 @@ int main() {
 	}
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1200, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::legend();
-	matplot::hold(ax1, true);
-	matplot::plot(ax1, train_epochs, train_loss, "b")->line_width(2)
-			.display_name("train loss");
-	matplot::plot(ax1, train_epochs, train_acc, "g--")->line_width(2)
-			.display_name("train acc");
-	matplot::plot(ax1, train_epochs, test_acc, "r-.")->line_width(2)
-			.display_name("test acc");
-	matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "epoch");
-    matplot::show();
+    auto ax1 = subplot(1, 2, 0);
+    ax1->xlabel("epoch");
+    ax1->ylabel("loss");
+    ax1->title("train loss");
+
+    plot( train_epochs, train_loss, "-o")->line_width(2)
+   							.display_name("train loss");
+    legend({});
+
+   	auto ax2 = subplot(1, 2, 1);
+   	plot( train_epochs, train_acc, "g--")->line_width(2)
+   		    				.display_name("train acc");
+   	hold( on);
+   	plot( train_epochs, test_acc, "r-.")->line_width(2)
+   		    				.display_name("test acc");
+   	hold( on);
+    legend({}); //->location(legend::general_alignment::right);
+   	ax2->xlabel("epoch");
+   	ax2->ylabel("acc");
+   	ax2->title("train & test acc");
+   	hold( off);
+   	F->draw();
+   	show();
 
 	// ----------------------------------------------------------
 	//  Using the Model

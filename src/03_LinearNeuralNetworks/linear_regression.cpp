@@ -88,7 +88,7 @@ int main() {
 	// The Normal Distribution and Squared Loss
 	// ----------------------------------------------------------------------------------
 	auto options = torch::TensorOptions().dtype(torch::kDouble).device(torch::kCPU);
-	auto x_range = torch::arange(-7, 7, 0.01, options);
+	torch::Tensor x_range = torch::arange(-7, 7, 0.01, options);
 
 	std::vector<double> xx(x_range.data_ptr<double>(), x_range.data_ptr<double>() + x_range.numel());
 
@@ -98,45 +98,47 @@ int main() {
 	//std:: cout << params[0][0] << " " << params[0][1] << std::endl;
 	//normal(xx, params[0][0], params[0][1]);
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1200, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::hold(ax1, true);
 
-	std::vector<std::string> lgd;
+	auto ax1 = subplot(1, 2, 0); //F->nexttile();
 
-	for( int r = 0; r < 3; r++ ) {
-		std::vector<double> yy = normal(xx, params[r][0], params[r][1]);
-		std::string legend_label = "mean " +
-				to_string_with_precision(params[r][0], 0) +
+	std::vector<double> yy0 = normal(xx, params[0][0], params[0][1]);
+	std::string legend_label0 = "mean " +
+				to_string_with_precision(params[0][0], 0) +
 				", std " +
-				to_string_with_precision(params[r][1], 0);
-		switch( r ) {
-			case 0:
-				matplot::plot(ax1, xx, yy, "b")->line_width(2);
-			break;
-			case 1:
-				matplot::plot(ax1, xx, yy, "g--")->line_width(2);
-				break;
-			case 2:
-				matplot::plot(ax1, xx, yy, "r-.")->line_width(2);
-			break;
-			default:
-			break;
-		}
-		lgd.push_back(legend_label);
-	}
+				to_string_with_precision(params[0][1], 0);
+	plot(xx, yy0, "b")->line_width(2).display_name(legend_label0);
+	ax1->xlabel("x");
+	ax1->ylabel("p(x)");
+	ax1->title("Linear regression");
+	legend({});
 
-    matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "x");
-    matplot::ylabel(ax1, "p(x)");
-    matplot::legend(ax1, lgd);
-    matplot::title(ax1, "Linear regression");
-    matplot::show();
+	auto ax2 = subplot(1, 2, 1);
+	std::vector<double> yy1 = normal(xx, params[1][0], params[1][1]);
+	std::string legend_label1 = "mean " +
+						to_string_with_precision(params[1][0], 0) +
+						", std " +
+						to_string_with_precision(params[1][1], 0);
+	plot(xx, yy1, "g--")->line_width(2).display_name(legend_label1);
+	hold(on);
+
+	std::vector<double> yy2 = normal(xx, params[2][0], params[2][1]);
+	std::string legend_label2 = "mean " +
+						to_string_with_precision(params[2][0], 0) +
+						", std " +
+						to_string_with_precision(params[2][1], 0);
+	plot(xx, yy2, "r-.")->line_width(2).display_name(legend_label2);
+
+    ax2->xlabel("x");
+    ax2->ylabel("p(x)");
+    ax2->title("Linear regression");
+    legend({});
+    hold(off);
+    F->draw();
+    show();
 
     std::cout << "Done!\n";
     return 0;

@@ -293,14 +293,7 @@ int main() {
 		float accuracy = (float)match / float(counter);
 		std::cout << "\nTest accuracy: " << accuracy << std::endl;
 	}
-/*
-	plt::figure_size(600, 500);
-	plt::named_plot("Train loss", train_epochs, train_loss_ave, "b");
-	plt::ylabel("loss");
-	plt::xlabel("epoch");
-	plt::legend();
-	plt::show();
-	*/
+
 	auto F = figure(true);
 	F->size(800, 600);
 	F->add_axes(false);
