@@ -147,7 +147,7 @@ struct RNNModelScratchLstm {
 
 	std::tuple<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor>> forward(torch::Tensor X,
 																	std::tuple<torch::Tensor, torch::Tensor> state) {
-		X = torch::nn::functional::one_hot(X.transpose(0, 1), vocab_size).to(torch::kFloat32);
+		X = torch::nn::functional::one_hot(X.transpose(0, 1), vocab_size).to(torch::kFloat32).to(X.device());
 
         return lstm(X, state, params);
 	}
@@ -184,12 +184,13 @@ struct RNNModelLstm : public torch::nn::Module {
             linear = torch::nn::Linear(num_hiddens * 2, vocab_size);
         }
         register_module("rnn_layer", rnn_layer);
+        register_module("linear", linear);
 	}
 
 	std::tuple<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor>> forward(torch::Tensor inputs,
 															std::tuple<torch::Tensor, torch::Tensor> state ) {
         auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size); //(inputs.T.long(), self.vocab_size)
-        X = X.to(torch::kFloat32);
+        X = X.to(torch::kFloat32).to(inputs.device());
         torch::Tensor Y;
 
         std::tie(Y, state) = rnn->forward(X, state);
@@ -287,7 +288,7 @@ int main() {
 	int64_t num_epochs = 400;
 	float lr = 1.0;
 	bool use_random_iter = false;
-
+	std::cout << "RNNModelScratchLstm\n";
 	auto nett = RNNModelScratchLstm(vocab.length(), num_hiddens, device);
 
 	std::pair<std::vector<double>, std::vector<double>> trlt = train_ch9(nett, train_iter, vocab, device, lr,
@@ -297,11 +298,12 @@ int main() {
 	// LSTM concise
 	//================================================
 	std::vector<std::pair<torch::Tensor, torch::Tensor>> ctrain_iter = seq_data_iter_random(tokens_ids, batch_size, num_steps);
-
+	std::cout << "RNNModelLstm\n";
 	auto lstm_layer = torch::nn::LSTM(vocab.length(), num_hiddens);
 	auto cnet = RNNModelLstm(lstm_layer, vocab.length());
 	cnet.to(device);
 
+	std::cout << "train_ch9\n";
 	std::pair<std::vector<double>, std::vector<double>> ctrlt = train_ch9( cnet, ctrain_iter, vocab, device, lr,
 			num_epochs, use_random_iter);
 

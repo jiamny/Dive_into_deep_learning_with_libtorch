@@ -118,7 +118,7 @@ struct RNNModelScratchGru {
 
 	std::tuple<torch::Tensor, torch::Tensor> forward(torch::Tensor X, torch::Tensor state) {
 
-		X = torch::nn::functional::one_hot(X.transpose(0, 1), vocab_size).to(torch::kFloat32);
+		X = torch::nn::functional::one_hot(X.transpose(0, 1), vocab_size).to(torch::kFloat32).to(X.device());
 
         return gru(X, state, params);
 	}
@@ -150,17 +150,18 @@ struct RNNModelGru : public torch::nn::Module {
         // `num_directions` should be 2, else it should be 1.
         if( ! rnn.get()->options.bidirectional() ) {
             num_directions = 1;
-            linear = torch::nn::Linear(num_hiddens, vocab_size);
+            linear = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, vocab_size));
         } else {
             num_directions = 2;
-            linear = torch::nn::Linear(num_hiddens * 2, vocab_size);
+            linear = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens * 2, vocab_size));
         }
         register_module("rnn_layer", rnn_layer);
+        register_module("linear", linear);
 	}
 
 	std::tuple<torch::Tensor, torch::Tensor> forward(torch::Tensor inputs, torch::Tensor state ) {
         auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size); //(inputs.T.long(), self.vocab_size)
-        X = X.to(torch::kFloat32);
+        X = X.to(torch::kFloat32).to(inputs.device());
         torch::Tensor Y;
         //torch::Tensor H = std::get<0>(state);
 
@@ -249,8 +250,8 @@ std::pair<double, double> train_epoch_ch9_gru(T& net, std::vector<std::pair<torc
 	torch::Tensor state = torch::empty({0});
 
 	for( int i = 0; i < train_iter.size(); i++ ) {
-	    auto X = train_iter[i].first;
-	    auto Y = train_iter[i].second;
+	    auto X = train_iter[i].first.to(device);
+	    auto Y = train_iter[i].second.to(device);
 
 	    if( state.numel() == 0 || use_random_iter ) {
 	    	state = net.begin_state(X.size(0), device);
@@ -370,6 +371,7 @@ int main() {
 	// Let us [check whether the outputs have the correct shapes]
 	auto X = torch::arange(10).reshape({2, 5});
 	int num_hiddens = 512;
+
 	auto net = RNNModelScratchGru(vocab.length(), num_hiddens, device);
 
 	torch::Tensor state = net.begin_state(X.size(0), device);
@@ -394,6 +396,7 @@ int main() {
 		std::string tc(1, v[i]);
 		prefix.push_back(tc);
 	}
+	std::cout << "predict_ch9_gru\n";
 	std::string prd = predict_ch9_gru(prefix, 10, net, vocab, device);
 	std::cout << prd << std::endl;
 
@@ -407,8 +410,8 @@ int main() {
 	int64_t num_epochs = 200;
 	float lr = 1.0;
 	bool use_random_iter = false;
-	auto nett = RNNModelScratchGru(vocab.length(), num_hiddens, device);
 
+	RNNModelScratchGru nett = RNNModelScratchGru(vocab.length(), num_hiddens, device);
 	std::pair<std::vector<double>, std::vector<double>> trlt = train_ch9_gru(nett, train_iter, vocab, device, lr,
 			num_epochs, use_random_iter);
 
@@ -416,13 +419,14 @@ int main() {
 	// RNNModel concise
 	//================================================
 	std::vector<std::pair<torch::Tensor, torch::Tensor>> ctrain_iter = seq_data_iter_random(tokens_ids, batch_size, num_steps);
+	std::cout << "RNNModelGru\n";
 	auto rnn_layer = torch::nn::RNN(vocab.length(), num_hiddens);
 	auto cnet = RNNModelGru( rnn_layer, vocab.length() );
 	cnet.to(device);
 	num_epochs = 200;
 	lr = 1.0;
 	use_random_iter = false;
-
+	std::cout << "train_ch9_gru\n";
 	std::pair<std::vector<double>, std::vector<double>> ctrlt = train_ch9_gru( cnet, ctrain_iter, vocab, device, lr,
 			num_epochs, use_random_iter);
 

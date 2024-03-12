@@ -28,18 +28,20 @@ struct RNNModeldeeprnn : public torch::nn::Module {
         // `num_directions` should be 2, else it should be 1.
         if( ! rnn.get()->options.bidirectional() ) {
             num_directions = 1;
-            linear = torch::nn::Linear(num_hiddens, vocab_size);
+            linear = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, vocab_size));
         } else {
             num_directions = 2;
-            linear = torch::nn::Linear(num_hiddens * 2, vocab_size);
+            linear = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens * 2, vocab_size));
         }
         register_module("rnn_layer", rnn_layer);
+        register_module("linear", linear);
 	}
 
 	std::tuple<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor>> forward(torch::Tensor inputs,
 															std::tuple<torch::Tensor, torch::Tensor> state ) {
+
         auto X = torch::one_hot(inputs.transpose(0, 1), vocab_size); //(inputs.T.long(), self.vocab_size)
-        X = X.to(torch::kFloat32);
+        X = X.to(torch::kFloat32).to(inputs.device());
         torch::Tensor Y;
 
         std::tie(Y, state) = rnn->forward(X, state);
@@ -101,14 +103,15 @@ int main() {
 	int num_layers  = 2;
 
 	torch::nn::LSTM lstm_layer(torch::nn::LSTMOptions(vocab.length(), num_hiddens).num_layers(num_layers));
-
+	lstm_layer->to(device);
+	std::cout << "RNNModeldeeprnn\n";
 	auto net = RNNModeldeeprnn(lstm_layer, vocab.length());
 	net.to(device);
 
 	std::tuple<torch::Tensor, torch::Tensor> state = net.begin_state(X.size(0), device);
 
 	std::tuple<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor>>  rlt = net.forward(X.to(device), state);
-
+	std::cout << "RNNModeldeeprnn forward\n";
 	auto Z = std::get<0>(rlt);
 	std::tuple<torch::Tensor, torch::Tensor> new_state = std::get<1>(rlt);
 
@@ -144,6 +147,7 @@ int main() {
 	std::vector<std::pair<torch::Tensor, torch::Tensor>> ctrain_iter = seq_data_iter_random(tokens_ids, batch_size, num_steps);
 
 	torch::nn::LSTM clstm_layer(torch::nn::LSTMOptions(vocab.length(), num_hiddens).num_layers(num_layers));
+	clstm_layer->to(device);
 	RNNModeldeeprnn cnet(clstm_layer, vocab.length());
 	cnet.to(device);
 

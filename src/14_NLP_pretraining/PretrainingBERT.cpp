@@ -8,8 +8,9 @@
 #include <matplot/matplot.h>
 using namespace matplot;
 
+template<typename T>
 std::tuple <torch::Tensor, torch::Tensor, torch::Tensor>
-_get_batch_loss_bert(BERTModel& net, torch::nn::CrossEntropyLoss& loss, int64_t vocab_size, torch::Tensor tokens_X,
+_get_batch_loss_bert(T& net, torch::nn::CrossEntropyLoss loss, int64_t vocab_size, torch::Tensor tokens_X,
 		torch::Tensor segments_X, torch::Tensor valid_lens_x,
 		torch::Tensor pred_positions_X, torch::Tensor mlm_weights_X,
 		torch::Tensor mlm_Y, torch::Tensor nsp_y) {
@@ -36,7 +37,8 @@ _get_batch_loss_bert(BERTModel& net, torch::nn::CrossEntropyLoss& loss, int64_t 
     return std::make_tuple(mlm_l, nsp_l, l);
 }
 
-void train_bert(_WikiTextDataset train_set, BERTModel& net, torch::nn::CrossEntropyLoss& loss,
+template<typename T>
+void train_bert(_WikiTextDataset train_set, T& net, torch::nn::CrossEntropyLoss loss,
 		int64_t vocab_size, int64_t num_steps, int64_t batch_size, torch::Device device) {
 
 	std::cout << "Load data\n";
@@ -123,7 +125,8 @@ void train_bert(_WikiTextDataset train_set, BERTModel& net, torch::nn::CrossEntr
 }
 
 // 用BERT表示文本
-torch::Tensor get_bert_encoding(BERTModel& net, std::vector<std::string> tokens_a,
+template<typename T>
+torch::Tensor get_bert_encoding(T& net, std::vector<std::string> tokens_a,
 		std::vector<std::string> tokens_b, Vocab vocab, torch::Device device) {
 	std::pair<std::vector<std::string>, std::vector<int64_t>> t = get_tokens_and_segments(tokens_a, tokens_b);
 	std::vector<std::string> tokens =  t.first;

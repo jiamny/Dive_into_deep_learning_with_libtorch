@@ -268,11 +268,12 @@ std::pair<double, double> train_epoch_ch9(T& net, std::vector<std::pair<torch::T
 	int64_t tot_tk = 0;
 
 	precise_timer timer;
-	std::tuple<torch::Tensor, torch::Tensor> state = std::make_tuple(torch::empty({0}), torch::empty({0}));
+	std::tuple<torch::Tensor, torch::Tensor> state = std::make_tuple(torch::empty({0}).to(device),
+			torch::empty({0}).to(device));
 
 	for( int i = 0; i < train_iter.size(); i++ ) {
-	    auto X = train_iter[i].first;
-	    auto Y = train_iter[i].second;
+	    auto X = train_iter[i].first.to(device);
+	    auto Y = train_iter[i].second.to(device);
 
 	    if( std::get<0>(state).numel() == 0 || use_random_iter ) {
 	    	state = net.begin_state(X.size(0), device);

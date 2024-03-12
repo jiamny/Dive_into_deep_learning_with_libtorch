@@ -145,21 +145,21 @@ int main() {
 	std::vector<float> y1(yx.data_ptr<float>(), yx.data_ptr<float>() + yx.numel());
 	std::vector<float> y2(onestep_preds.data_ptr<float>(), onestep_preds.data_ptr<float>() + onestep_preds.numel());
 
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
+	auto F1 = figure(true);
+	F1->size(800, 600);
+	F1->add_axes(false);
+	F1->reactive_mode(false);
+	F1->tiledlayout(1, 1);
+	F1->position(0, 0);
 
-	ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::plot(ax1, x1, y1, "b")->line_width(2);
-	matplot::plot(ax1, x1, y2, "r--")->line_width(2);
-	matplot::hold(ax1, false);
-	matplot::xlabel(ax1, "time");
-	matplot::ylabel(ax1, "data");
-	matplot::legend(ax1, {"data", "1-step preds"});
+	auto ax2 = F1->nexttile();
+	matplot::hold(ax2, true);
+	matplot::plot(ax2, x1, y1, "b")->line_width(2);
+	matplot::plot(ax2, x1, y2, "r--")->line_width(2);
+	matplot::hold(ax2, false);
+	matplot::xlabel(ax2, "time");
+	matplot::ylabel(ax2, "data");
+	matplot::legend(ax2, {"data", "1-step preds"});
 	matplot::show();
 
 	// Let us [take a closer look at the difficulties in 𝑘-step-ahead predictions] by computing predictions on
@@ -200,16 +200,16 @@ int main() {
 
 	std::vector<std::string> colors = {"b", "m", "g", "r."};
 
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
+	auto F2 = figure(true);
+	F2->size(800, 600);
+	F2->add_axes(false);
+	F2->reactive_mode(false);
+	F2->tiledlayout(1, 1);
+	F2->position(0, 0);
 
-	ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::xlim(ax1, {0, 1000});
+	auto ax3 = F2->nexttile();
+	matplot::hold(ax3, true);
+	matplot::xlim(ax3, {0, 1000});
 
 	std::vector<std::string> lgd;
 
@@ -217,9 +217,7 @@ int main() {
 		auto tt2 = time.index({Slice(tau + steps[i] - 1, T - max_steps + steps[i])});
 
 		std::vector<float> x2(tt2.data_ptr<float>(), tt2.data_ptr<float>() + tt2.numel());
-
 		std::string tlt = std::to_string(steps[i]) + "-step preds";
-
 		// have to reshape() and clone()!!!
 		auto yp = features.index({Slice(), (tau + steps[i] - 1)}).reshape({-1,1}).clone(); //preds[i]; // features.index({Slice(), (tau + steps[i] - 1)}).reshape({-1,1});
 
@@ -228,12 +226,13 @@ int main() {
 
 		std::vector<float> y3(yp.data_ptr<float>(), yp.data_ptr<float>() + yp.numel());
 
-		matplot::plot(ax1, x2, y3, colors[i].c_str());
+		matplot::plot(ax3, x2, y3, colors[i].c_str())->line_width(2);
 		lgd.push_back(tlt.c_str());
 	}
-	matplot::xlabel("time");
-	matplot::ylabel("data");
-	matplot::legend(lgd);
+	matplot::xlabel(ax3, "time");
+	matplot::ylabel(ax3, "data");
+	matplot::legend(ax3, lgd);
+	F2->draw();
 	matplot::show();
 
 	std::cout << "Done!\n";

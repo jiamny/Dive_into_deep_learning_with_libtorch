@@ -9,7 +9,6 @@
 #include <cmath>
 
 #include "../utils/ch_8_9_util.h"
-//#include "../utils.h"
 #include "../TempHelpFunctions.hpp"
 
 #include <matplot/matplot.h>
@@ -83,6 +82,7 @@ struct EncoderDecoderImpl : public torch::nn::Module {
 	}
 
 };
+
 TORCH_MODULE(EncoderDecoder);
 
 // ----------------------------------------------------------
@@ -109,8 +109,9 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 		vec.push_back(i);
 
 	torch::Tensor src_ar = (torch::from_blob(vec.data(), {1, num_steps}, options)).clone();
-	src_ar = src_ar.to(torch::kLong);
+	src_ar = src_ar.to(torch::kLong).to(device);
 	torch::Tensor src_val_len = (src_ar != src_vocab["<pad>"]).to(torch::kLong).sum(1);
+	src_val_len = src_val_len.to(device);
 
 	std::tuple<torch::Tensor, torch::Tensor> enc_outputs = net->encoder->forward(src_ar);
 
@@ -150,15 +151,17 @@ int main() {
 
 	// test encoder
 	auto encoder = Seq2SeqEncoder(10, 8, 16, 2);
+	encoder->to(device);
 	encoder->eval();
-	auto X = torch::zeros({4, 7}).to(torch::kLong);
+	auto X = torch::zeros({4, 7}).to(torch::kLong).to(device);
 	std::tuple<torch::Tensor, torch::Tensor> erlt = encoder->forward(X);
 	std::cout << std::get<0>(erlt).sizes() << std::endl;
 	std::cout << std::get<1>(erlt).sizes() << std::endl;
 
 	// test decoder
-	X = torch::zeros({4, 7}).to(torch::kLong);
+	X = torch::zeros({4, 7}).to(torch::kLong).to(device);
 	auto decoder = Seq2SeqDecoder(10, 8, 16, 2);
+	decoder->to(device);
 	decoder->eval();
 	torch::Tensor state = decoder->init_state(encoder->forward(X));
 
@@ -166,23 +169,25 @@ int main() {
 	std::cout << "output.shape: " << std::get<0>(drlt).sizes() << std::endl;
 	std::cout << "state.shape: " << std::get<1>(drlt).sizes() << std::endl;
 
+	std::cout << "sequence_mask\n";
 	// test sequence_mask
-	X = torch::tensor({{1, 2, 3}, {4, 5, 6}});
-	auto Y = sequence_mask(X, torch::tensor({1, 2}));
+	X = torch::tensor({{1, 2, 3}, {4, 5, 6}}).to(device);
+	auto Y = sequence_mask(X, torch::tensor({1, 2}).to(device));
 	std::cout << "sequence_mask:\n" << Y << std::endl;
 	std::cout << "X:\n" << X.sizes() << std::endl;
 	std::cout << "v_len:\n" << torch::tensor({1, 2}).sizes() << std::endl;
 
 	// (We can also mask all the entries across the last few axes.)
 	// If you like, you may even specify to replace such entries with a non-zero value.
-	X = torch::ones({2, 3, 4});
+	X = torch::ones({2, 3, 4}).to(device);
 	std::cout << "X.shape: " << X << std::endl;
-	Y = sequence_mask(X, torch::tensor({1, 2}), -1);
+	Y = sequence_mask(X, torch::tensor({1, 2}).to(device), -1);
 	std::cout << "sequence_mask:\n" << Y << std::endl;
 
 	auto loss_fn = MaskedSoftmaxCELoss();
-	torch::Tensor weighted_loss = loss_fn.forward(torch::ones({3, 4, 10}), torch::ones({3, 4}).to(torch::kLong),
-										torch::tensor({4, 2, 0}));
+	torch::Tensor weighted_loss = loss_fn.forward(torch::ones({3, 4, 10}).to(device),
+			torch::ones({3, 4}).to(torch::kLong).to(device),
+			torch::tensor({4, 2, 0}).to(device));
 
 	std::cout << "weighted_loss:\n" << weighted_loss << std::endl;
 
@@ -201,7 +206,9 @@ int main() {
 
 	std::tie(src_array, src_valid_len, tgt_array, tgt_valid_len, src_vocab, tgt_vocab) = load_data_nmt(filename, num_steps, 600);
 	encoder = Seq2SeqEncoder(src_vocab.length(), embed_size, num_hiddens, num_layers, dropout);
+	encoder->to(device);
 	decoder = Seq2SeqDecoder(tgt_vocab.length(), embed_size, num_hiddens, num_layers, dropout);
+	decoder->to(device);
 	auto net = EncoderDecoder(encoder, decoder);
 	net->to(device);
 
@@ -217,27 +224,27 @@ int main() {
 	std::vector<double> epochs, plsum;
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat, stat;
+	std::cout << "training \n";
+	src_array = src_array.to(device);
+	src_valid_len = src_valid_len.to(device);
+	tgt_array = tgt_array.to(device);
+	tgt_valid_len = tgt_valid_len.to(device);
 
 	for( int64_t epoch = 0;  epoch < num_epochs; epoch++ ) {
 		// get shuffled batch data indices
 		std::list<torch::Tensor> idx_iter = data_index_iter(src_array.size(0), batch_size, true);
-
 		float t_loss = 0.0;
 		int64_t cnt = 0;
 		int64_t n_wtks = 0;
 
 		for(auto& batch_idx : idx_iter) {
-
+			batch_idx = batch_idx.to(device);
 	        optimizer.zero_grad();
 
 	        auto X = src_array.index_select(0, batch_idx);
 	        auto X_valid_len = src_valid_len.index_select(0, batch_idx);
 	        auto Y = tgt_array.index_select(0, batch_idx);
 	        auto Y_valid_len = tgt_valid_len.index_select(0, batch_idx);
-	        X.to(device);
-	        X_valid_len.to(device);
-	        Y.to(device);
-	        Y_valid_len.to(device);
 
 	        std::vector<int64_t> tmp;
 	        for(int i = 0; i < Y.size(0); i++)
