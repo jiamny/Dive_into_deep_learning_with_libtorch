@@ -19,35 +19,34 @@ torch::Tensor f(torch::Tensor x) {
 
 void plot_kernel_reg(torch::Tensor y_hat, torch::Tensor y_train,
 		torch::Tensor y_truth, torch::Tensor x_test, std::string tlt) {
-	auto hat = y_hat.to(torch::kDouble);
-	auto train = y_train.to(torch::kDouble);
-	auto truth = y_truth.to(torch::kDouble);
-	auto test  = x_test.to(torch::kDouble);
+	auto hat = y_hat.to(torch::kDouble).to(torch::kCPU);
+	auto train = y_train.to(torch::kDouble).to(torch::kCPU);
+	auto truth = y_truth.to(torch::kDouble).to(torch::kCPU);
+	auto test  = x_test.to(torch::kDouble).to(torch::kCPU);
 	std::vector<double> yhat(hat.data_ptr<double>(), hat.data_ptr<double>() + hat.numel());
 	std::vector<double> ytrain(train.data_ptr<double>(), train.data_ptr<double>() + train.numel());
 	std::vector<double> ytruth(truth.data_ptr<double>(), truth.data_ptr<double>() + truth.numel());
 	std::vector<double> xtest(test.data_ptr<double>(), test.data_ptr<double>() + test.numel());
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1800, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::xlim(ax1, {0., 5.0});
-	matplot::ylim(ax1, {-1., 5.0});
-	matplot::plot(ax1, xtest, ytruth, "b")->line_width(2);
-	matplot::plot(ax1, xtest, yhat, "m--")->line_width(2);
-	matplot::plot(ax1, xtest, ytrain, "yo")->line_width(2);
-    matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "x");
-    matplot::ylabel(ax1, "y");
-    matplot::title(ax1, tlt.c_str());
-    matplot::legend(ax1, {"Truth", "Pred", "Train"});
-    matplot::show();
+	subplot(1, 3, 0);
+	plot(xtest, ytruth, "b")->line_width(2).display_name("Truth");
+	xlabel("x");
+	legend({});
+	subplot(1, 3, 1);
+	plot(xtest, yhat, "m--")->line_width(2).display_name("Pred");
+	ylabel("y");
+	legend({});
+	title(tlt.c_str());
+	subplot(1, 3, 2);
+	plot(xtest, ytrain, "ro")->line_width(2).display_name("Train");
+	legend({});
+	F->draw();
+    show();
 }
 
 // ------------------------------------------------
@@ -81,23 +80,29 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
+	// Device
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Using GPU." : "Using CPU.") << '\n';
+
 	torch::manual_seed(1000);
 
 	// generate an artificial dataset
 	int64_t n_train = 50; 								//  No. of training examples
 	auto tuple = torch::sort(torch::rand(n_train) * 5); //  Training inputs
-	torch::Tensor x_train = std::get<0>(tuple);
+	torch::Tensor x_train = std::get<0>(tuple).to(device);
 
-	auto y_train = f(x_train) + torch::normal(0.0, 0.5, (n_train));  // Training outputs
-	auto x_test = torch::arange(0, 5, 0.1);							  // Testing examples
-	auto y_truth = f(x_test); 										  // Ground-truth outputs for the testing examples
+	std::cout << "f()\n";
+	auto y_train = f(x_train) + torch::normal(0.0, 0.5, (n_train)).to(device);  // Training outputs
+	auto x_test = torch::arange(0, 5, 0.1).to(device);							  // Testing examples
+	auto y_truth = f(x_test).to(device); 										  // Ground-truth outputs for the testing examples
 	auto n_test =  x_test.size(0);  								  // No. of testing examples
 	std::cout << n_test << "\n";
 
 	/* Average Pooling
 	 * using average pooling to average over all the training outputs:
 	 */
-	auto y_hat = torch::repeat_interleave(y_train.mean(), n_test);
+	auto y_hat = torch::repeat_interleave(y_train.mean(), n_test).to(device);
 
 	plot_kernel_reg( y_hat, y_train, y_truth, x_test, "Average Pooling");
 
@@ -127,20 +132,20 @@ int main() {
 	float maxV = attention_weights.max().item<float>();
 	std::cout << "maxV: " <<  maxV << "\n";
 
-
     plot_heatmap(attention_weights, "Sorted training inputs", "Sorted testing inputs");
 
 	// Parametric Attention Pooling
-    auto X = torch::ones({2, 1, 4});
-    auto Y = torch::ones({2, 4, 6});
+    auto X = torch::ones({2, 1, 4}).to(device);
+    auto Y = torch::ones({2, 4, 6}).to(device);
     std::cout << "Batch Matrix Multiplication:\n" << (torch::bmm(X, Y)).sizes() << "\n";
 
     // use minibatch matrix multiplication to compute weighted averages of values in a minibatch.
-    auto weights = torch::ones({2, 10}) * 0.1;
-    auto vals    = torch::arange(20.0).reshape({2, 10});
+    auto weights = (torch::ones({2, 10}) * 0.1).to(device);
+    auto vals    = torch::arange(20.0).reshape({2, 10}).to(device);
     std::cout << "Batch Matrix Multiplication to compute weighted averages of values in a minibatch:\n"
     		<< torch::bmm(weights.unsqueeze(1), vals.unsqueeze(-1)) << "\n";
 
+    std::cout << "Training\n";
     // Training
     // Shape of `X_tile`: (`n_train`, `n_train`), where each column contains the same training inputs
     auto X_tile = x_train.repeat({n_train, 1});
@@ -149,22 +154,24 @@ int main() {
     auto Y_tile = y_train.repeat({n_train, 1});
 
     // Shape of `keys`: ('n_train', 'n_train' - 1)
-    auto keys = torch::masked_select(X_tile, (1 - torch::eye(n_train)).to(torch::kBool)).reshape({n_train, -1});
+    auto keys = torch::masked_select(X_tile, (1 - torch::eye(n_train)).to(torch::kBool).to(device)).reshape({n_train, -1});
     std::cout << keys.sizes() << "\n";
 
 	// Shape of `values`: ('n_train', 'n_train' - 1)
-    auto values = torch::masked_select(Y_tile, (1 - torch::eye(n_train)).to(torch::kBool)).reshape({n_train, -1});
+    auto values = torch::masked_select(Y_tile, (1 - torch::eye(n_train)).to(torch::kBool).to(device)).reshape({n_train, -1});
     std::cout << values.sizes() << "\n";
 
     // Using the squared loss and stochastic gradient descent, we [train the parametric attention model].
     auto net = NWKernelRegression();
+    net->to(device);
     auto loss = torch::nn::MSELoss(torch::nn::MSELossOptions(torch::kNone));
     auto trainer = torch::optim::SGD(net->parameters(), 0.5);
 
     std::vector<double> v_epoch, v_loss;
 
-    for( int epoch = 0; epoch < 5; epoch++ ) {
+    for( int epoch = 0; epoch < 10; epoch++ ) {
         trainer.zero_grad();
+        std::cout << "x_train: " << x_train.device() << keys.device() << " " << values.device() << " " << y_train.device() << '\n';
         auto l = loss( net->forward(x_train, keys, values), y_train );
         l.sum().backward();
         trainer.step();

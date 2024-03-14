@@ -100,6 +100,7 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
     // Predict for sequence to sequence.
 	net->eval();
     std::vector<std::string> etks = tokenize({src_sentence}, "word", false);
+    printVector(etks);
 
 	std::vector<int64_t> vec;
 	std::vector<int64_t> a = src_vocab[etks];
@@ -118,10 +119,16 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 	torch::Tensor prd;
 	torch::Tensor dec_state = net->decoder->init_state(enc_outputs);
 	std::tie(prd, dec_state) = net->decoder->forward(src_ar, dec_state );
+
+	// -----------------------------------------------------------
+	// make sure tensor in CPU
+	// -----------------------------------------------------------
+	prd = prd.to(torch::kCPU);
 	prd = prd.argmax(2);
 
 	auto r_ptr = prd.data_ptr<int64_t>();
 	std::vector<int64_t> idx{r_ptr, r_ptr + prd.numel()};
+
 //	std::for_each(std::begin(idx), std::end(idx), [](const auto & element) { std::cout << element << " "; });
 //	std::cout << std::endl;
 
@@ -294,7 +301,7 @@ int main() {
     matplot::ylabel(ax1, "loss");
     matplot::show();
 
-	printf("\n\n");
+	printf("\n\nPrediction:\n");
 	// Prediction
 	std::vector<std::string> engs = {"go .", "i lost .", "he\'s calm .", "i\'m home ."};
 	std::vector<std::string> fras = {"va !", "j\'ai perdu .", "il est calme .", "je suis chez moi ."};

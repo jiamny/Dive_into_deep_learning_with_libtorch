@@ -66,11 +66,8 @@ struct EncoderBlockImpl : public torch::nn::Module {
 
         attention = MultiHeadAttention(
             key_size, query_size, value_size, num_hiddens, num_heads, dropout, use_bias);
-
         addnorm1 = AddNorm(norm_shape, dropout);
-
         ffn = PositionWiseFFN(ffn_num_input, ffn_num_hiddens, num_hiddens);
-
         addnorm2 = AddNorm(norm_shape, dropout);
 
         register_module("attention", attention);
@@ -154,11 +151,11 @@ struct DecoderBlockImpl : public torch::nn::Module {
 
         i = ith_block;
         attention1 = MultiHeadAttention( key_size, query_size, value_size, num_hiddens, num_heads, dropout);
-        addnorm1 = AddNorm(norm_shape, dropout);
+        addnorm1   = AddNorm(norm_shape, dropout);
         attention2 = MultiHeadAttention( key_size, query_size, value_size, num_hiddens, num_heads, dropout);
-        addnorm2 = AddNorm(norm_shape, dropout);
+        addnorm2   = AddNorm(norm_shape, dropout);
         ffn = PositionWiseFFN(ffn_num_input, ffn_num_hiddens, num_hiddens);
-        addnorm3 = AddNorm(norm_shape, dropout);
+        addnorm3   = AddNorm(norm_shape, dropout);
 
         register_module("attention1", attention1);
         register_module("attention2", attention2);
@@ -194,7 +191,6 @@ struct DecoderBlockImpl : public torch::nn::Module {
         }
         // else
         // dec_valid_lens = None
-
         // Self-attention
         auto X2 = attention1->forward(X, key_values, key_values, dec_valid_lens);
         auto Y =  addnorm1->forward(X, X2);
@@ -340,8 +336,9 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 		vec.push_back(i);
 
 	torch::Tensor src_ar = (torch::from_blob(vec.data(), {1, num_steps}, options)).clone();
-	src_ar = src_ar.to(torch::kLong);
+	src_ar = src_ar.to(torch::kLong).to(device);
 	torch::Tensor src_val_len = (src_ar != src_vocab["<pad>"]).to(torch::kLong).sum(1);
+	src_val_len = src_val_len.to(device);
 
 	torch::Tensor empty;
 	torch::Tensor enc_outputs = net->encoder->forward(src_ar, empty);
@@ -349,6 +346,10 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 	torch::Tensor prd;
 	std::tuple<torch::Tensor, torch::Tensor, std::vector<torch::Tensor>> dec_state = net->decoder->init_state(enc_outputs, empty);
 	std::tie(prd, dec_state) = net->decoder->forward(src_ar, dec_state);
+	// -----------------------------------------------------------
+	// make sure tensor in CPU
+	// -----------------------------------------------------------
+	prd = prd.to(torch::kCPU);
 	prd = prd.argmax(2);
 
 	auto r_ptr = prd.data_ptr<int64_t>();
@@ -388,10 +389,9 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	torch::Device device(torch::kCPU);
-//	auto cuda_available = torch::cuda::is_available();
-//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Using GPU." : "Using CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -403,15 +403,17 @@ int main() {
 	ffn->to(device);
 	ffn->eval();
 
-	std::cout << ffn->forward(torch::ones({2, 3, 4}))[0] << "\n";
+	std::cout << ffn->forward(torch::ones({2, 3, 4}).to(device))[0] << "\n";
 
 	// ----------------------------------------------------------
 	// Residual Connection and Layer Normalization
 	// ----------------------------------------------------------
 	std::cout << "Residual Connection and Layer Normalization\n";
 	auto ln = torch::nn::LayerNorm(torch::nn::LayerNormOptions({2,2}));
+	ln->to(device);
 	auto bn = torch::nn::BatchNorm1d(2);
-	auto X = torch::tensor({{1, 2}, {2, 3}}, torch::kFloat);
+	bn->to(device);
+	auto X = torch::tensor({{1, 2}, {2, 3}}, torch::kFloat).to(device);
 
 	// Compute mean and variance from `X` in the training mode
 	std::cout << "layer norm:" << X.sizes() << "\nbatch norm:" << bn->forward(X) << "\n";
@@ -423,11 +425,12 @@ int main() {
 	auto add_norm = AddNorm(normalized_shape, 0.5); // Normalized_shape is input.size()[1:]
 	add_norm->to(device);
 	add_norm->eval();
-	std::cout << "add_norm: " << add_norm->forward(torch::ones({2, 3, 4}), torch::ones({2, 3, 4})).sizes() << std::endl;
+	std::cout << "add_norm: " << add_norm->forward(torch::ones({2, 3, 4}).to(device),
+								 torch::ones({2, 3, 4}).to(device)).sizes() << std::endl;
 
 	// As we can see, any layer in the transformer encoder does not change the shape of its input.
-	X = torch::ones({2, 100, 24});
-	auto valid_lens = torch::tensor({3, 2});
+	X = torch::ones({2, 100, 24}).to(device);
+	auto valid_lens = torch::tensor({3, 2}).to(device);
 
 	std::vector<int64_t> norm_shape({100, 24});
 	auto encoder_blk = EncoderBlock(24, 24, 24, 24, norm_shape, 24, 48, 8, 0.5);
@@ -440,17 +443,20 @@ int main() {
 	auto encoder = TransformerEncoder(200, 24, 24, 24, 24, norm_shape, 24, 48, 8, 2, 0.5);
 	encoder->to(device);
 	encoder->eval();
-	std::cout << "encoder: " << encoder->forward(torch::ones({2, 100}).to(torch::kLong), valid_lens).sizes() << std::endl;
+	auto t = encoder->forward(torch::ones({2, 100}).to(torch::kLong).to(device), valid_lens);
+	std::cout << "L_encoder: " << t.sizes() << std::endl;
 
 	// the feature dimension (num_hiddens) of the decoder is the same as that of the encoder
 	auto decoder_blk = DecoderBlock(24, 24, 24, 24, norm_shape, 24, 48, 8, 0.5, 0);
+	decoder_blk->to(device);
 	decoder_blk->eval();
-	X = torch::ones({2, 100, 24});
+	X = torch::ones({2, 100, 24}).to(device);
 	std::vector<torch::Tensor> tmp;
 	torch::Tensor expt;
 	tmp.push_back(expt);
+
 	auto state = std::make_tuple(encoder_blk->forward(X, valid_lens), valid_lens, tmp);
-	std::cout << std::get<0>(decoder_blk->forward(X, state)).sizes() << std::endl;
+	std::cout << "===> " << std::get<0>(decoder_blk->forward(X, state)).sizes() << std::endl;
 
 	// ----------------------------------------
 	// Training
@@ -476,16 +482,17 @@ int main() {
 	    src_vocab.length(), key_size, query_size, value_size, num_hiddens,
 	    tnorm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
 	    num_layers, dropout);
+	tencoder->to(device);
 
 	auto tdecoder = TransformerDecoder(
 	    tgt_vocab.length(), key_size, query_size, value_size, num_hiddens,
 	    tnorm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
 	    num_layers, dropout);
+	tdecoder->to(device);
 
 	// define model
 	auto net = EncoderDecoder(tencoder, tdecoder);
 	net->to(device);
-
 	net->apply(xavier_init_weights);
 
 	//auto optimizer = torch::optim::Adam(net->parameters(), lr);
@@ -498,6 +505,10 @@ int main() {
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat;
 	std::tuple<torch::Tensor, torch::Tensor, std::vector<torch::Tensor>> stat;
+	src_array = src_array.to(device);
+	src_valid_len = src_valid_len.to(device);
+	tgt_array = tgt_array.to(device);
+	tgt_valid_len = tgt_valid_len.to(device);
 
 	for( int64_t epoch = 0;  epoch < num_epochs; epoch++ ) {
 		// get shuffled batch data indices
@@ -508,17 +519,13 @@ int main() {
 		int64_t n_wtks = 0;
 
 		for(auto& batch_idx : idx_iter) {
-
+			batch_idx = batch_idx.to(device);
 	        optimizer.zero_grad();
 
 	        auto X = src_array.index_select(0, batch_idx);
 	        auto X_valid_len = src_valid_len.index_select(0, batch_idx);
 	        auto Y = tgt_array.index_select(0, batch_idx);
 	        auto Y_valid_len = tgt_valid_len.index_select(0, batch_idx);
-	        X.to(device);
-	        X_valid_len.to(device);
-	        Y.to(device);
-	        Y_valid_len.to(device);
 
 	        std::vector<int64_t> tmp;
 	        for(int i = 0; i < Y.size(0); i++)
@@ -533,7 +540,7 @@ int main() {
 	        std::pair<torch::Tensor, std::tuple<torch::Tensor, torch::Tensor, std::vector<torch::Tensor>>> out = net->forward(X, dec_input); // X_valid_len
 
 	        Y_hat = out.first;
-			stat = out.second;
+			stat  = out.second;
 
 	        auto l = loss_fn.forward(Y_hat, Y, Y_valid_len);
 	        l.sum().backward(); 	// Make the loss scalar for `backward`
@@ -572,6 +579,7 @@ int main() {
     matplot::show();
 
 	printf("\n\n");
+
 	// Prediction
 	std::vector<std::string> engs = {"go .", "i lost .", "he\'s calm .", "i\'m home ."};
 	std::vector<std::string> fras = {"va !", "j\'ai perdu .", "il est calme .", "je suis chez moi ."};
@@ -596,7 +604,7 @@ int main() {
 	std::cout << "enc_attention_weights.sizes(): " << enc_attention_weights.sizes() << "\n";
 
 	auto h = figure(true);
-	h->size(1500, 900);
+	h->size(2000, 840);
 	h->add_axes(false);
 	h->reactive_mode(false);
 	h->tiledlayout(num_layers, num_heads);
@@ -630,30 +638,6 @@ int main() {
 				matplot::xlabel(ax, "Key positions");
 
 			matplot::title(ax, ("Head " + std::to_string(c)).c_str());
-/*
-			tsr = tsr.squeeze();
-
-			std::vector<float> z = tensor2vector( tsr );
-			const float* zptr = &(z[0]);
-			const int colors = 1;
-			int cnt = (i*layerH.size(0) + c) + 1;
-//			plt::subplot(enc_attention_weights.size(0), layerH.size(0), cnt);
-
-			cid = ((cnt - 1) % layerH.size(0));
-			rid = static_cast<int>((cnt - 1) / layerH.size(0));
-			std::cout << "cnt: " << cnt << " " << enc_attention_weights.size(0) << " " << layerH.size(0)
-					  << " " << rid << " " << cid << "\n";
-			plt::subplot2grid(enc_attention_weights.size(0), layerH.size(0), rid, cid, 1, 1);
-
-			plt::title(("Head " + std::to_string(c)).c_str());
-			plt::imshow(zptr, tsr.size(0), tsr.size(1), colors, {}, &mat);
-			if( c == 0 )
-				plt::ylabel("Query positions");
-			if( i == 1 )
-				plt::xlabel("Key positions");
-
-			plt::colorbar(mat);
-			*/
 		}
 	}
 	matplot::colorbar();

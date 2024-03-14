@@ -385,7 +385,6 @@ torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens) {
         return torch::nn::functional::softmax(X, /*dim=*/-1);
     } else {
         auto shape = X.sizes();
-	std::cout << "shape: " << shape << '\n' << valid_lens.sizes() << '\n';
         if( valid_lens.dim() == 1) {
             valid_lens = torch::repeat_interleave(valid_lens, shape[shape.size() - 2]);
         } else {

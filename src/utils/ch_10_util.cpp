@@ -1,4 +1,5 @@
 #include "ch_10_util.h"
+#include <assert.h>
 
 void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab, std::string tlt) {
 	tsr = tsr.cpu().squeeze().to(torch::kDouble);
@@ -32,6 +33,11 @@ void plot_heatmap(torch::Tensor tsr, std::string xlab, std::string ylab, std::st
     	matplot::title(ax, "heatmap");
     }
     matplot::show();
+}
+
+bool check_shape(torch::Tensor a, torch::IntArrayRef shape) {
+	bool same = ( a.to(torch::kCPU).sizes() == shape );
+	return same;
 }
 
 

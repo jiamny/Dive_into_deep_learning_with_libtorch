@@ -19,7 +19,7 @@
 
 template<typename T>
 std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vocab tgt_vocab, int64_t num_steps,
-					torch::Device device, bool save_attention_weights=false) {
+							torch::Device device, bool save_attention_weights=false) {
 
 	auto options = torch::TensorOptions().dtype(torch::kLong);
     // Predict for sequence to sequence.
@@ -34,9 +34,9 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 		vec.push_back(i);
 
 	torch::Tensor src_ar = (torch::from_blob(vec.data(), {1, num_steps}, options)).clone();
-	src_ar = src_ar.to(torch::kLong);
+	src_ar = src_ar.to(torch::kLong).to(device);
 	torch::Tensor src_val_len = (src_ar != src_vocab["<pad>"]).to(torch::kLong).sum(1);
-
+	src_val_len = src_val_len.to(device);
 
 	torch::Tensor empty;
 	std::tuple<torch::Tensor, torch::Tensor> enc_outputs = net->encoder->forward(src_ar);
@@ -44,10 +44,15 @@ std::string predict_seq2seq(T net, std::string src_sentence, Vocab src_vocab, Vo
 	torch::Tensor prd;
 	std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> dec_state = net->decoder->init_state(enc_outputs, empty);
 	std::tie(prd, dec_state) = net->decoder->forward(src_ar, dec_state);
+	// -----------------------------------------------------------
+	// make sure tensor in CPU
+	// -----------------------------------------------------------
+	prd = prd.to(torch::kCPU);
 	prd = prd.argmax(2);
 
 	auto r_ptr = prd.data_ptr<int64_t>();
 	std::vector<int64_t> idx{r_ptr, r_ptr + prd.numel()};
+
 //	std::for_each(std::begin(idx), std::end(idx), [](const auto & element) { std::cout << element << " "; });
 //	std::cout << std::endl;
 
@@ -234,7 +239,9 @@ int main() {
 
 	// define model
 	auto enc = Seq2SeqEncoder( src_vocab.length(), embed_size, num_hiddens, num_layers, dropout );
+	enc->to(device);
 	auto dec = Seq2SeqAttentionDecoder( tgt_vocab.length(), embed_size, num_hiddens, num_layers, dropout );
+	dec->to(device);
 
 	auto net = EncoderDecoder(enc, dec);
 	net->to(device);
@@ -251,6 +258,10 @@ int main() {
 	std::vector<int64_t> wtks;
 	torch::Tensor Y_hat;
 	std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> stat;
+	src_array = src_array.to(device);
+	src_valid_len = src_valid_len.to(device);
+	tgt_array = tgt_array.to(device);
+	tgt_valid_len = tgt_valid_len.to(device);
 
 	for( int64_t epoch = 0;  epoch < num_epochs; epoch++ ) {
 		// get shuffled batch data indices
@@ -261,17 +272,13 @@ int main() {
 		int64_t n_wtks = 0;
 
 		for(auto& batch_idx : idx_iter) {
-
+			batch_idx = batch_idx.to(device);
 	        optimizer.zero_grad();
 
 	        auto X = src_array.index_select(0, batch_idx);
 	        auto X_valid_len = src_valid_len.index_select(0, batch_idx);
 	        auto Y = tgt_array.index_select(0, batch_idx);
 	        auto Y_valid_len = tgt_valid_len.index_select(0, batch_idx);
-	        X.to(device);
-	        X_valid_len.to(device);
-	        Y.to(device);
-	        Y_valid_len.to(device);
 
 	        std::vector<int64_t> tmp;
 	        for(int i = 0; i < Y.size(0); i++)
@@ -324,7 +331,7 @@ int main() {
     matplot::ylabel(ax1, "loss");
     matplot::show();
 
-	printf("\n\n");
+	printf("\n\nPrediction:\n");
 	// Prediction
 	std::vector<std::string> engs = {"go .", "i lost .", "he\'s calm .", "i\'m home ."};
 	std::vector<std::string> fras = {"va !", "j\'ai perdu .", "il est calme .", "je suis chez moi ."};

@@ -103,6 +103,7 @@ TORCH_MODULE(AdditiveAttention);
 // -------------------------------------
 torch::Tensor transpose_qkv(torch::Tensor X, int64_t num_heads);
 torch::Tensor transpose_output(torch::Tensor X, int64_t num_heads);
+bool check_shape(torch::Tensor a, torch::IntArrayRef shape);
 
 // -------------------------------------
 // Model Implementation

@@ -16,6 +16,11 @@ int main() {
 
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
+	// Device
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Using GPU." : "Using CPU.") << '\n';
+
 	torch::manual_seed(1000);
 
 	// Test MultiHeadAttention
@@ -46,15 +51,16 @@ int main() {
 
 	auto attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
 	                               num_hiddens, num_heads, 0.5);
+	attention->to(device);
 	attention->eval();
 
 	std::cout << attention << std::endl;
 
 	int64_t batch_size = 2, num_queries = 4, num_kvpairs = 6;
-	auto valid_lens = torch::tensor({3, 2});
+	auto valid_lens = torch::tensor({3, 2}).to(device);
 
-	auto X = torch::ones({batch_size, num_queries, num_hiddens});
-	auto Y = torch::ones({batch_size, num_kvpairs, num_hiddens});
+	auto X = torch::ones({batch_size, num_queries, num_hiddens}).to(device);
+	auto Y = torch::ones({batch_size, num_kvpairs, num_hiddens}).to(device);
 	std::cout << attention->forward(X, Y, Y, valid_lens).sizes() << std::endl;
 
 	std::cout << "Done!\n";

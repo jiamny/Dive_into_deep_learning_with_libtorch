@@ -60,6 +60,7 @@ struct InceptionImpl : public torch::nn::Module {
 				torch::nn::ReLU());
         //p4_2 = torch::nn::Sequential(torch::nn::Conv2d(Options(in_channels, c4, 1)),
         //		torch::nn::ReLU());
+
         register_module("p1", p1);
         register_module("p2", p2);
         register_module("p3", p3);
@@ -80,7 +81,8 @@ TORCH_MODULE(Inception);
 
 //  GoogLeNet uses a stack of a total of 9 inception blocks and global average pooling to generate its estimates.
 struct  GoogLeNetImpl : public torch::nn::Module {
-	torch::nn::Sequential b1{nullptr}, b2{nullptr}, b3{nullptr}, b4{nullptr}, b5{nullptr};
+
+	torch::nn::Sequential b1{nullptr}, b2{nullptr}, b3{nullptr}, b4{nullptr}, b5{nullptr}, features;
 
 	torch::nn::Linear linear{nullptr};
 
@@ -140,9 +142,9 @@ struct  GoogLeNetImpl : public torch::nn::Module {
 
 		b5 = torch::nn::Sequential(
 								Inception(832, 256, std::vector<int64_t>({160, 320}), std::vector<int64_t>({32, 128}), 128),
-				                Inception(832, 384, std::vector<int64_t>({192, 384}), std::vector<int64_t>({48, 128}), 128)
-								//torch::nn::AdaptiveAvgPool2d(torch::nn::AdaptiveAvgPool2dOptions({1, 1})),
-								//torch::nn::Flatten()
+				                Inception(832, 384, std::vector<int64_t>({192, 384}), std::vector<int64_t>({48, 128}), 128),
+								torch::nn::AdaptiveAvgPool2d(torch::nn::AdaptiveAvgPool2dOptions({1, 1})),
+								torch::nn::Flatten()
 								);
 
 		linear = torch::nn::Linear(1024, num_classes);
@@ -157,7 +159,7 @@ struct  GoogLeNetImpl : public torch::nn::Module {
 		// init_weights
 		for (auto& module : modules(/*include_self=*/false)) {
 		    if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
-		      torch::nn::init::normal_(M->weight); // Note: used instead of truncated normal initialization
+		      torch::nn::init::xavier_uniform_(M->weight); // Note: used instead of truncated normal initialization
 		      torch::nn::init::zeros_(M->bias);
 		      //M->weight.to(device);
 		      //M->bias.to(device);
@@ -176,15 +178,11 @@ struct  GoogLeNetImpl : public torch::nn::Module {
 	}
 
 	torch::Tensor forward(torch::Tensor x) {
-
 		x = b1->forward(x);
 		x = b2->forward(x);
 		x = b3->forward(x);
 		x = b4->forward(x);
 		x = b5->forward(x);
-		x = torch::adaptive_avg_pool2d(x, {1, 1});
-		x = x.view({x.size(0), -1});
-		torch::dropout(x, 0.2, is_training());
 		x = linear->forward(x);
 		return x;
 	}
@@ -252,6 +250,7 @@ int main() {
 	X = tnet->b5->forward(X);
 	std::cout << "name: " << tnet->b5->name() << "output shape: \t" << X.sizes() << std::endl;
 
+
 	size_t img_size = 224;
 	size_t batch_size = 32;
 	const std::string path = "./data/17_flowers_name.txt";
@@ -313,7 +312,7 @@ int main() {
 	size_t start_epoch, total_epoch;
 	start_epoch = 1;
 	total_iter = dataloader.get_count_max();
-	total_epoch = 40;
+	total_epoch = 20;
 	bool first = true;
 	std::vector<double> train_loss_ave;
 	std::vector<double> train_epochs;

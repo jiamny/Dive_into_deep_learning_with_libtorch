@@ -25,30 +25,32 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-//	auto cuda_available = torch::cuda::is_available();
-//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Using GPU." : "Using CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
 	int64_t num_hiddens = 100, num_heads = 5;
 	auto attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens,
 	                                   num_hiddens, num_heads, 0.5);
+	attention->to(device);
 	attention->eval();
 	std::cout << attention << "\n";
 
 	int64_t batch_size = 2, num_queries = 4;
-	auto valid_lens =  torch::tensor({3, 2});
+	auto valid_lens =  torch::tensor({3, 2}).to(device);
 
-	auto X = torch::ones({batch_size, num_queries, num_hiddens});
+	auto X = torch::ones({batch_size, num_queries, num_hiddens}).to(device);
 	std::cout << attention->forward(X, X, X, valid_lens).sizes() << std::endl;
 
 	int64_t encoding_dim = 32, num_steps = 60;
 
 	auto pos_encoding = PositionalEncoding(encoding_dim, 0);
+	pos_encoding->to(device);
 	pos_encoding->eval();
 
-	X = pos_encoding->forward(torch::zeros({1, num_steps, encoding_dim}));
+	X = pos_encoding->forward(torch::zeros({1, num_steps, encoding_dim}).to(device));
 
 	auto P = pos_encoding->P.index({Slice(), Slice(0, X.size(1)), Slice()});
 	std::cout << "P: " << P.sizes() << "\n";
@@ -56,7 +58,7 @@ int main() {
 	auto xL = torch::arange(num_steps).to(torch::kDouble); //torch::arange(num_steps).to(torch::kFloat);
 	std::vector<double> xx(xL.data_ptr<double>(), xL.data_ptr<double>() + xL.numel());
 
-	auto yP = P.index({0, Slice(), Slice(6,10)}).clone().to(torch::kDouble);
+	auto yP = P.index({0, Slice(), Slice(6,10)}).clone().to(torch::kDouble).to(torch::kCPU);
 	std::cout << "yP: " << yP.sizes() << "\n";
 
 	auto yL = yP.index({Slice(), 0}).clone();
@@ -86,7 +88,7 @@ int main() {
 	matplot::plot(ax1,  xx, col6, "b")->line_width(2);
 	matplot::plot(ax1, xx, col7, "g--")->line_width(2);
 	matplot::plot(ax1, xx, col8, "r-.")->line_width(2);
-	matplot::plot(ax1, xx, col9, "c:")->line_width(2);
+	matplot::plot(ax1, xx, col9, "m:")->line_width(2);
     matplot::hold(ax1, false);
     matplot::xlabel(ax1, "Row (position)");
     matplot::legend(ax1, {"Col 6", "Col 7", "Col 8", "Col 9"});
