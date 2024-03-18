@@ -4,6 +4,12 @@ list(APPEND requiredlibs "dl")
 list(APPEND requiredlibs "m")
 list(APPEND requiredlibs "jsoncpp") # link to libjsoncpp.so/libjsoncpp.a
 
+find_package(OpenMP)
+
+if(OpenMP_CXX_FOUND)
+    list(APPEND requiredlibs "OpenMP::OpenMP_CXX")
+endif()
+
 #----------------------------------------------------------------------------------
 add_executable(10_Attention_QKV)
 target_sources(10_Attention_QKV PRIVATE 
@@ -78,7 +84,7 @@ BahdanauAttention.cpp
 ../utils/ch_8_9_util.h
 ../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
-../utils/ch_10_util.cpp								
+../utils/ch_10_util.cpp							
 )
 
 target_link_libraries(10_BahdanauAttention ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
@@ -106,7 +112,7 @@ Transformer.cpp
 ../utils/ch_8_9_util.h
 ../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
-../utils/ch_10_util.cpp						
+../utils/ch_10_util.cpp					
 )
 													
 target_link_libraries(10_Transformer ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)
@@ -121,7 +127,13 @@ VisionTransformers.cpp
 ../utils/ch_8_9_util.h
 ../utils/ch_8_9_util.cpp
 ../utils/ch_10_util.h
-../utils/ch_10_util.cpp						
+../utils/ch_10_util.cpp	
+../utils/dataloader.hpp
+../utils/dataloader.cpp
+../utils/datasets.hpp
+../utils/datasets.cpp
+../utils/transforms.hpp
+../utils/transforms.cpp						
 )
 													
 target_link_libraries(10_VisionTransformers ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs} matplot)

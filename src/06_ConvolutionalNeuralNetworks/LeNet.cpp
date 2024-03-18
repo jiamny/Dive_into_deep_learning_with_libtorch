@@ -196,7 +196,7 @@ int main() {
     legend({});
 
    	auto ax2 = subplot(1, 2, 1);
-   	plot(xx, train_acc, "g--")->line_width(2).display_name("train acc");
+   	plot(xx, train_acc, "m--")->line_width(2).display_name("train acc");
    	hold(on);
    	plot(xx, test_acc, "r-.")->line_width(2).display_name("test acc");
    	hold(on);

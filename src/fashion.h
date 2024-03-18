@@ -13,12 +13,15 @@
 #include <torch/types.h>
 #include <torch/script.h>
 #include <torch/torch.h>
+#include <opencv2/opencv.hpp>
 
 //#include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include <cstddef>
 #include <string>
-
+using torch::indexing::Slice;
+using torch::indexing::None;
+using torch::indexing::Ellipsis;
 
 /// The FASHION dataset.
 
