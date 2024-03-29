@@ -15,6 +15,9 @@
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
 
+#include <matplot/matplot.h>
+using namespace matplot;
+
 using namespace std::chrono;
 
 std::tuple<double, double> gd_2d(double x1, double x2, double eta) {

@@ -145,20 +145,19 @@ int main() {
 	}
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1200, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
 	F->tiledlayout(1, 1);
 	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::legend();
-	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
-		.display_name("Train loss");
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "loss");
-    matplot::title(ax1, "Adam scratch");
-    matplot::show();
+	subplot(1, 2, 0);
+	matplot::plot(epochs, losses, "b")->line_width(2).display_name("Train loss");
+    matplot::xlabel("epoch");
+    matplot::ylabel("loss");
+    matplot::title("Adam scratch");
+    matplot::legend({});
+
 	// ------------------------------------
 	// A more concise implementation
 	// ------------------------------------
@@ -209,20 +208,14 @@ int main() {
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
+	subplot(1, 2, 1);
 
-	ax1 = F->nexttile();
-	matplot::legend();
-	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
-			.display_name("Train loss");
-	matplot::xlabel(ax1, "epoch");
-	matplot::ylabel(ax1, "loss");
-    matplot::title(ax1, "Adam concise");
+	matplot::plot(epochs, losses, "m")->line_width(2).display_name("Train loss");
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+    matplot::title("Adam concise");
+    matplot::legend({});
+    F->draw();
 	matplot::show();
 
 	std::cout << "Done!\n";

@@ -72,7 +72,7 @@ class Timer{
         	times.clear();
         }
 
-        ~Timer           ()         = default;
+        ~Timer() = default;
 
         template <typename Rep = typename Clock::duration::rep, typename Units = typename Clock::duration>
         Rep stop() {
@@ -148,5 +148,7 @@ std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFi
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle = true);
 
 torch::Tensor RangeToensorIndex(int64_t num);
+
+bool isNumberRegex(const std::string& str);
 
 #endif /* UTILS_H_ */

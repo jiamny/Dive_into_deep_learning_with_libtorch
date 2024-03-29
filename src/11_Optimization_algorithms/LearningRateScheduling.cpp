@@ -103,7 +103,8 @@ struct  CosineScheduler {
 
 
 template<typename Scheduler>
-void train(float lr, int64_t num_epochs, torch::Device device, bool lr_sh, Scheduler& SL) {
+std::tuple<std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> train(
+		float lr, int64_t num_epochs, torch::Device device, bool lr_sh, Scheduler& SL) {
 
 	auto net = net_fn();
 
@@ -140,10 +141,10 @@ void train(float lr, int64_t num_epochs, torch::Device device, bool lr_sh, Sched
 	torch::optim::SGD optimizer = torch::optim::SGD(net->parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss();
 
-	std::vector<float> train_loss;
-	std::vector<float> train_acc;
-	std::vector<float> test_acc;
-	std::vector<float> xx;
+	std::vector<double> train_loss;
+	std::vector<double> train_acc;
+	std::vector<double> test_acc;
+	std::vector<double> xx;
 
 	for( int64_t epoch = 0; epoch < num_epochs; epoch++ ) {
 
@@ -222,50 +223,50 @@ void train(float lr, int64_t num_epochs, torch::Device device, bool lr_sh, Sched
 		}
 	}
 
+	return std::make_tuple(train_loss, train_acc, test_acc, xx);
+}
+
+void plot_scheduler(std::tuple<std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> dt,
+		int64_t num_epochs, std::vector<double> x, std::vector<double> y) {
+
+	std::vector<double> train_loss = std::get<0>(dt);
+	std::vector<double> train_acc = std::get<1>(dt);
+	std::vector<double> test_acc = std::get<2>(dt);
+	std::vector<double> xx = std::get<3>(dt);
+
 	double xL = 1.0;
 	if( num_epochs > 10 ) xL = 5.0;
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1400, 400);
 	F->add_axes(false);
 	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
 	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::legend();
+	subplot(1, 3, 0);
+	matplot::plot(x, y, "b")->line_width(2).display_name("scheduler");
+	matplot::xlabel("epoch");
+	matplot::ylabel("lr");
+	matplot::legend({});
+
+	subplot(1, 3, 1);
 	matplot::ylim({0.0, 1.5});
 	matplot::xlim({xL, num_epochs*1.0});
-	matplot::hold(ax1, true);
-	matplot::plot(ax1, xx, train_loss, "b")->line_width(2)
-		.display_name("Train loss");
-	matplot::plot(ax1, xx, train_acc, "g--")->line_width(2)
-			.display_name("Train acc");
-	matplot::plot(ax1, xx, test_acc, "r-.")->line_width(2)
-			.display_name("Test acc");
-	matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "loss and acc");
-    matplot::show();
+	matplot::plot(xx, train_loss, "b")->line_width(2).display_name("Train loss");
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+	matplot::legend({});
 
-}
-
-void plot_scheduler(std::vector<double> x, std::vector<double> y) {
-
-	auto F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
-
-	auto ax1 = F->nexttile();
-	matplot::legend();
-	matplot::plot(ax1, x, y, "b")->line_width(2)
-		.display_name("scheduler");
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "lr");
-    matplot::show();
+	subplot(1, 3, 2);
+	matplot::plot(xx, train_acc, "g--")->line_width(2).display_name("Train acc");
+	matplot::hold(on);
+	matplot::plot(xx, test_acc, "r-.")->line_width(2).display_name("Test acc");
+	matplot::hold(off);
+    matplot::xlabel("epoch");
+    matplot::ylabel("acc");
+    matplot::legend({});
+	F->draw();
+    show();
 }
 
 
@@ -284,7 +285,8 @@ int main() {
 	float lr = 0.9;
 
 	SquareRootScheduler nl;
-	train(lr, num_epochs, device, false, nl);
+	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>, std::vector<double>> dt =
+			train(lr, num_epochs, device, false, nl);
 
 	// -------------------------------------
 	// SquareRootScheduler
@@ -296,8 +298,8 @@ int main() {
 		y.push_back(SL.get_lr(i)*1.0);
 	}
 
-	plot_scheduler(x, y);
-	train(lr, num_epochs, device, true, SL);
+	dt = train(lr, num_epochs, device, true, SL);
+	plot_scheduler(dt, num_epochs, x, y);
 
 	// -------------------------------------
 	// Factor Scheduler
@@ -310,9 +312,10 @@ int main() {
 		y.push_back(FL.get_lr(i));
 	}
 
-	plot_scheduler(x, y);
 	FL = FactorScheduler(0.9, 1e-2, 2.0);
-	train(lr, num_epochs, device, true, FL);
+	dt = train(lr, num_epochs, device, true, FL);
+
+	plot_scheduler(dt, num_epochs, x, y);
 
 	// -------------------------------------
 	// Cosine Scheduler
@@ -326,9 +329,10 @@ int main() {
 		y.push_back(CL.get_lr(i));
 	}
 
-	plot_scheduler(x, y);
 	CL = CosineScheduler(14, 0.9, 0.01, 5);
-	train(lr, num_epochs, device, true, CL);
+	dt = train(lr, num_epochs, device, true, CL);
+
+	plot_scheduler(dt, num_epochs, x, y);
 
 	std::cout << "Done!\n";
 	return 0;

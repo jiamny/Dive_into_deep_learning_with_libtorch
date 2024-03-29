@@ -16,7 +16,11 @@
 #include "../utils.h"
 #include "../utils/ch_11_util.h"
 
+#include <matplot/matplot.h>
+using namespace matplot;
+
 using namespace std::chrono;
+
 
 std::tuple<double, double, double, double> adagrad_2d(double x1, double x2, double s1, double s2, const double eta) {
 	double eps = 1e-6;
@@ -183,20 +187,20 @@ int main() {
 	}
 
 	auto F = figure(true);
-	F->size(800, 600);
+	F->size(1200, 500);
 	F->add_axes(false);
 	F->reactive_mode(false);
 	F->tiledlayout(1, 1);
 	F->position(0, 0);
 
-	auto ax1 = F->nexttile();
-	matplot::legend();
-	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
+	subplot(1,2, 0);
+	matplot::plot( epochs, losses, "b")->line_width(2)
 		.display_name("Train loss");
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "loss");
-    matplot::title(ax1, "Adagrad scratch");
-    matplot::show();
+    matplot::xlabel("epoch");
+    matplot::ylabel("loss");
+    matplot::title("Adagrad scratch");
+    matplot::legend({});
+
 
 	// ------------------------------------------
 	// Concise Implementation
@@ -251,18 +255,14 @@ int main() {
 		losses.push_back((t_loss/b_cnt));
 	}
 
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
-
-	ax1 = F->nexttile();
-	matplot::plot(ax1, epochs, losses, "b")->line_width(2);
-	matplot::xlabel(ax1, "epoch");
-	matplot::ylabel(ax1, "loss");
-	matplot::title(ax1, "Adagrad concise");
+	subplot(1,2, 1);
+	matplot::plot(epochs, losses, "m")->line_width(2)
+		.display_name("Train loss");
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+	matplot::title("Adagrad concise");
+	matplot::legend({});
+	F->draw();
 	matplot::show();
 
 	std::cout << "Done!\n";

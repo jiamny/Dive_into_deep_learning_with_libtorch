@@ -147,12 +147,14 @@ int main() {
 	F->position(0, 0);
 
 	auto ax1 = F->nexttile();
-	matplot::legend();
+
 	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
 		.display_name("Train loss");
     matplot::xlabel(ax1, "epoch");
     matplot::ylabel(ax1, "loss");
     matplot::title("Adadelta scratch");
+    matplot::legend({});
+    F->draw();
     matplot::show();
 
 	std::cout << "Done!\n";

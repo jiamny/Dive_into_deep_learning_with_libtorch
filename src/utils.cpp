@@ -190,4 +190,9 @@ torch::Tensor RangeToensorIndex(int64_t num) {
 	return RngIdx;
 }
 
+bool isNumberRegex(const std::string& str) {
+	std::regex numberRegex("^[-+]?([0-9]*\\.[0-9]+[0-9]+)$");
+	return std::regex_match(str, numberRegex);
+}
+
 

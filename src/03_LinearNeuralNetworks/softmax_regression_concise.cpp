@@ -109,6 +109,7 @@ int main() {
 			auto y = batch.target.to(device);
 
 			auto y_hat = net->forward(x);
+
 			auto loss = criterion(y_hat, y); //torch::cross_entropy_loss(y_hat, y);
 			std::cout << "loss: " << loss.item<double>() << std::endl;
 

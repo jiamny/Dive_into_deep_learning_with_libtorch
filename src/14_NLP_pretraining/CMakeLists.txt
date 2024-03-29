@@ -45,10 +45,10 @@ set_target_properties(14_PretrainingBERT PROPERTIES CXX_STANDARD 17  CXX_STANDAR
 
 
 # ---------------------------------------------------------------
-add_executable(14_BERT)
+add_executable(14_WordSimilarityAndAnalogy)
 
-target_sources(14_BERT PRIVATE
-BERT.cpp
+target_sources(14_WordSimilarityAndAnalogy PRIVATE
+WordSimilarityAndAnalogy.cpp
 ../utils/ch_8_9_util.h
 ../utils/ch_8_9_util.cpp
 ../utils.h 
@@ -57,6 +57,23 @@ BERT.cpp
 ../utils/ch_14_util.cpp
 )
 
-target_link_libraries(14_BERT ${TORCH_LIBRARIES} ${requiredlibs} )
-set_target_properties(14_BERT PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+target_link_libraries(14_WordSimilarityAndAnalogy ${TORCH_LIBRARIES} ${requiredlibs} )
+set_target_properties(14_WordSimilarityAndAnalogy PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+
+# ---------------------------------------------------------------
+add_executable(14_SubwordEmbedding)
+
+target_sources(14_SubwordEmbedding PRIVATE
+SubwordEmbedding.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_14_util.h
+../utils/ch_14_util.cpp
+)
+
+target_link_libraries(14_SubwordEmbedding ${TORCH_LIBRARIES} ${requiredlibs} )
+set_target_properties(14_SubwordEmbedding PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+
 

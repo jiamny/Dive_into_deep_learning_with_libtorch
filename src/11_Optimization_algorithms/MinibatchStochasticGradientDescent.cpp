@@ -59,7 +59,7 @@ std::pair<std::vector<float>, std::vector<float>> train_sgd(float lr, int64_t nu
 		epochs.push_back(epoch*1.0);
 		losses.push_back((t_loss/b_cnt));
 	}
-
+/*
 	auto F = figure(true);
 	F->size(800, 600);
 	F->add_axes(false);
@@ -74,7 +74,7 @@ std::pair<std::vector<float>, std::vector<float>> train_sgd(float lr, int64_t nu
     matplot::xlabel(ax1, "epoch");
     matplot::ylabel(ax1, "loss");
     matplot::show();
-
+*/
 	return {epochs, losses};
 }
 
@@ -210,7 +210,6 @@ int main() {
 	F->position(0, 0);
 
 	auto ax1 = F->nexttile();
-	matplot::legend();
 	matplot::hold(ax1, true);
 	matplot::plot(ax1, gd.first, gd.second, "b")->line_width(2)
 		.display_name("gd");
@@ -223,7 +222,10 @@ int main() {
 	matplot::hold(ax1, false);
     matplot::xlabel(ax1, "epoch");
     matplot::ylabel(ax1, "loss");
+    matplot::legend({});
+    F->draw();
     matplot::show();
+
 	// ---------------------------------------------
 	// Concise Implementation
 	// ---------------------------------------------
@@ -242,7 +244,7 @@ int main() {
 	auto loss = torch::nn::MSELoss(torch::nn::MSELossOptions(torch::kNone));
 
 	start = high_resolution_clock::now();
-	std::vector<float> epochs, losses;
+	std::vector<double> epochs, losses;
 
 	for( int64_t  epoch = 0; epoch < num_epochs; epoch++ ) {
 		std::list<std::pair<torch::Tensor, torch::Tensor>> data_iter = get_data_ch11(t_data, t_label, batch_size);
@@ -273,28 +275,14 @@ int main() {
 		epochs.push_back(epoch*1.0);
 		losses.push_back((t_loss/b_cnt));
 	}
-/*
-	plt::figure_size(800, 600);
-	plt::plot(epochs, losses, "b");
-	plt::xlabel("epoch");
-	plt::ylabel("loss");
-	plt::show();
-	plt::close();
-*/
-	F = figure(true);
-	F->size(800, 600);
-	F->add_axes(false);
-	F->reactive_mode(false);
-	F->tiledlayout(1, 1);
-	F->position(0, 0);
 
-	ax1 = F->nexttile();
-	matplot::legend();
-	matplot::plot(ax1, epochs, losses, "b")->line_width(2)
-		.display_name("Train loss");
-    matplot::xlabel(ax1, "epoch");
-    matplot::ylabel(ax1, "loss");
+	matplot::plot( epochs, losses, "b")->line_width(2).display_name("Train loss");
+    matplot::xlabel( "epoch");
+    matplot::ylabel( "loss");
+    matplot::title( "Concise Implementation");
+    matplot::legend( {});
     matplot::show();
+
 	std::cout << "Done!\n";
 	return 0;
 }

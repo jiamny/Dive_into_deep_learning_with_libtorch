@@ -71,7 +71,6 @@ int main() {
     matplot::hold(false);
     matplot::xlabel("x");
     matplot::title("f(x)");
-    F->draw();
 
     matplot::subplot(3, 1, 1);
     matplot::hold(true);
@@ -80,7 +79,6 @@ int main() {
     matplot::hold(false);
     matplot::xlabel("x");
     matplot::title("g(x)");
-    F->draw();
 
     matplot::subplot(3, 1, 2);
     matplot::hold(true);
