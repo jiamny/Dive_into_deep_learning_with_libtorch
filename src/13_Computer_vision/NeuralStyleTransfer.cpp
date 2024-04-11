@@ -379,19 +379,19 @@ int main() {
 	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(cimg.clone());
 	matplot::imshow(z);
 	matplot::title("Content image");
-	f->draw();
+	//f->draw();
 
 	matplot::subplot(2, 2, 1);
 	z = tensorToMatrix4MatplotPP(simg.clone());
 	matplot::imshow(z);
 	matplot::title("Style image");
-	f->draw();
+	//f->draw();
 
 	matplot::subplot(2, 2, 2);
 	z = tensorToMatrix4MatplotPP(gimg.clone());
 	matplot::imshow(z);
 	matplot::title("Style image");
-	f->draw();
+	//f->draw();
 
 	matplot::subplot(2, 2, 3);
 	matplot::legend();

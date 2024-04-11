@@ -58,28 +58,40 @@ int main() {
 		printVector(s);
 */
 	int64_t vocab_size = 10000, num_hiddens = 768, ffn_num_hiddens = 1024, num_heads = 4;
+	int64_t max_len=1000, key_size=768, query_size=768, value_size=768, num_inputs=768;
 	std::vector<int64_t> norm_shape = {768};
 	int64_t ffn_num_input = 768, num_layers = 2;
-	double dropout =  0.2;
+/*
+	std::vector<int64_t> norm_shape={256};
+	int64_t vocab_size = 10000, num_hiddens=256, ffn_num_hiddens=512, num_heads=4, num_blks=2, max_len=1000;
+	int64_t ffn_num_input=256, num_layers=2, key_size=256, query_size=256,
+            value_size=256, hid_in_features=256, mlm_in_features=256, nsp_in_features=256, num_inputs=256;
+*/
+	double dropout =  0.1;
 	auto encoder = BERTEncoder(vocab_size, num_hiddens, norm_shape, ffn_num_input,
-	                      ffn_num_hiddens, num_heads, num_layers, dropout);
+	                      ffn_num_hiddens, num_heads, num_layers, dropout, max_len, key_size, query_size,
+						  value_size, device);
+	encoder->to(device);
 
-
-	torch::Tensor tokens = torch::randint(0, vocab_size, {2, 8});
-	torch::Tensor segments = torch::tensor({{0, 0, 0, 0, 1, 1, 1, 1}, {0, 0, 0, 1, 1, 1, 1, 1}});
-	auto encoded_X = encoder(tokens, segments, torch::empty(0));
+	torch::Tensor tokens = torch::randint(0, vocab_size, {2, 8}).to(device);
+	std::cout << "tokens: " << tokens.sizes() << '\n';
+	torch::Tensor segments = torch::tensor({{0, 0, 0, 0, 1, 1, 1, 1}, {0, 0, 0, 1, 1, 1, 1, 1}}).to(device);
+	std::cout << "segments: " << segments.sizes() << '\n';
+	auto encoded_X = encoder->forward(tokens, segments, torch::empty(0));
 
 	std::cout << encoded_X.sizes() << '\n';
 
 	// 预训练任务
 	// 掩蔽语言模型（Masked Language Modeling）
-	auto mlm = MaskLM(vocab_size, num_hiddens);
-	torch::Tensor mlm_positions = torch::tensor({{1, 5, 2}, {6, 1, 5}});
+	std::cout << "Masked Language Modeling" << '\n';
+	auto mlm = MaskLM(vocab_size, num_hiddens, num_inputs);
+	mlm->to(device);
+	torch::Tensor mlm_positions = torch::tensor({{1, 5, 2}, {6, 1, 5}}).to(device);
 	auto mlm_Y_hat = mlm->forward(encoded_X, mlm_positions);
 	std::cout << "mlm_Y_hat.shape: " << mlm_Y_hat.sizes() << '\n';
 
 
-	torch::Tensor mlm_Y = torch::tensor({{7, 8, 9}, {10, 20, 30}}, torch::kLong);
+	torch::Tensor mlm_Y = torch::tensor({{7, 8, 9}, {10, 20, 30}}, torch::kLong).to(device);
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
 	torch::Tensor mlm_l = loss(mlm_Y_hat.reshape({-1, vocab_size}), mlm_Y.reshape(-1));
 	std::cout << "mlm_l.shape: " << mlm_l.sizes() << '\n';
@@ -91,10 +103,11 @@ int main() {
 	std::cout << "encoded_X.size(-1): " << encoded_X.size(-1) << '\n';
 
 	auto nsp = NextSentencePred(encoded_X.size(-1));
+	nsp->to(device);
 	torch::Tensor nsp_Y_hat = nsp->forward(encoded_X);
 	std::cout << "nsp_Y_hat.shape: " << nsp_Y_hat.sizes() << '\n';
 
-	torch::Tensor nsp_y = torch::tensor({0, 1}, torch::kLong);
+	torch::Tensor nsp_y = torch::tensor({0, 1}, torch::kLong).to(device);
 	auto nsp_l = loss(nsp_Y_hat, nsp_y);
 	std::cout << "nsp_l.shape: " << nsp_l.sizes() << '\n';
 

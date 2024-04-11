@@ -45,6 +45,7 @@ std::vector<std::pair<std::string, int64_t>> count_corpus( std::vector<std::stri
 
 std::vector<std::string> tokenize(const std::vector<std::string> lines, const std::string token, bool max_cut=false);
 
+std::vector<std::string> tokenize_str(const std::string line, char delim = ' ');
 
 // Vocabulary
 /*
@@ -67,6 +68,8 @@ public:
     //Vocabulary for text.
 	Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq,
 			std::vector<std::string> reserved_tokens);
+
+	Vocab(std::vector<std::pair<std::string, int64_t>> token_freqs);
 
 	~Vocab(void) {}
 
@@ -396,7 +399,7 @@ public:
     # `valid_len` shape: (`batch_size`,)
     */
     torch::Tensor forward(torch::Tensor pred, torch::Tensor label, torch::Tensor valid_len){
-    	weights = torch::ones_like(label);
+    	weights = torch::ones_like(label).to(pred.device());
         weights = sequence_mask(weights, valid_len);
         //reduction ='none'
         // auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));

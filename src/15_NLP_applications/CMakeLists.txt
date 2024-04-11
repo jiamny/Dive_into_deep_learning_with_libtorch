@@ -92,21 +92,22 @@ target_link_libraries(15_NaturalLanguageInferenceAttention ${OpenCV_LIBS}  ${TOR
 set_target_properties(15_NaturalLanguageInferenceAttention PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 # ---------------------------------------------------------------
-#add_executable(15_NaturalLanguageInferenceBert)
+add_executable(15_NaturalLanguageInferenceBert)
 
-#target_sources(15_NaturalLanguageInferenceBert PRIVATE
-#NaturalLanguageInferenceBert.cpp
-#../utils/ch_8_9_util.h
-#../utils/ch_8_9_util.cpp
-#../utils.h 
-#../utils.cpp
-#../utils/ch_15_util.h
-#../utils/ch_15_util.cpp
-#)
+target_sources(15_NaturalLanguageInferenceBert PRIVATE
+NaturalLanguageInferenceBert.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_14_util.h
+../utils/ch_14_util.cpp
+../utils/ch_15_util.h
+../utils/ch_15_util.cpp
+)
 
-#target_link_libraries(15_NaturalLanguageInferenceBert ${TORCH_LIBRARIES} ${requiredlibs} matplot)
-#set_target_properties(15_NaturalLanguageInferenceBert PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
-
+target_link_libraries(15_NaturalLanguageInferenceBert ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(15_NaturalLanguageInferenceBert PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
 
 

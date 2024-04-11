@@ -147,7 +147,6 @@ struct  ResNetImpl : public torch::nn::Module {
 		return classifier->forward(x);
 	}
 };
-
 TORCH_MODULE(ResNet);
 
 int main() {

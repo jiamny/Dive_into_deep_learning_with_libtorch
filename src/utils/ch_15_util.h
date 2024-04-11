@@ -89,7 +89,7 @@ public:
 	}
 
     torch::Tensor _pad( std::vector<std::string> data) {
-    	size_t num_steps = 50;
+    	size_t num_steps = this->num_steps;
 
     	std::vector<torch::Tensor> tensors;
 

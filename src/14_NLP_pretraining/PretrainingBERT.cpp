@@ -10,7 +10,7 @@ using namespace matplot;
 
 template<typename T>
 std::tuple <torch::Tensor, torch::Tensor, torch::Tensor>
-_get_batch_loss_bert(T& net, torch::nn::CrossEntropyLoss loss, int64_t vocab_size, torch::Tensor tokens_X,
+_get_batch_loss_bert(T& net, torch::nn::CrossEntropyLoss& loss, int64_t vocab_size, torch::Tensor tokens_X,
 		torch::Tensor segments_X, torch::Tensor valid_lens_x,
 		torch::Tensor pred_positions_X, torch::Tensor mlm_weights_X,
 		torch::Tensor mlm_Y, torch::Tensor nsp_y) {
@@ -25,7 +25,8 @@ _get_batch_loss_bert(T& net, torch::nn::CrossEntropyLoss loss, int64_t vocab_siz
     std::cout << "计算遮蔽语言模型损失\n";
     mlm_Y = mlm_Y.to(torch::kLong);
 
-    torch::Tensor mlm_l = loss(mlm_Y_hat.reshape({-1, vocab_size}), mlm_Y.reshape(-1)).mul(mlm_weights_X.reshape({-1, 1}));
+    torch::Tensor mlm_l = loss(mlm_Y_hat.reshape({-1, vocab_size}), mlm_Y.reshape(-1));
+    mlm_l = torch::mul(mlm_l, mlm_weights_X.reshape({-1, 1}));
     mlm_l = mlm_l.sum().div((mlm_weights_X.sum()).add(1e-8));
 
     // 计算下一句子预测任务的损失
@@ -38,7 +39,7 @@ _get_batch_loss_bert(T& net, torch::nn::CrossEntropyLoss loss, int64_t vocab_siz
 }
 
 template<typename T>
-void train_bert(_WikiTextDataset train_set, T& net, torch::nn::CrossEntropyLoss loss,
+void train_bert(_WikiTextDataset train_set, T& net, torch::nn::CrossEntropyLoss& loss,
 		int64_t vocab_size, int64_t num_steps, int64_t batch_size, torch::Device device) {
 
 	std::cout << "Load data\n";
@@ -64,29 +65,31 @@ void train_bert(_WikiTextDataset train_set, T& net, torch::nn::CrossEntropyLoss 
 	std::vector<double> MLM_loss, NSP_loss;
 	std::vector<double> steps;
 	std::cout << "Start training...\n";
-	net->train();
+
     while( step < num_steps && ! num_steps_reached ) {
         double mlm_t = 0.0, nsp_t = 0.0;
         int64_t nums = 0;
+        net->train();
     	for(auto& dt : *train_iter ) {
     		torch::Tensor tokens_X = dt.data;
-    		const torch::Tensor target = dt.target.to(device);
+    		std::cout << "tokens_X: " << tokens_X.sizes() << '\n';
+    		const torch::Tensor idx = dt.target.squeeze().to(device);
 
     		tokens_X = tokens_X.to(device);
-    		torch::Tensor segments_X = torch::index_select(all_segments, 0, target.squeeze());
-    		torch::Tensor valid_lens_x = torch::index_select(valid_lens, 0, target.squeeze());
-    		torch::Tensor pred_positions_X = torch::index_select(all_pred_positions, 0, target.squeeze());
-			torch::Tensor mlm_weights_X = torch::index_select(all_mlm_weights, 0, target.squeeze());
-			torch::Tensor mlm_Y = torch::index_select(all_mlm_labels, 0, target.squeeze());
-			torch::Tensor nsp_y = torch::index_select(nsp_labels, 0, target.squeeze());
-
-            trainer.zero_grad();
+    		torch::Tensor segments_X = torch::index_select(all_segments, 0, idx);
+    		torch::Tensor valid_lens_x = torch::index_select(valid_lens, 0, idx);
+    		torch::Tensor pred_positions_X = torch::index_select(all_pred_positions, 0, idx);
+			torch::Tensor mlm_weights_X = torch::index_select(all_mlm_weights, 0, idx);
+			torch::Tensor mlm_Y = torch::index_select(all_mlm_labels, 0, idx);
+			torch::Tensor nsp_y = torch::index_select(nsp_labels, 0, idx);
 
             std::tuple <torch::Tensor, torch::Tensor, torch::Tensor> lbert = _get_batch_loss_bert(
                 net, loss, vocab_size, tokens_X, segments_X, valid_lens_x,
                 pred_positions_X, mlm_weights_X, mlm_Y, nsp_y);
 
 			torch::Tensor mlm_l = std::get<0>(lbert), nsp_l = std::get<1>(lbert), l = std::get<2>(lbert);
+
+			trainer.zero_grad();
             l.backward();
             trainer.step();
 

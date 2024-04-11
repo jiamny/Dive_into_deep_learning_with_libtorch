@@ -153,8 +153,6 @@ private:
 	Vocab vocab;
 };
 
-
-
 struct AddNormImpl : torch::nn::Module {
     //The residual connection followed by layer normalization.
 	AddNormImpl(std::vector<int64_t> norm_shape, double dp, torch::Device device=torch::kCPU) {
@@ -162,6 +160,8 @@ struct AddNormImpl : torch::nn::Module {
         ln = torch::nn::LayerNorm(torch::nn::LayerNormOptions(norm_shape));
         dropout->to(device);
         ln->to(device);
+        register_module("dropout", dropout);
+        register_module("ln", ln);
 	}
 
 	torch::Tensor forward(torch::Tensor X, torch::Tensor Y) {
@@ -183,6 +183,9 @@ struct PositionWiseFFNImpl : public torch::nn::Module {
         dense1->to(device);
 		relu->to(device);
 		dense2->to(device);
+        register_module("dense1", dense1);
+        register_module("dense2", dense2);
+        register_module("relu", relu);
 	}
 
 	torch::Tensor forward(torch::Tensor X) {
@@ -199,6 +202,7 @@ struct DotProductAttentionImpl : public torch::nn::Module {
 	DotProductAttentionImpl(double dp, torch::Device device=torch::kCPU) {
         dropout = torch::nn::Dropout(torch::nn::DropoutOptions(1 - dp));
         dropout->to(device);
+        register_module("dropout", dropout);
 	}
 
 	torch::Tensor forward( torch::Tensor queries, torch::Tensor keys,
@@ -232,6 +236,11 @@ struct MultiHeadAttentionImpl : public torch::nn::Module {
 		W_o = torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, num_hiddens).bias(has_bias));
 		W_o->to(device);
 		//Dense(num_hiddens, num_hiddens, has_bias=has_bias)
+        register_module("attention", attention);
+        register_module("W_q", W_q);
+        register_module("W_k", W_k);
+        register_module("W_v", W_v);
+        register_module("W_o", W_o);
 	}
 
     torch::Tensor forward(torch::Tensor queries, torch::Tensor keys, torch::Tensor values, torch::Tensor valid_lens) {
@@ -241,7 +250,8 @@ struct MultiHeadAttentionImpl : public torch::nn::Module {
        
 	   // valid_lens is not None:
         if(valid_lens.numel() != 0) {
-        	valid_lens = torch::repeat_interleave(valid_lens, num_heads).to(queries.device());
+        	std::optional<long int> dim = {0};
+        	valid_lens = torch::repeat_interleave(valid_lens, num_heads, dim).to(queries.device());
         }
 
         auto output = attention->forward(queries, keys, values, valid_lens);
@@ -267,6 +277,10 @@ struct TransformerEncoderBlockImpl : public torch::nn::Module {
         addnorm1 = AddNorm(norm_shape, dropout, device);
         ffn = PositionWiseFFN(ffn_num_input, ffn_num_hiddens, num_hiddens, device);
         addnorm2 = AddNorm(norm_shape, dropout, device);
+        register_module("attention", attention);
+        register_module("addnorm1", addnorm1);
+        register_module("ffn", ffn);
+        register_module("addnorm2", addnorm2);
 	}
 
 	torch::Tensor forward(torch::Tensor X, torch::Tensor valid_lens=torch::empty(0)) {
@@ -292,7 +306,7 @@ struct BERTEncoderImpl : public torch::nn::Module {
 
     	// int64_t vocab_size, int64_t num_hiddens, int64_t  ffn_num_hiddens,
 	    // int64_t  num_heads, int64_t  num_blks, double dropout, int64_t  max_len=1000) {
-
+		std::cout << "vocab_size: " << vocab_size << " num_hiddens: " << num_hiddens << '\n';
         token_embedding = torch::nn::Embedding(vocab_size, num_hiddens);
         token_embedding->to(device);
         segment_embedding = torch::nn::Embedding(2, num_hiddens);
@@ -308,14 +322,17 @@ struct BERTEncoderImpl : public torch::nn::Module {
         //pos_embedding = torch::nn::Parameter(torch::randn({1, max_len,
         //                                              num_hiddens}));
         pos_embedding = torch::randn({1, max_len, num_hiddens}).to(device);
+        register_module("token_embedding", token_embedding);
+        register_module("segment_embedding", segment_embedding);
+        register_module("blks", blks);
 	}
 
     torch::Tensor forward(torch::Tensor tokens, torch::Tensor segments, torch::Tensor valid_lens=torch::empty(0)) {
         // Shape of `X` remains unchanged in the following code snippet:
         // (batch size, max sequence length, `num_hiddens`)
-    	torch::Tensor X = token_embedding(tokens) + segment_embedding(segments);
+    	torch::Tensor X = torch::add(token_embedding(tokens), segment_embedding(segments));
         X = X + pos_embedding.index({Slice(), Slice(None, X.size(1)), Slice()}); //[:, :X.shape[1], :]
-
+        
         for(auto& blk : *blks.ptr()) {
             X = blk.forward(X, valid_lens);
         }
@@ -340,6 +357,7 @@ struct MaskLMImpl : public torch::nn::Module {
 			  torch::nn::Linear(torch::nn::LinearOptions(num_hiddens, vocab_size).bias(true))
 		);
         mlp->to(device);
+        register_module("mlp", mlp);
 	}
 
 	torch::Tensor forward(torch::Tensor X, torch::Tensor pred_positions) {
@@ -366,6 +384,7 @@ struct NextSentencePredImpl : public torch::nn::Module {
         //self.output = nn.Dense(num_inputs, 2)
 		output = torch::nn::Linear(torch::nn::LinearOptions(num_inputs, 2).bias(true));
 		output->to(device);
+        register_module("output", output);
 	}
 
     torch::Tensor forward(torch::Tensor X) {
@@ -392,6 +411,10 @@ struct BERTModelImpl : public torch::nn::Module {
         hidden->to(device);
         mlm = MaskLM(vocab_size, num_hiddens, mlm_in_features, device);
         nsp = NextSentencePred(nsp_in_features, device);
+        register_module("encoder", encoder);
+        register_module("hidden", hidden);
+        register_module("mlm", mlm);
+        register_module("nsp", nsp);
 	}
 
 	std::tuple <torch::Tensor, torch::Tensor, torch::Tensor> forward(torch::Tensor tokens,
@@ -399,7 +422,6 @@ struct BERTModelImpl : public torch::nn::Module {
 			torch::Tensor pred_positions=torch::empty(0)) {
 
         torch::Tensor encoded_X = encoder->forward(tokens, segments, valid_lens);
-
         torch::Tensor mlm_Y_hat;
         if( pred_positions.numel() != 0 ) {
             mlm_Y_hat = mlm->forward(encoded_X, pred_positions).to(tokens.device());

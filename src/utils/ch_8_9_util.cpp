@@ -73,6 +73,20 @@ std::vector<std::string> tokenize(const std::vector<std::string> lines, const st
     return elems;
 }
 
+std::vector<std::string> tokenize_str(const std::string line, char delim) {
+	std::string item;
+	std::vector<std::string> elems;
+	std::stringstream ss(line);
+
+	while (std::getline(ss, item, delim)) {
+		// trim space
+		item = std::regex_replace(item, std::regex("^\\s+"), std::string(""));
+		item = std::regex_replace(item, std::regex("\\s+$"), std::string(""));
+		elems.push_back(std::move(item)); // if C++11 (based on comment from @mchiasson)
+	}
+    return elems;
+}
+
 
 std::vector<std::pair<std::string, int64_t>> count_corpus( std::vector<std::string> tokens ) {
 	std::vector<std::pair<std::string, int64_t>> _token_freqs;
@@ -144,6 +158,25 @@ Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq
     			idx++;
     		}
     	}
+    }
+
+    // sorted by value
+    order_token_to_idx = std::set<std::pair<std::string, int64_t>, comp>(token_to_idx.begin(), token_to_idx.end());
+}
+
+Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> token_freqs) {
+	_token_freqs = token_freqs;
+	idx_to_token.clear();
+	token_to_idx.clear();
+
+    if( ! token_to_idx.empty() ) token_to_idx.clear();
+    if( ! token_to_idx.empty() ) token_to_idx.clear();
+
+    int64_t idx = 0;
+    for(const auto it : _token_freqs ) {
+    	token_to_idx.insert(std::make_pair(it.first, idx));
+    	idx_to_token.insert(std::make_pair(idx, it.first));
+    	idx++;
     }
 
     // sorted by value
@@ -385,10 +418,11 @@ torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens) {
         return torch::nn::functional::softmax(X, /*dim=*/-1);
     } else {
         auto shape = X.sizes();
+
         if( valid_lens.dim() == 1) {
-            valid_lens = torch::repeat_interleave(valid_lens, shape[shape.size() - 2]);
+            valid_lens = torch::repeat_interleave(valid_lens, shape[1]).to(X.device());
         } else {
-            valid_lens = valid_lens.reshape(-1);
+            valid_lens = valid_lens.reshape(-1).to(X.device());
         }
 
         // On the last axis, replace masked elements with a very large negative value, whose exponentiation outputs 0
@@ -396,7 +430,6 @@ torch::Tensor masked_softmax(torch::Tensor X, torch::Tensor valid_lens) {
         X = sequence_mask(X.reshape({-1, shape[shape.size() - 1]}), valid_lens, /*value=*/ -1e6);
 
         return torch::nn::functional::softmax(X.reshape(shape), /*dim=*/-1);
-
     }
 }
 
