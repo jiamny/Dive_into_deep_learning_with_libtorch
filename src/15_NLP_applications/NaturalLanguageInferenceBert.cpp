@@ -24,8 +24,8 @@ public:
         for(int i = 0; i < sz; i++) {
         	std::string s = all_premise_tokens[i];
         	std::string ss = all_hypothesis_tokens[i];
-        	std::transform(s.begin(), s.end(), s.begin(), (int (*) (int))tolower);
-        	std::transform(ss.begin(), ss.end(), ss.begin(), (int (*) (int))tolower);
+        	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+        	std::transform(ss.begin(), ss.end(), ss.begin(), ::tolower);
         	std::vector<std::string> tks = tokenize_str(s);
         	std::vector<std::string> tkss = tokenize_str(ss);
         	all_premise_hypothesis_tokens.push_back(std::make_pair(tks, tkss));

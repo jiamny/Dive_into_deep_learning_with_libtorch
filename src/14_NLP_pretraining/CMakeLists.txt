@@ -92,4 +92,37 @@ SubwordEmbedding.cpp
 target_link_libraries(14_SubwordEmbedding ${TORCH_LIBRARIES} ${requiredlibs} )
 set_target_properties(14_SubwordEmbedding PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
 
+# ---------------------------------------------------------------
+add_executable(14_Word_embedding_dataset)
+
+target_sources(14_Word_embedding_dataset PRIVATE
+Word_embedding_dataset.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_14_util.h
+../utils/ch_14_util.cpp
+)
+
+target_link_libraries(14_Word_embedding_dataset ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(14_Word_embedding_dataset PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+
+
+# ---------------------------------------------------------------
+add_executable(14_Word2vec_pretraining)
+
+target_sources(14_Word2vec_pretraining PRIVATE
+Word2vec_pretraining.cpp
+../utils/ch_8_9_util.h
+../utils/ch_8_9_util.cpp
+../utils.h 
+../utils.cpp
+../utils/ch_14_util.h
+../utils/ch_14_util.cpp
+)
+
+target_link_libraries(14_Word2vec_pretraining ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(14_Word2vec_pretraining PROPERTIES CXX_STANDARD 17  CXX_STANDARD_REQUIRED YES)
+
 

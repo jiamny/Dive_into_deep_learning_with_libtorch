@@ -218,7 +218,7 @@ int main() {
 			num_batch++;
 			//std::cout << "num_batch: " << num_batch << '\n';
 		}
-		train_epochs.push_back(epoch*1.0);
+		train_epochs.push_back(epoch *1.0);
 		train_loss.push_back((loss_sum*1.0/num_batch));
 		train_acc.push_back((total_corrects*1.0/total_samples));
 		std::cout << "loss: " << (loss_sum*1.0/num_batch) << ", train acc: " << (total_corrects*1.0/total_samples) << '\n';

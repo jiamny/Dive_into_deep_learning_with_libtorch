@@ -17,12 +17,14 @@
 #include <map>
 #include <set>
 #include <random>
+#include <time.h>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
 
 #include "../utils/ch_8_9_util.h"
 #include "../utils.h"
+#include "../TempHelpFunctions.hpp"
 
 namespace F = torch::nn::functional;
 using torch::indexing::Slice;
@@ -442,5 +444,109 @@ struct BERTModelImpl : public torch::nn::Module {
 };
 TORCH_MODULE(BERTModel);
 
+std::vector<std::vector<std::string>> read_ptb(const std::string data_dir, size_t num_read);
 
+bool keep(std::string token, std::map<std::string, int64_t> counter, int64_t num_tokens);
+
+std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int64_t>>
+subsample(std::vector<std::vector<std::string>> sentences, Vocab vocab,
+		std::vector<std::pair<std::string, int64_t>> cnt_corpus);
+
+std::pair<std::vector<int64_t>, std::vector<std::vector<int64_t>>> get_centers_and_contexts(
+		std::vector<std::vector<int64_t>> corpus, int64_t max_window_size);
+
+double randomf(double low=0, double high=1);
+
+std::vector<std::vector<int64_t>> get_negatives(std::vector<std::vector<int64_t>> all_contexts, Vocab vocab,
+		std::map<std::string, int64_t> counter, int64_t K);
+
+class RandomGenerator {
+public:
+    //Randomly draw among {1, ..., n} according to n sampling weights."""
+	RandomGenerator(std::vector<double> sampling_wghts) {
+        //Defined in :numref:`sec_word2vec_data`"""
+        // Exclude
+		int64_t cnt = sampling_wghts.size() + 1, start = 1;
+        population = range(cnt, start );
+        sampling_weights = sampling_wghts;
+        i = 0;
+        //std::cout << "0 - sampling_wghts.size(): " << sampling_wghts.size() << " i = " << i << '\n';
+	}
+
+	~RandomGenerator() {};
+
+    int64_t draw(void) {
+
+        if( candidates.empty() || (i == candidates.size()) ) {
+        	if( ! candidates.empty() ) {
+        		candidates.clear();
+        	}
+        	//std::cout << "1 - candidates.size(): " << candidates.size() << " i = " << i << '\n';
+            // Cache `k` random sampling results
+
+            double sum =  vector_sum(sampling_weights);
+
+            while( candidates.size() < 10000 ) {
+            	double r = randomf() * sum;
+            	bool selected = false;
+            	for(int64_t j = 0; j < sampling_weights.size(); j++) {
+            		r -= sampling_weights[j];
+            	    if( r < 0 ){
+            	    	candidates.push_back( population[j] );
+    					selected = true;
+    					break;
+            	    }
+            	}
+
+            	if( ! selected ) {
+            		candidates.push_back( population[sampling_weights.size() - 1] );
+            	}
+            }
+
+            i = 0;
+        }
+        i += 1;
+        //std::cout << "candidates: " << candidates.size() << " i: " << i << '\n';
+        return candidates[i - 1];
+    }
+private:
+	int64_t i;
+	std::vector<int64_t> population;
+	std::vector<double>  sampling_weights;
+	std::vector<int64_t> candidates;
+};
+
+class PTBDataset : public torch::data::datasets::Dataset<PTBDataset> {
+public:
+	PTBDataset(torch::Tensor centers) {
+            //assert centers.size(0) == contexts.size(0) == negatives.size(0);
+            this->centers = centers;
+            //this->contexts_negatives = contexts_negatives;
+            //this->labels = labels;
+            const int64_t sz = centers.size(0);
+            int64_t start = 0;
+            std::vector<int64_t> idxs = range(sz, start);
+            this->tidx = torch::from_blob(idxs.data(),
+                		{static_cast<long>(idxs.size()), 1}, torch::TensorOptions(torch::kLong)).clone();
+	}
+
+	torch::data::Example<> get(size_t idx) override {
+            return {centers[idx], tidx[idx]};
+	}
+
+	torch::optional<size_t> size() const override {
+        return centers.size(0);
+	}
+private:
+	torch::Tensor  centers, tidx;
+};
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>  batchify(
+		std::vector<std::vector<int64_t>> all_contexts,
+		std::vector<std::vector<int64_t>> all_negatives,
+		std::vector<int64_t> all_centers);
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab> load_data_ptb(
+		std::string file_dir, int64_t batch_size, int64_t max_window_size,
+		int64_t num_noise_words, int64_t num_samples = 0);
 #endif /* SRC_UTILS_CH_14_UTIL_H_ */

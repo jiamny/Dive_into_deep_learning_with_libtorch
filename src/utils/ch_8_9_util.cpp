@@ -134,16 +134,18 @@ Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq
 
     // create an empty map of pairs
     if( ! token_to_idx.empty() ) token_to_idx.clear();
-    if( ! token_to_idx.empty() ) token_to_idx.clear();
+    if( ! idx_to_token.empty() ) idx_to_token.clear();
 
-    token_to_idx.insert(std::make_pair("<unk>", 0));
-    idx_to_token.insert(std::make_pair(0, "<unk>"));
+    token_to_idx["<unk>"] = 0;
+    idx_to_token[0] ="<unk>";
 
     int64_t idx = 1;
     if( ! reserved_tokens.empty()) {
     	for( auto& rt : reserved_tokens ) {
-    		token_to_idx.insert(std::make_pair(rt, idx));
-    		idx_to_token.insert(std::make_pair(idx, rt));
+    		//token_to_idx.insert(std::make_pair(rt, idx));
+    		//idx_to_token.insert(std::make_pair(idx, rt));
+    		token_to_idx[rt] = idx;
+    		idx_to_token[idx] = rt;
     		idx++;
     	}
     }
@@ -153,8 +155,10 @@ Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> corpus, float min_freq
     	if( token_to_idx.find(it.first) == token_to_idx.end() ) {
     		// not less than min freq
     		if( it.second >= min_freq ) {
-    			token_to_idx.insert(std::make_pair(it.first, idx));
-    			idx_to_token.insert(std::make_pair(idx, it.first));
+    			//token_to_idx.insert(std::make_pair(it.first, idx));
+    			//idx_to_token.insert(std::make_pair(idx, it.first));
+    			token_to_idx[it.first] = idx;
+    			idx_to_token[idx] = it.first;
     			idx++;
     		}
     	}
@@ -170,12 +174,14 @@ Vocab::Vocab(std::vector<std::pair<std::string, int64_t>> token_freqs) {
 	token_to_idx.clear();
 
     if( ! token_to_idx.empty() ) token_to_idx.clear();
-    if( ! token_to_idx.empty() ) token_to_idx.clear();
+    if( ! idx_to_token.empty() ) idx_to_token.clear();
 
     int64_t idx = 0;
     for(const auto it : _token_freqs ) {
-    	token_to_idx.insert(std::make_pair(it.first, idx));
-    	idx_to_token.insert(std::make_pair(idx, it.first));
+    	//token_to_idx.insert(std::make_pair(it.first, idx));
+    	//idx_to_token.insert(std::make_pair(idx, it.first));
+    	token_to_idx[it.first] = idx;
+    	idx_to_token[idx] = it.first;
     	idx++;
     }
 
@@ -194,11 +200,11 @@ int64_t Vocab::unk(void){  // Index for the unknown token
 
 std::vector<std::string> Vocab::to_tokens( std::vector<int64_t> indices ) {
     std::vector<std::string> values;
-    auto it = idx_to_token.begin();
+    //std::map<int64_t, std::string>::iterator it = idx_to_token.begin();
 
     for( int64_t i = 0; i < indices.size(); i++ ) {
-    	std::advance(it, indices[i]);
-    	values.push_back( it->second );
+    	//std::advance(it, indices[i]);
+    	values.push_back( idx_to_token[indices[i]] );
     }
 
     return values;
@@ -233,7 +239,7 @@ std::vector<int64_t> Vocab::operator [] (const std::vector<std::string> ss ) {
 			}
 		}
 	} else {
-		idx.push_back(0);
+		idx.clear();
 	}
 	return idx;
 }

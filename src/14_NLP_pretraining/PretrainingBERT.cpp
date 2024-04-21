@@ -94,7 +94,7 @@ void train_bert(_WikiTextDataset train_set, T& net, torch::nn::CrossEntropyLoss&
             trainer.step();
 
             step += 1;
-            steps.push_back(step * 1.0);
+            steps.push_back((step + 1) * 1.0);
             mlm_t = mlm_l.sum().data().item<double>();
             nsp_t = nsp_l.sum().data().item<double>();
             nums += tokens_X.size(0);

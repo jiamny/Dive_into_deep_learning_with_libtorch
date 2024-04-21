@@ -384,3 +384,339 @@ torch::Tensor transpose_qkv(torch::Tensor X, int64_t num_heads) {
     return X.reshape({-1, X.size(2), X.size(3)});
 }
 
+std::vector<std::vector<std::string>> read_ptb(const std::string data_dir, size_t num_read) {
+	std::vector<std::vector<std::string>> data;
+	std::string f = data_dir + "/ptb.train.txt";
+    std::string line;
+    const std::string WHITESPACE = " ";
+
+    std::ifstream fL(f.c_str());
+
+    if( fL.is_open() ) {
+    	size_t cnt = 0;
+
+    	while ( std::getline(fL, line) ) {
+
+    		line = std::regex_replace(line, std::regex("\\\n"), "");
+
+    		line = strip(line);
+    		std::vector<std::string> words;
+
+    		size_t ps = 0;
+    		while ((ps = line.find(WHITESPACE)) != std::string::npos) {
+    			std::string tk = line.substr(0, ps);
+    			tk = std::regex_replace(tk, std::regex("^\\s+"), std::string(""));
+    			tk = std::regex_replace(tk, std::regex("\\s+$"), std::string(""));
+    			if( tk.length() > 1 ) {
+    			    words.push_back(tk);
+    			}
+    			line.erase(0, ps + WHITESPACE.length());
+    		}
+    		std::string tk = line.substr(0, ps);
+    	    // trim space
+    	    tk = std::regex_replace(tk, std::regex("^\\s+"), std::string(""));
+    	    tk = std::regex_replace(tk, std::regex("\\s+$"), std::string(""));
+    	    if( tk.length() > 1 )
+    	    	words.push_back(tk);
+
+    	    if( words.size() > 0 )
+    	    	data.push_back(words);
+
+        	cnt++;
+        	if( num_read > 0 && cnt > num_read)
+        		break;
+    	}
+    }
+
+    fL.close();
+    return data;
+}
+
+// Return True if `token` is kept during subsampling
+bool keep(std::string token, std::map<std::string, int64_t> counter, int64_t num_tokens) {
+	std::default_random_engine random(time(NULL));
+	std::uniform_real_distribution<double> dis(0.0, 1.0);
+
+    return( dis(random) <
+           std::sqrt(static_cast<double>(1e-4 *1.0 / counter[token] * num_tokens)));
+}
+
+std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int64_t>>
+subsample(std::vector<std::vector<std::string>> sentences, Vocab vocab,
+		std::vector<std::pair<std::string, int64_t>> cnt_corpus) {
+    //Subsample high-frequency words.
+    // Exclude unknown tokens ('<unk>')
+	std::map<std::string, int64_t> counter;
+	std::vector<std::vector<std::string>> slt_sentences;
+	std::set<std::string> slt_corpus;
+
+	for(int64_t r = 0; r < sentences.size(); r++) {
+		std::vector<std::string> dt;
+		for(auto& d : sentences[r]) {
+			if( vocab[d] != vocab.unk() ) {
+				dt.push_back(d);
+				if( slt_corpus.find(d) != slt_corpus.end()) {
+					slt_corpus.insert(d);
+				}
+			}
+		}
+		slt_sentences.push_back(dt);
+	}
+
+	int64_t num_tokens = 0;
+	for(auto& d : cnt_corpus) {
+		if( counter.empty() ) {
+			counter[d.first] = d.second;
+			num_tokens += d.second;
+		} else {
+			if( slt_corpus.find(d.first) == slt_corpus.end()) {
+				counter[d.first] = d.second;
+				num_tokens += d.second;
+			}
+		}
+	}
+	/*
+	std::cout << "num_tokens:  " << num_tokens << '\n';
+
+	int i = 0;
+	for (auto it = counter.begin(); it != counter.end(); it++) {
+		std::cout << "[" << it->first  << " : " << it->second << "] ";
+		i++;
+		if( i > 5 )
+			break;
+	}
+	std::cout << '\n';
+	*/
+
+	std::vector<std::vector<std::string>> n_sentences;
+
+	for(int64_t r = 0; r < slt_sentences.size(); r++) {
+		std::vector<std::string> dt;
+		for(auto& d : slt_sentences[r]) {
+			if( keep(d, counter, num_tokens) ) {
+				dt.push_back(d);
+			}
+		}
+
+		if(dt.size() > 0 ) {
+			//printVector(dt);
+			n_sentences.push_back(dt);
+		}
+	}
+
+	return std::make_pair(n_sentences, counter);
+}
+
+std::pair<std::vector<int64_t>, std::vector<std::vector<int64_t>>> get_centers_and_contexts(
+		std::vector<std::vector<int64_t>> corpus, int64_t max_window_size) {
+
+	//std::cout << "corpus.size(): " << corpus.size() << '\n';
+	std::default_random_engine e(static_cast<unsigned int>(time(nullptr)));
+	std::uniform_int_distribution<> randInt(1, max_window_size);
+    //Return center words and context words in skip-gram.
+	std::vector<int64_t> centers;
+	std::vector<std::vector<int64_t>> contexts;
+
+    for(auto& line : corpus ) {
+        // To form a "center word--context word" pair, each sentence needs to
+        // have at least 2 words
+    	//std::cout << "line.size(): " << line.size() << '\n';
+        if(line.size() < 2 )
+            continue;
+        //centers += line
+        for(auto& d : line )
+        	centers.push_back(d);
+
+        int64_t cnt = line.size(), start = 0;
+        for(auto& i : range(cnt, start)) {  // Context window centered at `i`
+            int64_t window_size = randInt(e); //random.randint(1, max_window_size)
+            int64_t count = std::min(cnt, i + 1 + window_size) - std::max(start, (i - window_size));
+            //indices = list(range(max(0, i - window_size),
+            //                     min(len(line), i + 1 + window_size)))
+            std::vector<int64_t> indices = range(count, std::max(start, (i - window_size)));
+            //std::cout << "window_size: " << window_size
+            //		  << " count: " << count << " i: " << i << " max: " << std::max(start, (i - window_size)) << '\n';
+            //printVector(indices);
+            // Exclude the center word from the context words
+            indices.erase(std::remove(indices.begin(), indices.end(), i), indices.end());
+            //printVector(indices);
+            //contexts.append([line[idx] for idx in indices])
+            std::vector<int64_t> dt;
+            for(auto& idx : indices )
+            	dt.push_back(line[idx]);
+
+            contexts.push_back(dt);
+        }
+    }
+    return std::make_pair(centers, contexts);
+}
+
+//return random double from low to high, default 0-1
+double randomf(double low, double high) {
+	return low + (high - low) * rand() / ((double) RAND_MAX);
+}
+
+
+std::vector<std::vector<int64_t>> get_negatives(std::vector<std::vector<int64_t>> all_contexts, Vocab vocab,
+		std::map<std::string, int64_t> counter, int64_t K) {
+    // Return noise words in negative sampling.
+    // Sampling weights for words with indices 1, 2, ... (index 0 is the
+    // excluded unknown token) in the vocabulary
+
+	//std::cout << "all_contexts: " << all_contexts.size()
+	//		  << " counter: " << counter.size()
+	//		  << " vocab: " << vocab.length() << '\n';
+
+	std::vector<double> sampling_weights;
+	std::vector<std::vector<int64_t>>  all_negatives;
+	int64_t cnt = vocab.length() - 1, start = 1;
+	for(auto& i : range(cnt, start) ) {
+		std::vector<int64_t> indices;
+		indices.push_back(i);
+		std::vector<std::string> dt = vocab.to_tokens(indices);
+		for(auto& str : dt)
+			sampling_weights.push_back(std::pow(static_cast<double>(counter[str]), 0.75));
+	}
+	//std::cout << "sampling_weights: " << sampling_weights.size() << " vocab.length(): " << vocab.length() << '\n';
+    //sampling_weights = [counter[vocab.to_tokens(i)]**0.75
+    RandomGenerator generator(sampling_weights);
+
+    for(auto& contexts : all_contexts ) {
+    	std::vector<int64_t> negatives;
+        while( negatives.size() < contexts.size() * K ) {
+            int64_t neg = generator.draw();
+            // Noise words cannot be context words
+            if(negatives.size() < 1) {
+            	negatives.push_back(neg);
+            } else {
+            	if( std::find(contexts.begin(), contexts.end(), neg) == contexts.end() ) // neg not in contexts
+            		negatives.push_back(neg);
+            }
+        }
+        all_negatives.push_back(negatives);
+    }
+
+	return all_negatives;
+}
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>  batchify(
+		std::vector<std::vector<int64_t>> all_contexts,
+		std::vector<std::vector<int64_t>> all_negatives,
+		std::vector<int64_t> all_centers) {
+	int64_t max_len = 0;
+	for( int i = 0; i < all_contexts.size(); i++ ) {
+		std::vector<int64_t> d1 = all_contexts[i];
+		std::vector<int64_t> d2 = all_negatives[i];
+		if( (d1.size() + d2.size()) > max_len )
+			max_len = d1.size() + d2.size();
+	}
+	//std::cout << "max_len: " << max_len << " all_contexts.size(): " << all_contexts.size() << '\n';
+
+    std::vector<torch::Tensor> contexts_negatives, masks, labels;
+
+    for( int64_t i = 0; i < all_contexts.size(); i++ ) {
+    	std::vector<int64_t> d1 = all_contexts[i];
+    	std::vector<int64_t> d2 = all_negatives[i];
+        int64_t cur_len = d1.size() + d2.size();
+        std::vector<int64_t> c_n;
+        for(auto& t : d1)
+        	c_n.push_back(t);
+        for(auto& t : d2)
+            c_n.push_back(t);
+        //c_n.resize(cur_len);
+        //std::merge(d1.begin(), d1.end(), d2.begin(), d2.end(), c_n.begin());
+        for(int64_t j = 0; j < (max_len - cur_len); j++)
+        	c_n.push_back(0);
+        //if(c_n.size() > 60) std::cout << "c_n: " << c_n.size() << '\n';
+
+        auto TT = torch::from_blob(c_n.data(), {1, static_cast<long>(c_n.size())}, torch::TensorOptions(torch::kLong));
+        contexts_negatives.push_back(TT.clone());
+
+        std::vector<int64_t> msk;
+        for(int64_t j = 0; j < cur_len; j++)
+        	msk.push_back(1);
+        for(int64_t j = 0; j < (max_len - cur_len); j++)
+        	msk.push_back(0);
+        //if(msk.size() > 60) std::cout << "msk: " << msk.size() << '\n';
+
+        auto mk = torch::from_blob(msk.data(), {1, static_cast<long>(msk.size())}, torch::TensorOptions(torch::kLong));
+        masks.push_back(mk.clone());
+
+        std::vector<int64_t> lbl;
+        for(int64_t j = 0; j < d1.size(); j++)
+        	lbl.push_back(1);
+
+        for(int64_t j = 0; j < (max_len - d1.size()); j++)
+            lbl.push_back(0);
+        //if(lbl.size() > 60) std::cout << "lbl: " << lbl.size() << '\n';
+
+        auto lb = torch::from_blob(lbl.data(), {1, static_cast<long>(lbl.size())}, torch::TensorOptions(torch::kLong));
+        labels.push_back(lb.clone());
+    }
+
+    torch::Tensor contexts_negatives_ts = torch::concat(contexts_negatives, 0).to(torch::kLong);
+    torch::Tensor masks_ts = torch::concat(masks, 0).to(torch::kLong);
+    torch::Tensor labels_ts = torch::concat(labels, 0).to(torch::kLong);
+    torch::Tensor centers_ts = torch::from_blob(all_centers.data(),
+    			 { static_cast<long>(all_centers.size()), 1}, torch::TensorOptions(torch::kLong)).clone();
+
+    return std::make_tuple(contexts_negatives_ts, masks_ts, labels_ts, centers_ts);
+}
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, Vocab> load_data_ptb(
+		std::string file_dir, int64_t batch_size, int64_t max_window_size,
+		int64_t num_noise_words, int64_t num_samples) {
+
+	std::vector<std::vector<std::string>> ptb_data = read_ptb(file_dir, num_samples);
+	std::vector<std::string> tokens;
+
+	for(int64_t i = 0; i < ptb_data.size(); i++ ) {
+		std::vector<std::string> dt = ptb_data[i];
+		for(int64_t j = 0; j < dt.size(); j++ )
+			tokens.push_back(dt[j]);
+	}
+
+	std::vector<std::pair<std::string, int64_t>> cnt_corpus = count_corpus( tokens );
+
+	float min_freq = 10.0f;
+	std::vector<std::string> reserved_tokens(0);
+
+	Vocab vocab(cnt_corpus, min_freq, reserved_tokens);
+
+	std::pair<std::vector<std::vector<std::string>>, std::map<std::string, int64_t>> rlt = subsample(
+			ptb_data, vocab, cnt_corpus);
+	std::vector<std::vector<std::string>> subsampled = rlt.first;
+	std::map<std::string, int64_t> counter = rlt.second;
+
+	std::vector<std::string> tks;
+	for(auto& dt: subsampled ) {
+		for(auto& d : dt)
+			tks.push_back(d);
+	}
+
+	std::vector<std::pair<std::string, int64_t>> aft_freq = count_corpus( tks );
+
+	std::vector<std::vector<int64_t>> corpus;
+	for(auto& line : subsampled) {
+		corpus.push_back(vocab[line]);
+	}
+
+	std::vector<int64_t> all_centers;
+	std::vector<std::vector<int64_t>> all_contexts;
+	std::tie(all_centers, all_contexts) = get_centers_and_contexts(corpus, max_window_size);
+
+	std::vector<std::vector<int64_t>> all_negatives = get_negatives(all_contexts, vocab, counter, num_noise_words);
+	int64_t max_len = 0;
+	for( int i = 0; i < all_contexts.size(); i++ ) {
+		std::vector<int64_t> d1 = all_contexts[i];
+		std::vector<int64_t> d2 = all_negatives[i];
+		if( (d1.size() + d2.size()) > max_len )
+			max_len = d1.size() + d2.size();
+	}
+
+	std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor> batch = batchify(
+			all_contexts, all_negatives, all_centers);
+	// contexts_negatives_ts, masks_ts, labels_ts, centers_ts
+	return std::make_tuple(std::get<0>(batch), std::get<1>(batch), std::get<2>(batch),std::get<3>(batch), vocab);
+}
+
