@@ -174,12 +174,7 @@ int main() {
 	// Convert vectors to a tensor
 	auto t_label = torch::from_blob(labels.data(), {int(labels.size()), 1}).clone();
 	auto t_data = torch::from_blob(datas.data(), {int(labels.size()), int(datas.size()/labels.size())}).clone();
-/*
-	std::cout << "size = " << t_label.data().sizes() << "\n";
-	std::cout << "sizes = " << t_data.data().sizes() << "\n";
-	std::cout << "t_data[0:20,:]\n" << t_data.index({Slice(0, 20), Slice()}) << "\n";
-	std::cout << "t_label[0:20]\n" << t_label.index({Slice(0, 20)}) << "\n";
-*/
+
 	int64_t num_epochs = 10;
 	float lr = 1.0;
 

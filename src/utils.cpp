@@ -85,9 +85,13 @@ std::unordered_map<int, std::string> get_fashion_mnist_labels(void){
 
 
 torch::Tensor softmax(torch::Tensor X) {
-	auto X_exp = torch::exp(X);
-    auto partition = X_exp.sum(1, true);
-    return (X_exp / partition);  // The broadcasting mechanism is applied here
+	torch::Tensor val_max, _;
+	std::tie(val_max, _) = torch::max(X, -1, true);
+	torch::Tensor X_exp = torch::exp(X - val_max);
+
+	c10::OptionalArrayRef<long int> dim = {1};
+	torch::Tensor partition = torch::sum(X_exp, dim, true);
+	return (X_exp / partition);
 }
 
 int64_t accuracy(torch::Tensor y_hat, torch::Tensor y) {

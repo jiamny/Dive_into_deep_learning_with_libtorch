@@ -12,6 +12,7 @@
 #include <cmath>	// for sqrt
 #include <unordered_map>
 #include <unordered_set>
+#include <torch/torch.h>
 
 using namespace std;
 

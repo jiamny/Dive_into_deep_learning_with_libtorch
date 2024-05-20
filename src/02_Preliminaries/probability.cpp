@@ -90,7 +90,7 @@ int main() {
 	estimates = estimates.to(torch::kDouble);
 
 	auto F = figure(true);
-	F->size(1800, 600);
+	F->size(2000, 500);
 	auto ax0 = subplot(1, 3, 0);
 	auto y0 = estimates.index({Slice(), 0});
 	std::vector<double> yy0(y0.data_ptr<double>(), y0.data_ptr<double>() + y0.numel());
