@@ -62,7 +62,7 @@ double kl_divergence(torch::Tensor p, torch::Tensor q) {
 
 torch::Tensor cross_entropy(torch::Tensor y_hat, torch::Tensor y) {
 	//  ce = -torch.log(y_hat[range(len(y_hat)), y])
-	torch::Tensor ridx = RangeToensorIndex(y_hat.size(0));;
+	torch::Tensor ridx = RangeTensorIndex(y_hat.size(0));;
     auto ce = -1 * torch::log(y_hat.index({ridx, y}));
     return ce.mean();
 }
