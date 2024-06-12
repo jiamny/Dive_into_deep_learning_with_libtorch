@@ -45,36 +45,28 @@ int main() {
 	F->position(0, 0);
 
 	auto ax1 = F->nexttile();
-	matplot::hold(ax1, true);
-	matplot::plot(ax1, xx, y1, "b")->line_width(2);
-	matplot::plot(ax1, xx, y2, "m--")->line_width(2);
+	matplot::plot(ax1, xx, y1, "b")->line_width(2).display_name("f(x)");
+	hold(ax1, on);
+	F->draw();
+	matplot::plot(ax1, xx, y2, "m--")->line_width(2).display_name("g(x)");
+	F->draw();
 	auto [t, a] = matplot::textarrow(ax1, 0.9, -1.0, 1.01, -1.2, "min of empirical risk");
-    t->color("red").font_size(14);
-    a->color("black");
+	t->color("red").font_size(14).display_name("");
+	a->color("black").display_name("");
 	auto [tt, aa] = matplot::textarrow(ax1, 1.05, -0.5, 1.1, -1.05, "min of risk");
-    tt->color("red").font_size(14);
-    aa->color("black");
-    matplot::xlabel(ax1, "x");
-    matplot::ylabel(ax1, "risk");
-    matplot::legend(ax1, {"f(x)", "g(x)"});
-    matplot::show();
+	tt->color("red").font_size(14).display_name("");
+	aa->color("black").display_name("");
+	matplot::xlabel(ax1, "x");
+	matplot::ylabel(ax1, "risk");
+	matplot::legend(ax1, {"", "", "", "", "", ""});
+	matplot::show();
 
 	// Local Minima
 	x = torch::arange(-1.0, 2.0, 0.01).to(torch::kDouble);
 	xs = f(x);
 	std::vector<double> y3(xs.data_ptr<double>(), xs.data_ptr<double>() + xs.numel());
 	std::vector<double> x2(x.data_ptr<double>(), x.data_ptr<double>() + x.numel());
-	/*
-	plt::plot(x2, y3, "b");
-	plt::annotate("local minimum", -0.30, -0.8);
-	plt::arrow(-0.1, -0.72, -0.17, 0.4, "k", "k", 0.05, 0.02);
-	plt::annotate("global minimum", 0.95, 0.8);
-	plt::arrow(1.35, 0.75, -0.25, -1.72, "k", "k", 0.05, 0.02);
-	plt::xlabel("x");
-	plt::ylabel("f(x)");
-	plt::show();
-	plt::close();
-*/
+
 	F = figure(true);
 	F->size(800, 600);
 	F->add_axes(false);

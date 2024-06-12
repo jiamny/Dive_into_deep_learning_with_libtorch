@@ -43,12 +43,12 @@ int main() {
 	matplot::hold(ax1, true);
 	matplot::plot(ax1, xx, yy, "b")->line_width(2);
 	matplot::plot(ax1, xx, yy2, "r:")->line_width(2);
-    matplot::hold(ax1, false);
-    matplot::xlabel(ax1, "x");
-    matplot::ylabel(ax1, "sigmoid(x)");
-    matplot::title(ax1, "Sigmoid");
-    matplot::legend(ax1, {"sigmoid", "gradient"});
-    matplot::show();
+	matplot::hold(ax1, false);
+	matplot::xlabel(ax1, "x");
+	matplot::ylabel(ax1, "sigmoid(x)");
+	matplot::title(ax1, "Sigmoid");
+	matplot::legend(ax1, {"sigmoid", "gradient"});
+	matplot::show();
 
 	//Exploding Gradients
 	/*

@@ -63,4 +63,5 @@ T vector_sum(std::vector<T> data) {
     return total;
 }
 
+
 #endif /* SRC_UTILS_TEMPHELPFUNCTIONS_HPP_ */

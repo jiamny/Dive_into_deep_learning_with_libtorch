@@ -36,8 +36,8 @@ torch::Tensor bilinear_kernel(int in_channels, int out_channels, int kernel_size
 
     auto weight = torch::zeros({in_channels, out_channels, kernel_size, kernel_size});
 
-    auto in_idx = RangeToensorIndex(in_channels);
-    auto out_idx = RangeToensorIndex(out_channels);
+    auto in_idx = RangeTensorIndex(in_channels);
+    auto out_idx = RangeTensorIndex(out_channels);
     weight.index_put_({in_idx, out_idx, Slice(0, kernel_size), Slice(0, kernel_size)}, filt);
 
     return weight;

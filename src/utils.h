@@ -147,7 +147,7 @@ std::unordered_map<std::string, std::string> getFlowersLabels(std::string jsonFi
 // data batch indices
 std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_size, bool shuffle = true);
 
-torch::Tensor RangeToensorIndex(int64_t num);
+torch::Tensor RangeTensorIndex(int64_t num);
 
 bool isNumberRegex(const std::string& str);
 

@@ -185,7 +185,7 @@ std::list<torch::Tensor> data_index_iter(int64_t num_examples, int64_t batch_siz
 	return( batch_indices );
 }
 
-torch::Tensor RangeToensorIndex(int64_t num) {
+torch::Tensor RangeTensorIndex(int64_t num) {
 	std::vector<int64_t> idx;
 	for( int64_t i = 0; i < num; i++ )
 		idx.push_back(i);
