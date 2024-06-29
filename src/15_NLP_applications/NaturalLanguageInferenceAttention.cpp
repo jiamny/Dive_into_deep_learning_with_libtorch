@@ -35,11 +35,12 @@ torch::nn::Sequential mlp(size_t num_inputs, size_t num_hiddens, bool flatten) {
 }
 
 
-class Attend : public torch::nn::Module {
+class AttendImpl : public torch::nn::Module {
 public:
-	Attend(){};
-	Attend(size_t num_inputs, size_t num_hiddens) {
+	AttendImpl(){};
+	AttendImpl(size_t num_inputs, size_t num_hiddens) {
         this->f = mlp(num_inputs, num_hiddens, false);
+        register_module("f", f);
 	}
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor A, torch::Tensor B) {
@@ -69,13 +70,14 @@ public:
 private:
 	torch::nn::Sequential f{nullptr};
 };
+TORCH_MODULE(Attend);
 
-
-class Compare : public torch::nn::Module {
+class CompareImpl : public torch::nn::Module {
 public:
-	Compare(){};
-    Compare(size_t num_inputs, size_t num_hiddens) {
+	CompareImpl(){};
+    CompareImpl(size_t num_inputs, size_t num_hiddens) {
         this->g = mlp(num_inputs, num_hiddens, false);
+        register_module("g", g);
     }
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor A, torch::Tensor B, torch::Tensor beta, torch::Tensor alpha) {
@@ -87,14 +89,16 @@ public:
 private:
 	torch::nn::Sequential g{nullptr};
 };
+TORCH_MODULE(Compare);
 
-
-class Aggregate : public torch::nn::Module {
+class AggregateImpl : public torch::nn::Module {
 public:
-	Aggregate(){};
-	Aggregate(size_t num_inputs, size_t num_hiddens, size_t num_outputs) {
+	AggregateImpl(){};
+	AggregateImpl(size_t num_inputs, size_t num_hiddens, size_t num_outputs) {
         this->h = mlp(num_inputs, num_hiddens, true);
         this->linear = torch::nn::Linear(num_hiddens, num_outputs);
+        register_module("h", h);
+        register_module("linear", linear);
 	}
 
 	torch::Tensor forward(torch::Tensor V_A, torch::Tensor V_B) {
@@ -111,18 +115,22 @@ private:
 	torch::nn::Sequential h{nullptr};
 	torch::nn::Linear linear{nullptr};
 };
+TORCH_MODULE(Aggregate);
 
-
-class DecomposableAttention : public torch::nn::Module {
+class DecomposableAttentionImpl : public torch::nn::Module {
 public:
 	torch::nn::Embedding embedding{nullptr};
-	DecomposableAttention(Vocab vocab, size_t embed_size, size_t num_hiddens, size_t num_inputs_attend,
+	DecomposableAttentionImpl(Vocab vocab, size_t embed_size, size_t num_hiddens, size_t num_inputs_attend,
                  size_t num_inputs_compare, size_t num_inputs_agg) {
-        this->embedding = torch::nn::Embedding(vocab.length(), embed_size);
-        this->attend = Attend(num_inputs_attend, num_hiddens);
-        this->compare = Compare(num_inputs_compare, num_hiddens);
+        embedding = torch::nn::Embedding(vocab.length(), embed_size);
+        attend = Attend(num_inputs_attend, num_hiddens);
+        compare = Compare(num_inputs_compare, num_hiddens);
         // There are 3 possible outputs: entailment, contradiction, and neutral
-        this->aggregate = Aggregate(num_inputs_agg, num_hiddens, 3);
+        aggregate = Aggregate(num_inputs_agg, num_hiddens, 3);
+        register_module("embedding", embedding);
+        register_module("attend", attend);
+        register_module("compare", compare);
+        register_module("aggregate", aggregate);
 	}
 
 	torch::Tensor forward(std::pair<torch::Tensor, torch::Tensor> X) {
@@ -130,23 +138,23 @@ public:
         auto hypotheses = X.second;
         auto A = embedding->forward(premises);
         auto B = embedding->forward(hypotheses);
-        auto rlt = attend.forward(A, B);
+        auto rlt = attend->forward(A, B);
         auto beta = rlt.first, alpha = rlt.second;
-        auto V = compare.forward(A, B, beta, alpha);
-        auto Y_hat = aggregate.forward(V.first, V.second);
+        auto V = compare->forward(A, B, beta, alpha);
+        auto Y_hat = aggregate->forward(V.first, V.second);
 	    return Y_hat;
 	}
 private:
-	Attend attend;
-	Compare compare;
-	Aggregate aggregate;
+	Attend attend{nullptr};
+	Compare compare{nullptr};
+	Aggregate aggregate{nullptr};
 };
-
+TORCH_MODULE(DecomposableAttention);
 
 std::string predict_snli(DecomposableAttention& net, Vocab vocab, std::vector<std::string> premise_dt,
 						 std::vector<std::string> hypothesis_dt, size_t num_steps, torch::Device device) {
 	// Predict the logical relationship between the premise and hypothesis."""
-    net.eval();
+    net->eval();
 
     std::vector<torch::Tensor> ptensors;
 
@@ -172,7 +180,7 @@ std::string predict_snli(DecomposableAttention& net, Vocab vocab, std::vector<st
 
     torch::Tensor hypothesis = torch::concat(htensors, 0).to(torch::kLong);
 
-    torch::Tensor label = torch::argmax(net.forward(std::make_pair(premise.reshape({1, -1}),hypothesis.reshape({1, -1}))), 1);
+    torch::Tensor label = torch::argmax(net->forward(std::make_pair(premise.reshape({1, -1}),hypothesis.reshape({1, -1}))), 1);
     if(label.data().item<long>() == 0)
     	return "entailment";
     else if(label.data().item<long>() == 1)
@@ -186,10 +194,9 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	torch::Device device(torch::kCPU);
-//	auto cuda_available = torch::cuda::is_available();
-//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(123);
 
@@ -200,8 +207,17 @@ int main() {
 	const std::string data_dir = "./data/snli_1.0";
 	bool is_train = true;
 
-	auto train_data = read_snli(data_dir, is_train, 0);
-	auto test_data = read_snli(data_dir, false, 0);
+    int tr_sz = 0, ts_sz = 0;
+	std::cout << "// -----------------------------------------------------------------\n";
+	std::cout << "//if GPU has enough RAM, comment following condition statements\n";
+	std::cout << "// -----------------------------------------------------------------\n";
+    if( cuda_available ) {
+    	tr_sz = 2000;
+    	ts_sz = 500;
+    }
+
+	auto train_data = read_snli(data_dir, is_train, tr_sz);
+	auto test_data = read_snli(data_dir, false, ts_sz);
 
 	float min_freq = 5.0f;
 	std::vector<std::string> reserved_tokens;
@@ -215,7 +231,6 @@ int main() {
 	auto train_iter = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
 			        									std::move(dataset),
 														torch::data::DataLoaderOptions().batch_size(batch_size).drop_last(true));
-
 
 /*
 	for(auto& dt : *train_iter ) {
@@ -235,7 +250,8 @@ int main() {
 	auto net = DecomposableAttention(vocab, embed_size, num_hiddens, 100, 200, 400);
 	auto glove_embedding = TokenEmbedding("./data/glove.6B.100d/vec.txt");
 	auto embeds = glove_embedding[vocab.idx_to_token];
-	net.embedding->weight.data().copy_(embeds);
+	net->embedding->weight.data().copy_(embeds);
+	net->to(device);
 
 	// ---------------------------------------------------------
 	// Training and Evaluating the Model
@@ -243,14 +259,14 @@ int main() {
 	float lr = 0.01;
 	int num_epochs = 10;
 
-	auto trainer = torch::optim::Adam(net.parameters(), lr);
+	auto trainer = torch::optim::Adam(net->parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone));
 
 	auto testdata = SNLIDataset(test_data, num_steps, vocab).map(torch::data::transforms::Stack<>());
 	auto test_iter = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(
 				        												std::move(testdata), batch_size);
 
-	net.train();
+	net->train();
 /*
 	auto batch_data = *train_iter->begin();
 	auto t_data     = batch_data.data.to(device);
@@ -286,7 +302,7 @@ int main() {
 			torch::Tensor lab_data  = batch_data.target.to(device).squeeze().flatten();
 
 			trainer.zero_grad();
-			torch::Tensor pred = net.forward(ftr_data);
+			torch::Tensor pred = net->forward(ftr_data);
 			auto l = loss(pred, lab_data);
 			l.sum().backward();
 
@@ -313,7 +329,7 @@ int main() {
 											 t_data.index({Slice(), Slice(num_steps, 2*num_steps)}));
 			auto lab_data  = b_data.target.to(device).squeeze().flatten();
 
-			auto pred = net.forward(ftr_data);
+			auto pred = net->forward(ftr_data);
 			total_corrects += accuracy(pred, lab_data);
 			total_samples += t_data.size(0);
 		}
@@ -341,7 +357,7 @@ int main() {
    	hold( on);
    	plot( train_epochs, test_acc, "r-.")->line_width(2)
    		    				.display_name("test acc");
-   	hold( on);
+   	hold(on);
     legend({}); //->location(legend::general_alignment::right);
    	ax2->xlabel("epoch");
    	ax2->ylabel("acc");

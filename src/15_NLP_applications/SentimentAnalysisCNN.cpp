@@ -62,13 +62,18 @@ struct TextCNNImpl : public torch::nn::Module {
         // Create multiple one-dimensional convolutional layers
         //convs = torch::nn::ModuleList();
         //for c, k in zip(num_channels, kernel_sizes):
-        for( int i = 0; i < num_channels.size(); i++ )
-            convs.push_back( torch::nn::Conv1d(
-            		torch::nn::Conv1dOptions(2 * embed_size, num_channels[i], kernel_sizes[i])));
+        for( int i = 0; i < num_channels.size(); i++ ){
+        	torch::nn::Conv1d conv = torch::nn::Conv1d(
+            		torch::nn::Conv1dOptions(2 * embed_size, num_channels[i], kernel_sizes[i]));
+            convs.push_back( conv );
+            register_module("conv"+std::to_string(i), conv);
+        }
 
         register_module("embedding", embedding);
         register_module("constant_embedding", constant_embedding);
         register_module("decoder", decoder);
+        register_module("pool", pool);
+        register_module("relu", relu);
 
 	}
 
@@ -219,7 +224,7 @@ int main() {
 	// Training and Evaluating the Model
 	// ----------------------------------------------------------
 	float lr = 0.01;
-	int num_epochs = 3;
+	int num_epochs = 10;
 
 	auto trainer = torch::optim::Adam(net->parameters(), lr);
 	auto loss = torch::nn::CrossEntropyLoss(torch::nn::CrossEntropyLossOptions().reduction(torch::kNone)); //reduction="none"
