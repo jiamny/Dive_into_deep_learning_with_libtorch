@@ -10,7 +10,7 @@ project(D2L_pytorch_cpp VERSION 1.0.0 LANGUAGES CXX)
 add_subdirectory(matplotplusplus)
 
 
-set(PYTORCH_VERSION "2.3.1")
+set(PYTORCH_VERSION "2.4.0")
 
 set(USE_CPU_ONLY NO)
 

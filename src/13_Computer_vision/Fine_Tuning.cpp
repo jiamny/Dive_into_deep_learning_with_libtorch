@@ -4,7 +4,7 @@
 #include <torch/script.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-//#include <torchvision/vision.h>
+#include <torch/script.h>
 
 #include <iostream>
 #include <memory>
@@ -26,10 +26,10 @@ int main() {
 	std::cout << "Current path is " << get_current_dir_name() << '\n';
 
 	// Device
-	torch::Device device(torch::kCPU);
-//	auto cuda_available = torch::cuda::is_available();
-//	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
-//	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
+	//torch::Device device(torch::kCPU);
+	auto cuda_available = torch::cuda::is_available();
+	torch::Device device(cuda_available ? torch::kCUDA : torch::kCPU);
+	std::cout << (cuda_available ? "CUDA available. Training on GPU." : "Training on CPU.") << '\n';
 
 	torch::manual_seed(1000);
 
@@ -106,16 +106,34 @@ int main() {
 
 	matplot::show();
 
-	std::string mdlf = "./src/13_Computer_vision/resnet18-f37072fd.pth";
-
 	ResNet18 net(1000, true);
-	//torch::load(net, mdlf, device);
-	auto X = torch::rand({1, 3, 224, 224}).to(device);
+	net->to(device);
 
-	auto ot = net->forward(X);
+	/*
+	std::string mdlf = "./src/13_Computer_vision/resnet18_jit_model.pt";
+
+	torch::jit::script::Module net;
+	try {
+	    // Deserialize the ScriptModule from a file using torch::jit::load().
+	    net = torch::jit::load(mdlf.c_str(), device);
+	} catch (const c10::Error& e) {
+	    std::cerr << "error loading the model\n";
+	    return -1;
+	}
+
+	auto X = torch::rand({1, 3, 224, 224}).to(device);
+	std::vector<torch::jit::IValue> inputs;
+	inputs.push_back(X);
+
+	auto ot = net.forward(inputs).toTensor();
 
 	std::cout << "ot: " << ot.sizes() << "\n";
-	std::cout << (*(net->named_modules()["fc"])) << '\n';
+	std::cout << net.attr("fc") << '\n';
+	*/
+	auto X = torch::rand({1, 3, 224, 224}).to(device);
+	auto ot = net->forward(X);
+	std::cout << "ot: " << ot.sizes() << "\n";
+	std::cout << (*(net->named_modules())["fc"]) << '\n';
 	//torch::nn::Linear fc = (*(net->named_modules()["fc"]));
 	//fc->parameters();
 

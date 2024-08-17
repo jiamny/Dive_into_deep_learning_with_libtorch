@@ -55,7 +55,6 @@ std::vector<std::pair<std::string, int64_t>> count_corpus2( std::vector<std::str
 	std::vector<std::pair<std::string, int64_t>> _token_freqs;
 	std::map<std::string, int64_t> cntTks;
 
-
     for (auto tk : tokens) {
 
         if (cntTks.find(tk) == cntTks.end()) {  // if key is NOT present already

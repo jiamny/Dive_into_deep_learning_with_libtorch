@@ -297,7 +297,8 @@ int main() {
 
 	const std::vector<size_t> style_layers = {0, 5, 10, 19, 28}, content_layers = {25};
 
-	const std::vector<Layer> config = { Layer::CONV64, Layer::CONV64, Layer::MAXPOOL, Layer::CONV128, Layer::CONV128,
+	const std::vector<Layer> config = {
+			Layer::CONV64, Layer::CONV64, Layer::MAXPOOL, Layer::CONV128, Layer::CONV128,
 			Layer::MAXPOOL, Layer::CONV256, Layer::CONV256, Layer::CONV256, Layer::CONV256,
 			Layer::MAXPOOL, Layer::CONV512, Layer::CONV512, Layer::CONV512, Layer::CONV512,
 			Layer::MAXPOOL, Layer::CONV512, Layer::CONV512, Layer::CONV512, Layer::CONV512,
@@ -332,12 +333,12 @@ int main() {
 		styles_Y_gram.push_back(gram(Y));
 
 	torch::Tensor X = gen_img.forward();
-	//    scheduler = torch::optim::LRScheduler(trainer, lr_decay_epoch, 0.8)
+	// scheduler = torch::optim::LRScheduler(trainer, lr_decay_epoch, 0.8)
 
 	// Training
 	int64_t num_epoches = 200;
 
-	std::vector<float> nepoch, c_loss, s_loss, tv_loss;
+	std::vector<double> nepoch, c_loss, s_loss, tv_loss;
 
 	for( int64_t epoch = 1; epoch <= num_epoches; epoch++ ){
         trainer.zero_grad();
@@ -375,37 +376,38 @@ int main() {
 	f->x_position(0);
 	f->y_position(0);
 
-	matplot::subplot(2, 2, 0);
+	matplot::subplot(2, 3, 0);
 	std::vector<std::vector<std::vector<unsigned char>>> z = tensorToMatrix4MatplotPP(cimg.clone());
 	matplot::imshow(z);
 	matplot::title("Content image");
-	//f->draw();
 
-	matplot::subplot(2, 2, 1);
+	matplot::subplot(2, 3, 1);
 	z = tensorToMatrix4MatplotPP(simg.clone());
 	matplot::imshow(z);
 	matplot::title("Style image");
-	//f->draw();
 
-	matplot::subplot(2, 2, 2);
+	matplot::subplot(2, 3, 2);
 	z = tensorToMatrix4MatplotPP(gimg.clone());
 	matplot::imshow(z);
-	matplot::title("Style image");
-	//f->draw();
+	matplot::title("Stylized image");
 
-	matplot::subplot(2, 2, 3);
+	matplot::subplot(2, 3, 3);
+	matplot::plot(nepoch, c_loss, "b")->line_width(2).display_name("Content");
 	matplot::legend();
-	matplot::hold(true);
-	matplot::plot(nepoch, c_loss, "b")->line_width(2)
-				.display_name("Content");
-	matplot::plot(nepoch, s_loss, "g--")->line_width(2)
-					.display_name("Style");
-	matplot::plot(nepoch, tv_loss, "r-.")->line_width(2)
-					.display_name("TV");
-	matplot::hold(false);
 	matplot::xlabel("epoch");
 	matplot::ylabel("loss");
-	f->draw();
+
+	matplot::subplot(2, 3, 4);
+	matplot::plot(nepoch, s_loss, "g--")->line_width(2).display_name("Style");
+	matplot::legend();
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
+
+	matplot::subplot(2, 3, 5);
+	matplot::plot(nepoch, tv_loss, "r-.")->line_width(2).display_name("TV");
+	matplot::legend();
+	matplot::xlabel("epoch");
+	matplot::ylabel("loss");
 	matplot::show();
 
 	std::cout << "Done!\n";
