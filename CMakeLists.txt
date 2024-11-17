@@ -109,8 +109,12 @@ add_subdirectory("src/12_Computational_performance")
 add_subdirectory("src/13_Computer_vision")
 add_subdirectory("src/14_NLP_pretraining")
 add_subdirectory("src/15_NLP_applications")
+add_subdirectory("src/16_Recommender_systems")
 add_subdirectory("src/17_Generative_adversarial_networks")
 add_subdirectory("src/18_Appendix_mathematics_4_deep_learning")
+add_subdirectory("src/19_Reinforcement_Learning")
+add_subdirectory("src/20_Gaussian_Processes")
+add_subdirectory("src/21_Hyperparameter_Optimization")
 add_subdirectory("src/utils")
 
 

@@ -151,4 +151,5 @@ torch::Tensor RangeTensorIndex(int64_t num);
 
 bool isNumberRegex(const std::string& str);
 
+
 #endif /* UTILS_H_ */
