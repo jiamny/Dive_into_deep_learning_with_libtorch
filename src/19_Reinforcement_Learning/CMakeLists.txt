@@ -23,3 +23,18 @@ Q_learning.cpp
 
 target_link_libraries(19_Q_learning  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs})
 set_target_properties(19_Q_learning PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+# ---------------------------------------------------------------
+add_executable(19_Deep_Q_network)
+
+target_sources(19_Deep_Q_network PRIVATE 
+Deep_Q_network.cpp
+../utils.h
+../utils.cpp
+)
+
+target_link_libraries(19_Deep_Q_network  ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${requiredlibs})
+set_target_properties(19_Deep_Q_network PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+
+

@@ -18,7 +18,25 @@ target_sources(20_gp_priors PRIVATE
 gp_priors.cpp
 ../utils.h
 ../utils.cpp
+../utils/ch_20_util.h
+../utils/ch_20_util.cpp
 )
 
 target_link_libraries(20_gp_priors ${TORCH_LIBRARIES} ${requiredlibs} matplot)
 set_target_properties(20_gp_priors PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+# ---------------------------------------------------------------
+add_executable(20_gp_inference)
+
+target_sources(20_gp_inference PRIVATE 
+gp_inference.cpp
+../utils.h
+../utils.cpp
+../utils/ch_20_util.h
+../utils/ch_20_util.cpp
+)
+
+target_link_libraries(20_gp_inference ${TORCH_LIBRARIES} ${requiredlibs} matplot)
+set_target_properties(20_gp_inference PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+

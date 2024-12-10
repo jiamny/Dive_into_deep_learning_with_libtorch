@@ -50,5 +50,7 @@ Dive into deep learning with LibTorch and LibTorchvision C++ API
 
 - [LibTorchvision](https://github.com/pytorch/vision)
 
+- [RS-Models](https://github.com/nbsps/RS-Models)
+
 ## License
 This repository is licensed under MIT as given in [LICENSE](LICENSE).

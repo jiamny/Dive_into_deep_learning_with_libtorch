@@ -66,7 +66,7 @@ public:
         }
 
         cv::imshow(" ", frameFace);
-        cv::waitKey(20);
+        cv::waitKey(30);
     }
 
     std::tuple<int, float, int, int> step(int action) {

@@ -4,47 +4,11 @@
 #include <torch/utils.h>
 #include <random>
 #include <cmath>
-#include "../TempHelpFunctions.hpp"
-#include "../utils.h"
+#include "../utils/ch_20_util.h"
 
 #include <matplot/matplot.h>
 using namespace matplot;
 
-class MultivariateNormalx{
-    torch::Tensor mean, stddev, var, L;
-    int d = 0;
-    // Define epsilon.
-    double epsilon = 0.0001;
-public:
-    MultivariateNormalx(const torch::Tensor &mean, const torch::Tensor &std) : mean(mean), stddev(std), var(std * std) {
-      	d = mean.size(0);
-    	// Add small pertturbation.
-    	torch::Tensor K = stddev + epsilon*torch::eye(d).to(mean.dtype());
-    	// Cholesky decomposition.
-    	L = torch::linalg::cholesky(K);
-    }
-
-    torch::Tensor rsample(int n = 1) {
-    	torch::Tensor u = torch::normal(0., 1., d*n).reshape({d, n}).to(mean.dtype());
-    	torch::Tensor x = mean.reshape({d, 1}) + torch::mm(L, u);
-    	return x;
-    }
-};
-
-
-
-torch::Tensor distance_matrix(torch::Tensor x, torch::Tensor y) {
-	assert(x.size(1) == y.size(1));
-    int m = x.size(0);
-    int n = y.size(0);
-	torch::Tensor z = torch::zeros({m, n});
-    for(auto& i : range(m, 0) ) {
-        for(auto& j : range(n, 0)) {
-            z[i][j] = std::sqrt(torch::sum(torch::pow((x[i] - y[j]),2)).data().item<float>());
-        }
-    }
-    return z;
-}
 
 torch::Tensor lin_func(torch::Tensor x, int n_sample) {
 	int m = x.size(0);
@@ -57,10 +21,6 @@ torch::Tensor lin_func(torch::Tensor x, int n_sample) {
     return preds;
 }
 
-torch::Tensor rbfkernel(torch::Tensor x1, torch::Tensor x2, float ls=4.) {
-	torch::Tensor dist = distance_matrix(x1.unsqueeze(1), x2.unsqueeze(1));
-    return torch::exp(-(1. / ls / 2) * (torch::pow(dist, 2)));
-}
 
 
 int main() {
@@ -82,8 +42,8 @@ int main() {
 	std::vector<double> color;
 	for(int i = 1; i < x_points.size(0); i++) {
 		x_.push_back(x_points[i].data().item<double>());
-		//up_b.push_back(up_bd[i].data().item<double>());
-		//lw_b.push_back(lw_bd[i].data().item<double>());
+		up_b.push_back(up_bd[i].data().item<double>());
+		lw_b.push_back(lw_bd[i].data().item<double>());
 		color.push_back(i * 1.);
 		y_h.push_back(0.);
 	}
@@ -94,14 +54,15 @@ int main() {
     f->y_position(0);
 
     matplot::hold(true);
-    matplot::plot(x_, y_h, "k--")->line_width(3);
+    matplot::plot(x_, y_h, "k--")->line_width(4);
     for(int i = 0; i < outs.size(0); i++) {
     	std::vector<double> y_;
     	for(int j = 1; j < outs.size(1); j++)
     		y_.push_back(outs[i][j].data().item<double>());
     	matplot::plot(x_, y_)->line_width(2);
     }
-
+    matplot::plot(x_, lw_b, "m:")->line_width(2);
+    matplot::plot(x_, up_b, "m:")->line_width(2);
     matplot::show();
 
 	std::cout << "// --------------------------------------------------\n";
@@ -129,7 +90,6 @@ int main() {
     		y_.push_back(prior_samples[i][j].data().item<double>());
     	matplot::plot(ax, x_, y_)->line_width(2);
     }
-
 	matplot::show();
 
 	std::cout << "Done!\n";
