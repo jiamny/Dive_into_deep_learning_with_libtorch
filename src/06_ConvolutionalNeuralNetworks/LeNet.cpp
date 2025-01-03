@@ -99,11 +99,11 @@ int main() {
 	std::vector<double> train_acc;
 	std::vector<double> test_acc;
 	std::vector<double> xx;
-/*
+
 	auto batch = *train_loader->begin();
 	auto data  = batch.data.to(device);
 	auto y  = batch.target.to(device);
-	std::cout << "y: " << y << std::endl;
+	std::cout << "y: " << y.dtype() << " " << y.sizes() << std::endl;
 
 	auto y_hat = net->forward(data);
 	std::cout << "y_hat: " << y_hat << std::endl;
@@ -113,7 +113,7 @@ int main() {
 	optimizer.zero_grad();
 	l.backward();
 	optimizer.step();
-*/
+/*
 
 	//    timer, num_batches = d2l.Timer(), len(train_iter)
 	for( int64_t epoch = 0; epoch < num_epochs; epoch++ ) {
@@ -131,6 +131,7 @@ int main() {
 	    	auto y = batch.target.to(device);
 
 	    	auto y_hat = net->forward(X);
+
 	    	auto l = loss(y_hat, y);
 
 	    	epoch_loss += l.item<float>();
@@ -207,7 +208,7 @@ int main() {
    	hold( off);
    	F->draw();
    	show();
-
+*/
 	std::cout << "Done!\n";
 	return 0;
 }

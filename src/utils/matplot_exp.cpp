@@ -67,7 +67,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, normal_data_source, 2), n_bins)
         ->normalization(norm)
@@ -75,28 +75,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("2 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, normal_data_source, 5), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, normal_data_source, 10), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("10 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, normal_data_source, 30), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     xlabel("Value");
     ylabel("Frequency");
 
@@ -115,7 +115,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, uniform_data_source, 2), n_bins)
         ->normalization(norm)
@@ -123,28 +123,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("2 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, uniform_data_source, 5), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, uniform_data_source, 10), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("10 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, uniform_data_source, 30), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     xlabel("Value");
     ylabel("Frequency");
 
@@ -163,7 +163,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, chi2_data_source, 2), n_bins)
         ->normalization(norm)
@@ -171,28 +171,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("2 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi2_data_source, 5), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi2_data_source, 10), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("10 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi2_data_source, 30), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     // xlim({0,50});
     xlabel("Value");
     ylabel("Frequency");
@@ -210,7 +210,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, chi_data_source, 2), n_bins)
         ->normalization(norm)
@@ -218,28 +218,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("2 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi_data_source, 5), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi_data_source, 10), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("10 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, chi_data_source, 30), n_bins)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     xlabel("Value");
     ylabel("Frequency");
 
@@ -260,7 +260,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, ratio_ss, 2), edges)
         ->normalization(norm)
@@ -268,28 +268,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("2 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, ratio_ss, 5), edges)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, ratio_ss, 10), edges)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("10 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, ratio_ss, 30), edges)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     xlabel("Value");
     ylabel("Frequency");
 
@@ -308,7 +308,7 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("1 sample");
-    f->draw();
+
     hold(on);
     hist(bootstrap(mean<double>, bernoulli_data_source, 5), 6)
         ->normalization(norm)
@@ -316,28 +316,28 @@ int main() {
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("5 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, bernoulli_data_source, 30), 10)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("30 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, bernoulli_data_source, 300, 100000), 50)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("300 samples");
-    f->draw();
+
     hist(bootstrap(mean<double>, bernoulli_data_source, 3000, 10000), 50)
         ->normalization(norm)
         .algorithm(alg)
         .edge_alpha(1.0)
         .face_alpha(hist_alpha)
         .display_name("3000 samples");
-    f->draw();
+
     xlabel("Value");
     ylabel("Frequency");
 

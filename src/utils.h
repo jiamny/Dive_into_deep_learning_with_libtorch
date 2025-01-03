@@ -19,7 +19,7 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>   // iota()
-
+#include <regex>
 
 #include <jsoncpp/json/allocator.h>
 #include <jsoncpp/json/value.h>

@@ -245,8 +245,8 @@ int main() {
 	std::cout << imgT.max() << " " << label[0] << '\n';
 
 	torch::Tensor photo;
-	bool use_photo = false;
-	bool use_cv_imshow = false;
+	bool use_photo = true;
+	bool use_cv_imshow = true;
     bool normalize = true;
 
     if( normalize ) {
