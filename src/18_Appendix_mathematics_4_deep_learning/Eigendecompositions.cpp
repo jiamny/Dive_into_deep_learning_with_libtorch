@@ -25,7 +25,7 @@ int main() {
 	// Finding Eigenvalues
 	// ----------------------------------------
 
-	auto eigRlts = torch::linalg::eig(torch::tensor({{2, 1}, {2, 3}}).to(torch::kFloat64));
+	auto eigRlts = torch::linalg_eig(torch::tensor({{2, 1}, {2, 3}}).to(torch::kFloat64));
 
 	std::cout << "eig values:\n" << std::get<0>(eigRlts) << '\n';
 
@@ -39,7 +39,7 @@ int main() {
 	              {0.1, 0.2, 5.0, 0.5},
 	              {0.1, 0.3, 0.5, 9.0}});
 
-	eigRlts = torch::linalg::eig(X);
+	eigRlts = torch::linalg_eig(X);
 	std::cout << "eig values:\n" << std::get<0>(eigRlts) << '\n';
 
 	// -------------------------------------------------
@@ -112,7 +112,7 @@ int main() {
 	// Relating Back to Eigenvectors
 	// ----------------------------------------
 	// Compute the eigenvalues
-	auto eigs = std::get<0>(torch::linalg::eig(A));
+	auto eigs = std::get<0>(torch::linalg_eig(A));
 	eigs = torch::abs(eigs);
 	//norm_eigs = [torch.abs(torch.tensor(x)) for x in eigs]
 	auto TT = eigs.sort();

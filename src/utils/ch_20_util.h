@@ -41,7 +41,7 @@ public:
     	// Add small pertturbation.
     	torch::Tensor K = stddev + epsilon*torch::eye(d).to(mean.dtype());
     	// Cholesky decomposition.
-    	L = torch::linalg::cholesky(K);
+    	L = torch::linalg_cholesky(K);
     }
 
     torch::Tensor rsample(int n = 1) {
